@@ -7,6 +7,70 @@
   let html5QrCode = null;
   let scanning = false;
 
+  let db = null;
+  let docRef = null;
+  let cloudEnabled = false;
+  let suppressNextSnapshot = false;
+
+  // ---------- Firebase setup ----------
+  function initCloud() {
+    try {
+      if (typeof firebaseConfig === "undefined") return;
+      if (!firebaseConfig.apiKey || firebaseConfig.apiKey.indexOf("BURAYA") === 0) {
+        setSyncStatus("local");
+        return;
+      }
+      firebase.initializeApp(firebaseConfig);
+      db = firebase.firestore();
+      docRef = db.collection("bakkal").doc("veri");
+      cloudEnabled = true;
+      setSyncStatus("connecting");
+
+      docRef.onSnapshot(
+        (snap) => {
+          if (suppressNextSnapshot) {
+            suppressNextSnapshot = false;
+            return;
+          }
+          if (snap.exists && snap.data().products) {
+            products = snap.data().products;
+          } else {
+            docRef.set({ products: products.length ? products : seedData() });
+            products = products.length ? products : seedData();
+          }
+          setSyncStatus("connected");
+          renderAll();
+        },
+        (err) => {
+          console.error("Firestore hata", err);
+          setSyncStatus("error");
+        }
+      );
+    } catch (e) {
+      console.error("Firebase başlatma hatası", e);
+      setSyncStatus("local");
+    }
+  }
+
+  function setSyncStatus(state) {
+    const icon = document.getElementById("syncIcon");
+    const text = document.getElementById("syncText");
+    if (!icon || !text) return;
+    if (state === "connected") {
+      icon.className = "ti ti-cloud-check";
+      text.textContent = "Senkron";
+    } else if (state === "connecting") {
+      icon.className = "ti ti-cloud-up";
+      text.textContent = "Bağlanıyor";
+    } else if (state === "error") {
+      icon.className = "ti ti-cloud-x";
+      text.textContent = "Hata";
+    } else {
+      icon.className = "ti ti-cloud-off";
+      text.textContent = "Yerel";
+    }
+  }
+
   // ---------- Persistence ----------
   function load() {
     try {
@@ -17,13 +81,21 @@
     }
     if (!Array.isArray(products) || !products.length) products = seedData();
     renderAll();
+    initCloud();
   }
 
   function save() {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(products));
     } catch (e) {
-      console.error("Kaydetme hatası", e);
+      console.error("Yerel kaydetme hatası", e);
+    }
+    if (cloudEnabled && docRef) {
+      suppressNextSnapshot = true;
+      docRef.set({ products }).catch((e) => {
+        console.error("Bulut kaydetme hatası", e);
+        setSyncStatus("error");
+      });
     }
   }
 
@@ -141,7 +213,8 @@
   }
 
   function renderAll() {
-    const search = (document.getElementById("searchBox").value || "").toLowerCase().trim();
+    const searchEl = document.getElementById("searchBox");
+    const search = (searchEl ? searchEl.value : "").toLowerCase().trim();
     const list = document.getElementById("productList");
     const empty = document.getElementById("emptyState");
 
