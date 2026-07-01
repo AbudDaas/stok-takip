@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Bakkal Stok Takip</title>
+<meta name="theme-color" content="#1F3864" />
+<link rel="manifest" href="manifest.json" />
+<link rel="icon" href="icons/icon-192.png" />
+<link rel="apple-touch-icon" href="icons/icon-192.png" />
+<link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+
+  <header class="topbar">
+    <div class="topbar-title">
+      <i class="ti ti-building-store" aria-hidden="true"></i>
+      <span>Bakkal Stok Takip</span>
+    </div>
+  </header>
+
+  <main id="app">
+
+    <!-- ÖZET -->
+    <section class="stats-grid">
+      <div class="stat-card">
+        <p class="stat-label">Toplam ürün</p>
+        <p class="stat-value" id="statTotal">0</p>
+      </div>
+      <div class="stat-card stat-danger">
+        <p class="stat-label">Sipariş gerekli</p>
+        <p class="stat-value" id="statOrder">0</p>
+      </div>
+    </section>
+
+    <!-- SEKME: ÜRÜNLER -->
+    <section id="tab-products" class="tab-panel active">
+
+      <div class="card">
+        <p class="card-title">Ürün ekle</p>
+        <div class="form-row">
+          <input id="newName" type="text" placeholder="Ürün adı, örn. pepsi 1 lt" />
+        </div>
+        <div class="form-row two-col">
+          <input id="newCategory" type="text" placeholder="Kategori, örn. içecekler" />
+          <input id="newMin" type="number" min="0" placeholder="Min. stok" value="5" />
+        </div>
+        <div class="form-row">
+          <input id="newQty" type="number" min="0" placeholder="Başlangıç stok" value="0" />
+        </div>
+        <button id="addBtn" class="btn btn-primary btn-block">
+          <i class="ti ti-plus" aria-hidden="true"></i> Ürün ekle
+        </button>
+      </div>
+
+      <div class="section-header">
+        <p class="card-title">Tüm ürünler</p>
+        <input id="searchBox" type="text" class="search-input" placeholder="Ürün ara..." />
+      </div>
+
+      <div id="productList" class="list"></div>
+      <p id="emptyState" class="empty-state">Henüz ürün yok. Yukarıdan ekleyerek başla.</p>
+    </section>
+
+    <!-- SEKME: QR TARA -->
+    <section id="tab-scan" class="tab-panel">
+      <div class="card">
+        <p class="card-title">QR kod ile giriş / çıkış</p>
+        <p class="card-subtitle">Bir ürünün QR kodunu okutarak stok girişi veya çıkışı yapabilirsin.</p>
+        <button id="startScanBtn" class="btn btn-primary btn-block">
+          <i class="ti ti-scan" aria-hidden="true"></i> Kamerayı başlat
+        </button>
+        <div id="qrReader" class="qr-reader"></div>
+        <button id="stopScanBtn" class="btn btn-block" style="display:none;">
+          <i class="ti ti-player-stop" aria-hidden="true"></i> Taramayı durdur
+        </button>
+      </div>
+
+      <div class="card">
+        <p class="card-title">QR kodları yazdır</p>
+        <p class="card-subtitle">Her ürün için bir QR kod oluşturup rafa yapıştırabilirsin. Ürünler listesinden bir ürüne dokun, "QR kodu göster" seçeneğini kullan.</p>
+      </div>
+    </section>
+
+    <!-- SEKME: SİPARİŞ LİSTESİ -->
+    <section id="tab-orders" class="tab-panel">
+      <div class="card-header-row">
+        <p class="card-title">Acil sipariş listesi</p>
+        <button id="resetBtn" class="btn btn-sm">
+          <i class="ti ti-refresh" aria-hidden="true"></i> Tümünü sıfırla
+        </button>
+      </div>
+      <div id="orderList" class="list"></div>
+      <p id="orderEmptyState" class="empty-state">Şu anda sipariş edilmesi gereken ürün yok.</p>
+    </section>
+
+  </main>
+
+  <!-- ÜRÜN DETAY / QR MODAL -->
+  <div id="detailModal" class="modal-overlay" style="display:none;">
+    <div class="modal">
+      <div class="modal-header">
+        <p id="modalProductName" class="modal-title"></p>
+        <button id="closeModalBtn" class="icon-btn" aria-label="Kapat"><i class="ti ti-x" aria-hidden="true"></i></button>
+      </div>
+      <div class="modal-body">
+        <div class="qty-control">
+          <button id="qtyMinusBtn" class="qty-btn" aria-label="Stok azalt"><i class="ti ti-minus" aria-hidden="true"></i></button>
+          <span id="modalQty" class="qty-display">0</span>
+          <button id="qtyPlusBtn" class="qty-btn" aria-label="Stok arttır"><i class="ti ti-plus" aria-hidden="true"></i></button>
+        </div>
+        <p id="modalStatus" class="status-pill"></p>
+
+        <div class="modal-section">
+          <div id="modalQrCode" class="qr-code-box"></div>
+          <button id="printQrBtn" class="btn btn-block">
+            <i class="ti ti-printer" aria-hidden="true"></i> QR kodu yazdır
+          </button>
+        </div>
+
+        <div class="modal-section">
+          <label class="field-label">Ürün adı</label>
+          <input id="editName" type="text" />
+          <div class="form-row two-col">
+            <div>
+              <label class="field-label">Kategori</label>
+              <input id="editCategory" type="text" />
+            </div>
+            <div>
+              <label class="field-label">Min. stok</label>
+              <input id="editMin" type="number" min="0" />
+            </div>
+          </div>
+          <button id="saveEditBtn" class="btn btn-primary btn-block">Kaydet</button>
+          <button id="deleteProductBtn" class="btn btn-danger btn-block">
+            <i class="ti ti-trash" aria-hidden="true"></i> Ürünü sil
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ALT NAVİGASYON -->
+  <nav class="bottom-nav">
+    <button class="nav-btn active" data-tab="tab-products">
+      <i class="ti ti-list" aria-hidden="true"></i>
+      <span>Ürünler</span>
+    </button>
+    <button class="nav-btn" data-tab="tab-scan">
+      <i class="ti ti-qrcode" aria-hidden="true"></i>
+      <span>QR Tara</span>
+    </button>
+    <button class="nav-btn" data-tab="tab-orders">
+      <i class="ti ti-alert-triangle" aria-hidden="true"></i>
+      <span>Sipariş</span>
+    </button>
+  </nav>
+
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tabler-icons/2.44.0/iconfont/tabler-icons.min.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
