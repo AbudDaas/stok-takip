@@ -1,15 +1,10 @@
-// Firebase Console'dan (console.firebase.google.com) aldığın bilgileri
-// aşağıya yapıştır. README.md dosyasındaki "Bulut senkronizasyonu kurulumu"
-// bölümünde adım adım anlatılıyor.
-//
-// Doldurmadan bırakırsan uygulama sorunsuz çalışmaya devam eder,
-// sadece cihazlar arası senkronizasyon olmaz (veriler sadece o cihazda kalır).
+// Firebase Console'dan alınan proje bilgileri (bakkal-stok projesi)
 
 const firebaseConfig = {
-  apiKey: "BURAYA_API_KEY",
-  authDomain: "BURAYA_PROJE.firebaseapp.com",
-  projectId: "BURAYA_PROJE_ID",
-  storageBucket: "BURAYA_PROJE.appspot.com",
-  messagingSenderId: "BURAYA_SENDER_ID",
-  appId: "BURAYA_APP_ID"
+  apiKey: "AIzaSyD6M_sRSuwn6PGccwQj5jqCL1j3gT1Qou8",
+  authDomain: "bakkal-stok.firebaseapp.com",
+  projectId: "bakkal-stok",
+  storageBucket: "bakkal-stok.firebasestorage.app",
+  messagingSenderId: "866905782667",
+  appId: "1:866905782667:web:342f7c0b85c5c912e1d78e"
 };
