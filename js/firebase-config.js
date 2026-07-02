@@ -1,5 +1,3 @@
-// Firebase Console'dan alınan proje bilgileri (bakkal-stok projesi)
-
 const firebaseConfig = {
   apiKey: "AIzaSyD6M_sRSuwn6PGccwQj5jqCL1j3gT1Qou8",
   authDomain: "bakkal-stok.firebaseapp.com",
