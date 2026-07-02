@@ -1,9 +1,10 @@
-const CACHE_NAME = "bakkal-stok-v1";
+const CACHE_NAME = "bakkal-stok-v2";
 const CORE_ASSETS = [
   "./",
   "./index.html",
   "./css/style.css",
   "./js/app.js",
+  "./js/firebase-config.js",
   "./manifest.json",
   "./icons/icon-192.png",
   "./icons/icon-512.png"
