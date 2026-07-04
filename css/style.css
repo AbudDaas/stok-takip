@@ -220,11 +220,18 @@ input:focus{outline:2px solid var(--navy-light);outline-offset:1px;}
   align-items:center;
   gap:2px;
   padding:6px 0;
-  font-size:11px;
+  font-size:10px;
   color:var(--text-muted);
   cursor:pointer;
+  min-width:0;
 }
-.nav-btn i{font-size:22px;}
+.nav-btn span{
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  max-width:100%;
+}
+.nav-btn i{font-size:19px;}
 .nav-btn.active{color:var(--navy);}
 
 .modal-overlay{
@@ -292,3 +299,61 @@ input:focus{outline:2px solid var(--navy-light);outline-offset:1px;}
   padding:12px 0;
   background:#fff;
 }
+
+/* Kasa (sepet) */
+.cart-row{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:var(--radius);
+  padding:10px 12px;
+}
+.cart-info{min-width:0;flex:1;}
+.cart-name{margin:0;font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.cart-meta{margin:2px 0 0;font-size:12px;color:var(--text-muted);}
+.cart-controls{display:flex;align-items:center;gap:8px;flex-shrink:0;}
+.cart-qty-btn{
+  width:28px;height:28px;
+  border-radius:50%;
+  border:1px solid var(--border);
+  background:#fff;
+  font-size:14px;
+  cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+}
+.cart-qty-value{min-width:18px;text-align:center;font-weight:700;font-size:14px;}
+.cart-line-total{font-weight:700;font-size:14px;min-width:70px;text-align:right;}
+.cart-remove-btn{
+  background:none;border:none;color:var(--red);font-size:16px;cursor:pointer;padding:2px;
+}
+
+.cart-total-row{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  font-size:16px;
+  font-weight:700;
+  padding:12px 0;
+  border-top:1px solid var(--border);
+  margin-top:8px;
+}
+.cart-total-row span:last-child{color:var(--navy);font-size:20px;}
+
+/* Satışlar */
+.sale-row{
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:var(--radius);
+  padding:10px 12px;
+}
+.sale-row-top{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+}
+.sale-time{font-size:12px;color:var(--text-muted);}
+.sale-amount{font-weight:700;font-size:15px;color:var(--navy);}
+.sale-items{margin:4px 0 0;font-size:12px;color:var(--text-secondary);}
