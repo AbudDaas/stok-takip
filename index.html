@@ -49,8 +49,9 @@
           <input id="newCategory" type="text" placeholder="Kategori, örn. içecekler" />
           <input id="newMin" type="number" min="0" placeholder="Min. stok" value="5" />
         </div>
-        <div class="form-row">
+        <div class="form-row two-col">
           <input id="newQty" type="number" min="0" placeholder="Başlangıç stok" value="0" />
+          <input id="newPrice" type="number" min="0" step="0.01" placeholder="Fiyat (₺)" value="0" />
         </div>
         <button id="addBtn" class="btn btn-primary btn-block">
           <i class="ti ti-plus" aria-hidden="true"></i> Ürün ekle
@@ -66,7 +67,7 @@
       <p id="emptyState" class="empty-state">Henüz ürün yok. Yukarıdan ekleyerek başla.</p>
     </section>
 
-    <!-- SEKME: QR TARA -->
+    <!-- SEKME: QR TARA (STOK GİRİŞ/ÇIKIŞ) -->
     <section id="tab-scan" class="tab-panel">
       <div class="card">
         <p class="card-title">QR kod ile giriş / çıkış</p>
@@ -84,6 +85,57 @@
         <p class="card-title">QR kodları yazdır</p>
         <p class="card-subtitle">Her ürün için bir QR kod oluşturup rafa yapıştırabilirsin. Ürünler listesinden bir ürüne dokun, "QR kodu göster" seçeneğini kullan.</p>
       </div>
+    </section>
+
+    <!-- SEKME: KASA (SATIŞ) -->
+    <section id="tab-kasa" class="tab-panel">
+      <div class="card">
+        <p class="card-title">Kasa — QR okutarak satış</p>
+        <p class="card-subtitle">Müşterinin aldığı ürünlerin QR kodunu sırayla okut, sepete otomatik eklensin.</p>
+        <button id="startKasaScanBtn" class="btn btn-primary btn-block">
+          <i class="ti ti-scan" aria-hidden="true"></i> Kamerayı başlat
+        </button>
+        <div id="qrReaderKasa" class="qr-reader"></div>
+        <button id="stopKasaScanBtn" class="btn btn-block" style="display:none;">
+          <i class="ti ti-player-stop" aria-hidden="true"></i> Taramayı durdur
+        </button>
+      </div>
+
+      <div class="card">
+        <div class="card-header-row">
+          <p class="card-title">Sepet</p>
+          <button id="clearCartBtn" class="btn btn-sm">
+            <i class="ti ti-trash" aria-hidden="true"></i> Sepeti boşalt
+          </button>
+        </div>
+        <div id="cartList" class="list"></div>
+        <p id="cartEmptyState" class="empty-state">Sepet boş. Ürün QR kodunu okutarak ekle.</p>
+
+        <div class="cart-total-row">
+          <span>Toplam</span>
+          <span id="cartTotal">0,00 ₺</span>
+        </div>
+        <button id="completeSaleBtn" class="btn btn-primary btn-block">
+          <i class="ti ti-check" aria-hidden="true"></i> Satışı tamamla
+        </button>
+      </div>
+    </section>
+
+    <!-- SEKME: SATIŞLAR -->
+    <section id="tab-sales" class="tab-panel">
+      <div class="stats-grid">
+        <div class="stat-card">
+          <p class="stat-label">Bugünkü satış</p>
+          <p class="stat-value" id="statTodayTotal">0,00 ₺</p>
+        </div>
+        <div class="stat-card">
+          <p class="stat-label">Bugünkü işlem</p>
+          <p class="stat-value" id="statTodayCount">0</p>
+        </div>
+      </div>
+      <p class="card-title">Satış geçmişi</p>
+      <div id="salesList" class="list"></div>
+      <p id="salesEmptyState" class="empty-state">Henüz satış yapılmadı.</p>
     </section>
 
     <!-- SEKME: SİPARİŞ LİSTESİ -->
@@ -135,6 +187,8 @@
               <input id="editMin" type="number" min="0" />
             </div>
           </div>
+          <label class="field-label">Fiyat (₺)</label>
+          <input id="editPrice" type="number" min="0" step="0.01" />
           <button id="saveEditBtn" class="btn btn-primary btn-block">Kaydet</button>
           <button id="deleteProductBtn" class="btn btn-danger btn-block">
             <i class="ti ti-trash" aria-hidden="true"></i> Ürünü sil
@@ -150,9 +204,17 @@
       <i class="ti ti-list" aria-hidden="true"></i>
       <span>Ürünler</span>
     </button>
+    <button class="nav-btn" data-tab="tab-kasa">
+      <i class="ti ti-cash-register" aria-hidden="true"></i>
+      <span>Kasa</span>
+    </button>
     <button class="nav-btn" data-tab="tab-scan">
       <i class="ti ti-qrcode" aria-hidden="true"></i>
       <span>QR Tara</span>
+    </button>
+    <button class="nav-btn" data-tab="tab-sales">
+      <i class="ti ti-receipt" aria-hidden="true"></i>
+      <span>Satışlar</span>
     </button>
     <button class="nav-btn" data-tab="tab-orders">
       <i class="ti ti-alert-triangle" aria-hidden="true"></i>
