@@ -53,6 +53,12 @@
           <input id="newQty" type="number" min="0" placeholder="Başlangıç stok" value="0" />
           <input id="newPrice" type="number" min="0" step="0.01" placeholder="Fiyat (₺)" value="0" />
         </div>
+        <div class="form-row barcode-row">
+          <input id="newBarcode" type="text" placeholder="Barkod (opsiyonel)" />
+          <button id="scanNewBarcodeBtn" type="button" class="btn btn-icon-only" aria-label="Barkod tara">
+            <i class="ti ti-barcode" aria-hidden="true"></i>
+          </button>
+        </div>
         <button id="addBtn" class="btn btn-primary btn-block">
           <i class="ti ti-plus" aria-hidden="true"></i> Ürün ekle
         </button>
@@ -189,11 +195,32 @@
           </div>
           <label class="field-label">Fiyat (₺)</label>
           <input id="editPrice" type="number" min="0" step="0.01" />
+          <label class="field-label">Barkod</label>
+          <div class="form-row barcode-row">
+            <input id="editBarcode" type="text" placeholder="Barkod (opsiyonel)" />
+            <button id="scanEditBarcodeBtn" type="button" class="btn btn-icon-only" aria-label="Barkod tara">
+              <i class="ti ti-barcode" aria-hidden="true"></i>
+            </button>
+          </div>
           <button id="saveEditBtn" class="btn btn-primary btn-block">Kaydet</button>
           <button id="deleteProductBtn" class="btn btn-danger btn-block">
             <i class="ti ti-trash" aria-hidden="true"></i> Ürünü sil
           </button>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- HIZLI BARKOD TARAMA MODAL -->
+  <div id="barcodeScanModal" class="modal-overlay" style="display:none;">
+    <div class="modal">
+      <div class="modal-header">
+        <p class="modal-title">Barkodu tara</p>
+        <button id="closeBarcodeModalBtn" class="icon-btn" aria-label="Kapat"><i class="ti ti-x" aria-hidden="true"></i></button>
+      </div>
+      <div class="modal-body">
+        <p class="card-subtitle">Ürünün üzerindeki barkodu kameraya göster.</p>
+        <div id="quickScanReader" class="qr-reader"></div>
       </div>
     </div>
   </div>
