@@ -1,11 +1,16 @@
 (function () {
   "use strict";
 
-  const STORAGE_KEY = "bakkal_urunler_v1";
+  const STORAGE_KEY = "bakkal_urunler_v2";
   let products = [];
+  let sales = [];
+  let cart = []; // { productId, name, price, qty }
   let activeProductId = null;
+
   let html5QrCode = null;
   let scanning = false;
+  let html5QrCodeKasa = null;
+  let scanningKasa = false;
 
   let db = null;
   let docRef = null;
@@ -33,10 +38,14 @@
             return;
           }
           if (snap.exists && snap.data().products) {
-            products = snap.data().products;
+            const data = snap.data();
+            products = data.products;
+            sales = data.sales || [];
           } else {
-            docRef.set({ products: products.length ? products : seedData() });
-            products = products.length ? products : seedData();
+            const initial = { products: products.length ? products : seedData(), sales: sales || [] };
+            docRef.set(initial);
+            products = initial.products;
+            sales = initial.sales;
           }
           setSyncStatus("connected");
           renderAll();
@@ -75,24 +84,41 @@
   function load() {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
-      products = raw ? JSON.parse(raw) : seedData();
+      const parsed = raw ? JSON.parse(raw) : null;
+      products = (parsed && parsed.products) || seedData();
+      sales = (parsed && parsed.sales) || [];
     } catch (e) {
       products = seedData();
+      sales = [];
     }
     if (!Array.isArray(products) || !products.length) products = seedData();
+    if (!Array.isArray(sales)) sales = [];
     renderAll();
     initCloud();
+
+    // Service worker tamamen kaldırıldı (eski önbellek sorunlarına neden oluyordu).
+    // Varsa önceden kayıtlı service worker'ları ve önbellekleri temizle.
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.getRegistrations().then((regs) => {
+        regs.forEach((reg) => reg.unregister());
+      });
+    }
+    if ("caches" in window) {
+      caches.keys().then((names) => {
+        names.forEach((name) => caches.delete(name));
+      });
+    }
   }
 
   function save() {
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(products));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({ products, sales }));
     } catch (e) {
       console.error("Yerel kaydetme hatası", e);
     }
     if (cloudEnabled && docRef) {
       suppressNextSnapshot = true;
-      docRef.set({ products }).catch((e) => {
+      docRef.set({ products, sales }).catch((e) => {
         console.error("Bulut kaydetme hatası", e);
         setSyncStatus("error");
       });
@@ -101,20 +127,21 @@
 
   function seedData() {
     return [
-      mkProduct("pepsi 1 lt", "içecekler", 12, 10),
-      mkProduct("pepsi 2.5 lt", "içecekler", 3, 5),
-      mkProduct("cocacola 1 lt", "içecekler", 0, 8),
-      mkProduct("ekmek", "fırın", 15, 10)
+      mkProduct("pepsi 1 lt", "içecekler", 12, 10, 22),
+      mkProduct("pepsi 2.5 lt", "içecekler", 3, 5, 45),
+      mkProduct("cocacola 1 lt", "içecekler", 0, 8, 24),
+      mkProduct("ekmek", "fırın", 15, 10, 8)
     ];
   }
 
-  function mkProduct(name, category, qty, min) {
+  function mkProduct(name, category, qty, min, price) {
     return {
       id: genId(),
       name,
       category,
       qty: Number(qty) || 0,
-      min: Number(min) || 0
+      min: Number(min) || 0,
+      price: Number(price) || 0
     };
   }
 
@@ -136,12 +163,17 @@
     return String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   }
 
+  function formatTL(n) {
+    return (Number(n) || 0).toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " ₺";
+  }
+
   // ---------- CRUD ----------
   function addProduct() {
     const nameInput = document.getElementById("newName");
     const catInput = document.getElementById("newCategory");
     const minInput = document.getElementById("newMin");
     const qtyInput = document.getElementById("newQty");
+    const priceInput = document.getElementById("newPrice");
 
     const name = nameInput.value.trim();
     if (!name) {
@@ -151,12 +183,14 @@
     const category = catInput.value.trim() || "diğer";
     const min = Number(minInput.value) || 0;
     const qty = Number(qtyInput.value) || 0;
+    const price = Number(priceInput.value) || 0;
 
-    products.push(mkProduct(name, category, qty, min));
+    products.push(mkProduct(name, category, qty, min, price));
     nameInput.value = "";
     catInput.value = "";
     minInput.value = "5";
     qtyInput.value = "0";
+    priceInput.value = "0";
     save();
     renderAll();
     nameInput.focus();
@@ -186,6 +220,7 @@
     p.name = name;
     p.category = document.getElementById("editCategory").value.trim() || "diğer";
     p.min = Number(document.getElementById("editMin").value) || 0;
+    p.price = Number(document.getElementById("editPrice").value) || 0;
     save();
     renderAll();
     updateModalContent(p);
@@ -199,14 +234,14 @@
     renderAll();
   }
 
-  // ---------- Rendering ----------
+  // ---------- Rendering: Products ----------
   function productRowHtml(p) {
     const status = getStatus(p);
     return `
       <div class="product-row" data-id="${p.id}">
         <div class="product-info">
           <p class="product-name">${escapeHtml(p.name)}</p>
-          <p class="product-meta">${escapeHtml(p.category)} · Stok: ${p.qty}</p>
+          <p class="product-meta">${escapeHtml(p.category)} · Stok: ${p.qty} · ${formatTL(p.price)}</p>
         </div>
         <span class="status-badge ${STATUS_CLASS[status]}">${STATUS_LABEL[status]}</span>
       </div>`;
@@ -252,6 +287,9 @@
 
     document.getElementById("statTotal").textContent = products.length;
     document.getElementById("statOrder").textContent = needsOrder.length;
+
+    renderCart();
+    renderSales();
   }
 
   // ---------- Modal ----------
@@ -262,6 +300,7 @@
     document.getElementById("editName").value = p.name;
     document.getElementById("editCategory").value = p.category;
     document.getElementById("editMin").value = p.min;
+    document.getElementById("editPrice").value = p.price;
     updateModalContent(p);
     document.getElementById("detailModal").style.display = "flex";
     renderQrCode(p.id);
@@ -312,7 +351,7 @@
     win.document.close();
   }
 
-  // ---------- QR Scanning ----------
+  // ---------- QR Scanning: Stok giriş/çıkış ----------
   function startScan() {
     const readerEl = document.getElementById("qrReader");
     document.getElementById("startScanBtn").style.display = "none";
@@ -363,6 +402,194 @@
     }
   }
 
+  // ---------- QR Scanning: Kasa (satış) ----------
+  function startScanKasa() {
+    const readerEl = document.getElementById("qrReaderKasa");
+    document.getElementById("startKasaScanBtn").style.display = "none";
+    document.getElementById("stopKasaScanBtn").style.display = "flex";
+    readerEl.innerHTML = "";
+    html5QrCodeKasa = new Html5Qrcode("qrReaderKasa");
+    scanningKasa = true;
+
+    html5QrCodeKasa
+      .start(
+        { facingMode: "environment" },
+        { fps: 10, qrbox: 220 },
+        (decodedText) => {
+          onScanSuccessKasa(decodedText);
+        },
+        () => {}
+      )
+      .catch((err) => {
+        alert("Kamera başlatılamadı. Tarayıcı izinlerini kontrol et.\n" + err);
+        stopScanKasa();
+      });
+  }
+
+  function stopScanKasa() {
+    document.getElementById("startKasaScanBtn").style.display = "flex";
+    document.getElementById("stopKasaScanBtn").style.display = "none";
+    if (html5QrCodeKasa && scanningKasa) {
+      html5QrCodeKasa
+        .stop()
+        .then(() => html5QrCodeKasa.clear())
+        .catch(() => {});
+    }
+    scanningKasa = false;
+  }
+
+  function onScanSuccessKasa(decodedText) {
+    const p = products.find((x) => x.id === decodedText);
+    if (!p) {
+      alert("Bu QR kod kayıtlı bir ürüne ait değil.");
+      return;
+    }
+    addToCart(p);
+  }
+
+  // ---------- Kasa: Sepet ----------
+  function addToCart(p) {
+    const existing = cart.find((c) => c.productId === p.id);
+    if (existing) {
+      existing.qty += 1;
+    } else {
+      cart.push({ productId: p.id, name: p.name, price: p.price, qty: 1 });
+    }
+    renderCart();
+  }
+
+  function adjustCartQty(productId, delta) {
+    const item = cart.find((c) => c.productId === productId);
+    if (!item) return;
+    item.qty += delta;
+    if (item.qty <= 0) {
+      cart = cart.filter((c) => c.productId !== productId);
+    }
+    renderCart();
+  }
+
+  function removeCartItem(productId) {
+    cart = cart.filter((c) => c.productId !== productId);
+    renderCart();
+  }
+
+  function clearCart() {
+    cart = [];
+    renderCart();
+  }
+
+  function cartRowHtml(item) {
+    const lineTotal = item.price * item.qty;
+    return `
+      <div class="cart-row" data-id="${item.productId}">
+        <div class="cart-info">
+          <p class="cart-name">${escapeHtml(item.name)}</p>
+          <p class="cart-meta">${formatTL(item.price)} / adet</p>
+        </div>
+        <div class="cart-controls">
+          <button class="cart-qty-btn cart-minus" data-id="${item.productId}" aria-label="Azalt"><i class="ti ti-minus" aria-hidden="true"></i></button>
+          <span class="cart-qty-value">${item.qty}</span>
+          <button class="cart-qty-btn cart-plus" data-id="${item.productId}" aria-label="Arttır"><i class="ti ti-plus" aria-hidden="true"></i></button>
+          <span class="cart-line-total">${formatTL(lineTotal)}</span>
+          <button class="cart-remove-btn" data-id="${item.productId}" aria-label="Kaldır"><i class="ti ti-x" aria-hidden="true"></i></button>
+        </div>
+      </div>`;
+  }
+
+  function renderCart() {
+    const list = document.getElementById("cartList");
+    const empty = document.getElementById("cartEmptyState");
+    if (!list) return;
+
+    if (!cart.length) {
+      list.innerHTML = "";
+      empty.style.display = "block";
+    } else {
+      empty.style.display = "none";
+      list.innerHTML = cart.map(cartRowHtml).join("");
+    }
+
+    list.querySelectorAll(".cart-plus").forEach((btn) => {
+      btn.addEventListener("click", () => adjustCartQty(btn.dataset.id, 1));
+    });
+    list.querySelectorAll(".cart-minus").forEach((btn) => {
+      btn.addEventListener("click", () => adjustCartQty(btn.dataset.id, -1));
+    });
+    list.querySelectorAll(".cart-remove-btn").forEach((btn) => {
+      btn.addEventListener("click", () => removeCartItem(btn.dataset.id));
+    });
+
+    const total = cart.reduce((sum, c) => sum + c.price * c.qty, 0);
+    document.getElementById("cartTotal").textContent = formatTL(total);
+  }
+
+  function completeSale() {
+    if (!cart.length) {
+      alert("Sepet boş.");
+      return;
+    }
+    const total = cart.reduce((sum, c) => sum + c.price * c.qty, 0);
+
+    cart.forEach((item) => {
+      const p = products.find((x) => x.id === item.productId);
+      if (p) p.qty = Math.max(0, p.qty - item.qty);
+    });
+
+    sales.push({
+      id: genId(),
+      timestamp: new Date().toISOString(),
+      items: cart.map((c) => ({ name: c.name, qty: c.qty, price: c.price })),
+      total
+    });
+
+    cart = [];
+    save();
+    renderAll();
+    alert(`Satış tamamlandı: ${formatTL(total)}`);
+  }
+
+  // ---------- Satışlar (geçmiş) ----------
+  function isToday(isoString) {
+    const d = new Date(isoString);
+    const now = new Date();
+    return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth() && d.getDate() === now.getDate();
+  }
+
+  function saleRowHtml(sale) {
+    const d = new Date(sale.timestamp);
+    const timeStr = d.toLocaleString("tr-TR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
+    const itemsSummary = sale.items.map((i) => `${escapeHtml(i.name)} x${i.qty}`).join(", ");
+    return `
+      <div class="sale-row">
+        <div class="sale-row-top">
+          <span class="sale-time">${timeStr}</span>
+          <span class="sale-amount">${formatTL(sale.total)}</span>
+        </div>
+        <p class="sale-items">${itemsSummary}</p>
+      </div>`;
+  }
+
+  function renderSales() {
+    const list = document.getElementById("salesList");
+    const empty = document.getElementById("salesEmptyState");
+    if (!list) return;
+
+    const sorted = [...sales].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+    if (!sorted.length) {
+      list.innerHTML = "";
+      empty.style.display = "block";
+    } else {
+      empty.style.display = "none";
+      list.innerHTML = sorted.map(saleRowHtml).join("");
+    }
+
+    const todaySales = sales.filter((s) => isToday(s.timestamp));
+    const todayTotal = todaySales.reduce((sum, s) => sum + s.total, 0);
+    document.getElementById("statTodayTotal").textContent = formatTL(todayTotal);
+    document.getElementById("statTodayCount").textContent = todaySales.length;
+  }
+
   // ---------- Tabs ----------
   function switchTab(tabId) {
     document.querySelectorAll(".tab-panel").forEach((el) => el.classList.remove("active"));
@@ -371,6 +598,7 @@
       btn.classList.toggle("active", btn.dataset.tab === tabId);
     });
     if (tabId !== "tab-scan" && scanning) stopScan();
+    if (tabId !== "tab-kasa" && scanningKasa) stopScanKasa();
   }
 
   // ---------- Event wiring ----------
@@ -398,16 +626,16 @@
   document.getElementById("startScanBtn").addEventListener("click", startScan);
   document.getElementById("stopScanBtn").addEventListener("click", stopScan);
 
+  document.getElementById("startKasaScanBtn").addEventListener("click", startScanKasa);
+  document.getElementById("stopKasaScanBtn").addEventListener("click", stopScanKasa);
+  document.getElementById("clearCartBtn").addEventListener("click", () => {
+    if (!cart.length || confirm("Sepeti boşaltmak istediğine emin misin?")) clearCart();
+  });
+  document.getElementById("completeSaleBtn").addEventListener("click", completeSale);
+
   document.querySelectorAll(".nav-btn").forEach((btn) => {
     btn.addEventListener("click", () => switchTab(btn.dataset.tab));
   });
-
-  // ---------- Service worker ----------
-  if ("serviceWorker" in navigator) {
-    window.addEventListener("load", () => {
-      navigator.serviceWorker.register("service-worker.js").catch(() => {});
-    });
-  }
 
   load();
 })();
