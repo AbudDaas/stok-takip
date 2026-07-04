@@ -134,14 +134,15 @@
     ];
   }
 
-  function mkProduct(name, category, qty, min, price) {
+  function mkProduct(name, category, qty, min, price, barcode) {
     return {
       id: genId(),
       name,
       category,
       qty: Number(qty) || 0,
       min: Number(min) || 0,
-      price: Number(price) || 0
+      price: Number(price) || 0,
+      barcode: (barcode || "").trim()
     };
   }
 
@@ -174,6 +175,7 @@
     const minInput = document.getElementById("newMin");
     const qtyInput = document.getElementById("newQty");
     const priceInput = document.getElementById("newPrice");
+    const barcodeInput = document.getElementById("newBarcode");
 
     const name = nameInput.value.trim();
     if (!name) {
@@ -184,13 +186,15 @@
     const min = Number(minInput.value) || 0;
     const qty = Number(qtyInput.value) || 0;
     const price = Number(priceInput.value) || 0;
+    const barcode = barcodeInput.value.trim();
 
-    products.push(mkProduct(name, category, qty, min, price));
+    products.push(mkProduct(name, category, qty, min, price, barcode));
     nameInput.value = "";
     catInput.value = "";
     minInput.value = "5";
     qtyInput.value = "0";
     priceInput.value = "0";
+    barcodeInput.value = "";
     save();
     renderAll();
     nameInput.focus();
@@ -221,6 +225,7 @@
     p.category = document.getElementById("editCategory").value.trim() || "diğer";
     p.min = Number(document.getElementById("editMin").value) || 0;
     p.price = Number(document.getElementById("editPrice").value) || 0;
+    p.barcode = document.getElementById("editBarcode").value.trim();
     save();
     renderAll();
     updateModalContent(p);
@@ -301,6 +306,7 @@
     document.getElementById("editCategory").value = p.category;
     document.getElementById("editMin").value = p.min;
     document.getElementById("editPrice").value = p.price;
+    document.getElementById("editBarcode").value = p.barcode || "";
     updateModalContent(p);
     document.getElementById("detailModal").style.display = "flex";
     renderQrCode(p.id);
@@ -351,6 +357,10 @@
     win.document.close();
   }
 
+  function findProductByScan(code) {
+    return products.find((p) => p.id === code || (p.barcode && p.barcode === code));
+  }
+
   // ---------- QR Scanning: Stok giriş/çıkış ----------
   function startScan() {
     const readerEl = document.getElementById("qrReader");
@@ -388,9 +398,9 @@
   }
 
   function onScanSuccess(decodedText) {
-    const p = products.find((x) => x.id === decodedText);
+    const p = findProductByScan(decodedText);
     if (!p) {
-      alert("Bu QR kod kayıtlı bir ürüne ait değil.");
+      alert("Bu kod kayıtlı bir ürüne ait değil.");
       return;
     }
     stopScan();
@@ -439,9 +449,9 @@
   }
 
   function onScanSuccessKasa(decodedText) {
-    const p = products.find((x) => x.id === decodedText);
+    const p = findProductByScan(decodedText);
     if (!p) {
-      alert("Bu QR kod kayıtlı bir ürüne ait değil.");
+      alert("Bu kod kayıtlı bir ürüne ait değil.");
       return;
     }
     addToCart(p);
@@ -590,6 +600,44 @@
     document.getElementById("statTodayCount").textContent = todaySales.length;
   }
 
+  // ---------- Hızlı barkod tarama (ürün ekle/düzenle formları için) ----------
+  let quickScanCode = null;
+  let quickScanTargetInputId = null;
+
+  function openQuickBarcodeScan(targetInputId) {
+    quickScanTargetInputId = targetInputId;
+    document.getElementById("barcodeScanModal").style.display = "flex";
+    const readerEl = document.getElementById("quickScanReader");
+    readerEl.innerHTML = "";
+    quickScanCode = new Html5Qrcode("quickScanReader");
+    quickScanCode
+      .start(
+        { facingMode: "environment" },
+        { fps: 10, qrbox: 220 },
+        (decodedText) => {
+          const input = document.getElementById(quickScanTargetInputId);
+          if (input) input.value = decodedText;
+          closeQuickBarcodeScan();
+        },
+        () => {}
+      )
+      .catch((err) => {
+        alert("Kamera başlatılamadı. Tarayıcı izinlerini kontrol et.\n" + err);
+        closeQuickBarcodeScan();
+      });
+  }
+
+  function closeQuickBarcodeScan() {
+    document.getElementById("barcodeScanModal").style.display = "none";
+    if (quickScanCode) {
+      quickScanCode
+        .stop()
+        .then(() => quickScanCode.clear())
+        .catch(() => {});
+      quickScanCode = null;
+    }
+  }
+
   // ---------- Tabs ----------
   function switchTab(tabId) {
     document.querySelectorAll(".tab-panel").forEach((el) => el.classList.remove("active"));
@@ -622,6 +670,13 @@
     if (confirm("Bu ürünü silmek istediğine emin misin?")) deleteProduct(activeProductId);
   });
   document.getElementById("printQrBtn").addEventListener("click", printQr);
+
+  document.getElementById("scanNewBarcodeBtn").addEventListener("click", () => openQuickBarcodeScan("newBarcode"));
+  document.getElementById("scanEditBarcodeBtn").addEventListener("click", () => openQuickBarcodeScan("editBarcode"));
+  document.getElementById("closeBarcodeModalBtn").addEventListener("click", closeQuickBarcodeScan);
+  document.getElementById("barcodeScanModal").addEventListener("click", (e) => {
+    if (e.target.id === "barcodeScanModal") closeQuickBarcodeScan();
+  });
 
   document.getElementById("startScanBtn").addEventListener("click", startScan);
   document.getElementById("stopScanBtn").addEventListener("click", stopScan);
