@@ -375,3 +375,20 @@ input:focus{outline:2px solid var(--navy-light);outline-offset:1px;}
   justify-content:center;
   font-size:18px;
 }
+
+/* Kasa tarama geri bildirimi */
+.scan-feedback{
+  margin-top:8px;
+  padding:10px 14px;
+  border-radius:var(--radius);
+  background:var(--green-bg);
+  color:var(--green-text);
+  font-size:14px;
+  font-weight:600;
+  text-align:center;
+  display:none;
+  align-items:center;
+  justify-content:center;
+  gap:6px;
+}
+.scan-feedback.show{display:flex;}
