@@ -11,6 +11,8 @@
   let scanning = false;
   let html5QrCodeKasa = null;
   let scanningKasa = false;
+  let stokScanCooldown = false;
+  let kasaScanCooldown = false;
 
   let db = null;
   let docRef = null;
@@ -398,6 +400,7 @@
   }
 
   function onScanSuccess(decodedText) {
+    if (stokScanCooldown) return;
     const p = findProductByScan(decodedText);
     if (!p) {
       alert("Bu kod kayıtlı bir ürüne ait değil.");
@@ -449,12 +452,36 @@
   }
 
   function onScanSuccessKasa(decodedText) {
+    if (kasaScanCooldown) return;
     const p = findProductByScan(decodedText);
     if (!p) {
       alert("Bu kod kayıtlı bir ürüne ait değil.");
       return;
     }
     addToCart(p);
+    kasaScanCooldown = true;
+    showKasaScanFeedback(p.name);
+    setTimeout(() => {
+      kasaScanCooldown = false;
+    }, 3000);
+  }
+
+  function showKasaScanFeedback(name) {
+    const readerEl = document.getElementById("qrReaderKasa");
+    if (!readerEl) return;
+    let badge = document.getElementById("kasaScanFeedback");
+    if (!badge) {
+      badge = document.createElement("div");
+      badge.id = "kasaScanFeedback";
+      badge.className = "scan-feedback";
+      readerEl.parentElement.insertBefore(badge, readerEl.nextSibling);
+    }
+    badge.innerHTML = `<i class="ti ti-check" aria-hidden="true"></i> ${escapeHtml(name)} eklendi`;
+    badge.classList.add("show");
+    clearTimeout(badge._hideTimer);
+    badge._hideTimer = setTimeout(() => {
+      badge.classList.remove("show");
+    }, 3000);
   }
 
   // ---------- Kasa: Sepet ----------
