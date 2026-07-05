@@ -117,10 +117,32 @@
         <div id="cartList" class="list"></div>
         <p id="cartEmptyState" class="empty-state">Sepet boş. Ürün QR kodunu okutarak ekle.</p>
 
+        <div class="form-row">
+          <label class="field-label">İndirim (₺)</label>
+          <input id="cartDiscount" type="number" min="0" step="0.01" value="0" />
+        </div>
+
+        <div class="cart-subtotal-row">
+          <span>Ara toplam</span>
+          <span id="cartSubtotal">0,00 ₺</span>
+        </div>
         <div class="cart-total-row">
           <span>Toplam</span>
           <span id="cartTotal">0,00 ₺</span>
         </div>
+
+        <div class="payment-type-row">
+          <button id="payNakitBtn" class="payment-type-btn active" data-type="nakit">
+            <i class="ti ti-cash" aria-hidden="true"></i> Nakit
+          </button>
+          <button id="payVeresiyeBtn" class="payment-type-btn" data-type="veresiye">
+            <i class="ti ti-notebook" aria-hidden="true"></i> Veresiye
+          </button>
+        </div>
+        <div id="veresiyeCustomerRow" class="form-row" style="display:none;">
+          <select id="veresiyeCustomerSelect"></select>
+        </div>
+
         <button id="completeSaleBtn" class="btn btn-primary btn-block">
           <i class="ti ti-check" aria-hidden="true"></i> Satışı tamamla
         </button>
@@ -129,19 +151,62 @@
 
     <!-- SEKME: SATIŞLAR -->
     <section id="tab-sales" class="tab-panel">
+      <div class="period-filter">
+        <button class="period-btn active" data-period="today">Bugün</button>
+        <button class="period-btn" data-period="week">Bu Hafta</button>
+        <button class="period-btn" data-period="month">Bu Ay</button>
+        <button class="period-btn" data-period="all">Tümü</button>
+      </div>
+
       <div class="stats-grid">
         <div class="stat-card">
-          <p class="stat-label">Bugünkü satış</p>
-          <p class="stat-value" id="statTodayTotal">0,00 ₺</p>
+          <p class="stat-label">Toplam ciro</p>
+          <p class="stat-value" id="statPeriodTotal">0,00 ₺</p>
         </div>
         <div class="stat-card">
-          <p class="stat-label">Bugünkü işlem</p>
-          <p class="stat-value" id="statTodayCount">0</p>
+          <p class="stat-label">İşlem sayısı</p>
+          <p class="stat-value" id="statPeriodCount">0</p>
         </div>
       </div>
+
+      <p class="card-title">En çok satan ürünler</p>
+      <div id="topProductsList" class="list"></div>
+      <p id="topProductsEmptyState" class="empty-state">Bu dönemde satış yok.</p>
+
       <p class="card-title">Satış geçmişi</p>
       <div id="salesList" class="list"></div>
-      <p id="salesEmptyState" class="empty-state">Henüz satış yapılmadı.</p>
+      <p id="salesEmptyState" class="empty-state">Bu dönemde satış yapılmadı.</p>
+    </section>
+
+    <!-- SEKME: VERESİYE -->
+    <section id="tab-veresiye" class="tab-panel">
+      <div class="card">
+        <p class="card-title">Müşteri ekle</p>
+        <div class="form-row">
+          <input id="newCustomerName" type="text" placeholder="Müşteri adı" />
+        </div>
+        <div class="form-row">
+          <input id="newCustomerPhone" type="text" placeholder="Telefon (opsiyonel)" />
+        </div>
+        <button id="addCustomerBtn" class="btn btn-primary btn-block">
+          <i class="ti ti-user-plus" aria-hidden="true"></i> Müşteri ekle
+        </button>
+      </div>
+
+      <div class="stats-grid">
+        <div class="stat-card stat-danger">
+          <p class="stat-label">Toplam alacak</p>
+          <p class="stat-value" id="statTotalDebt">0,00 ₺</p>
+        </div>
+        <div class="stat-card">
+          <p class="stat-label">Müşteri sayısı</p>
+          <p class="stat-value" id="statCustomerCount">0</p>
+        </div>
+      </div>
+
+      <p class="card-title">Müşteriler</p>
+      <div id="customerList" class="list"></div>
+      <p id="customerEmptyState" class="empty-state">Henüz müşteri yok.</p>
     </section>
 
     <!-- SEKME: SİPARİŞ LİSTESİ -->
@@ -225,6 +290,46 @@
     </div>
   </div>
 
+  <!-- MÜŞTERİ DETAY MODAL -->
+  <div id="customerModal" class="modal-overlay" style="display:none;">
+    <div class="modal">
+      <div class="modal-header">
+        <p id="customerModalName" class="modal-title"></p>
+        <button id="closeCustomerModalBtn" class="icon-btn" aria-label="Kapat"><i class="ti ti-x" aria-hidden="true"></i></button>
+      </div>
+      <div class="modal-body">
+        <p class="debt-display">
+          <span>Güncel bakiye</span>
+          <span id="customerModalDebt" class="debt-amount">0,00 ₺</span>
+        </p>
+
+        <div class="modal-section">
+          <label class="field-label">Ödeme al</label>
+          <div class="form-row barcode-row">
+            <input id="paymentAmountInput" type="number" min="0" step="0.01" placeholder="Tutar (₺)" />
+            <button id="recordPaymentBtn" class="btn btn-primary" style="width:auto;padding:0 16px;">Kaydet</button>
+          </div>
+        </div>
+
+        <div class="modal-section">
+          <label class="field-label">Müşteri adı</label>
+          <input id="editCustomerName" type="text" />
+          <label class="field-label">Telefon</label>
+          <input id="editCustomerPhone" type="text" />
+          <button id="saveCustomerEditBtn" class="btn btn-primary btn-block">Kaydet</button>
+          <button id="deleteCustomerBtn" class="btn btn-danger btn-block">
+            <i class="ti ti-trash" aria-hidden="true"></i> Müşteriyi sil
+          </button>
+        </div>
+
+        <div class="modal-section">
+          <p class="field-label">İşlem geçmişi</p>
+          <div id="customerHistoryList" class="list"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- ALT NAVİGASYON -->
   <nav class="bottom-nav">
     <button class="nav-btn active" data-tab="tab-products">
@@ -242,6 +347,10 @@
     <button class="nav-btn" data-tab="tab-sales">
       <i class="ti ti-receipt" aria-hidden="true"></i>
       <span>Satışlar</span>
+    </button>
+    <button class="nav-btn" data-tab="tab-veresiye">
+      <i class="ti ti-notebook" aria-hidden="true"></i>
+      <span>Veresiye</span>
     </button>
     <button class="nav-btn" data-tab="tab-orders">
       <i class="ti ti-alert-triangle" aria-hidden="true"></i>
