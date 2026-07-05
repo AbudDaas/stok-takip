@@ -578,3 +578,15 @@ input:focus{outline:2px solid var(--navy-light);outline-offset:1px;}
 .history-row:last-child{border-bottom:none;}
 .history-amount-debt{color:var(--red);font-weight:600;}
 .history-amount-payment{color:var(--green-text);font-weight:600;}
+
+/* Kg tartılı ürün sepet düzenleme butonu (cart-qty-btn ile aynı görünüm) */
+.cart-edit-weight-btn{
+  width:28px;height:28px;
+  border-radius:50%;
+  border:1px solid var(--border);
+  background:#fff;
+  font-size:13px;
+  cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  color:var(--navy);
+}
