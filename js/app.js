@@ -149,14 +149,15 @@
 
   function seedData() {
     return [
-      mkProduct("pepsi 1 lt", "içecekler", 12, 10, 22),
-      mkProduct("pepsi 2.5 lt", "içecekler", 3, 5, 45),
-      mkProduct("cocacola 1 lt", "içecekler", 0, 8, 24),
-      mkProduct("ekmek", "fırın", 15, 10, 8)
+      mkProduct("pepsi 1 lt", "içecekler", 12, 10, 22, "", "adet"),
+      mkProduct("pepsi 2.5 lt", "içecekler", 3, 5, 45, "", "adet"),
+      mkProduct("cocacola 1 lt", "içecekler", 0, 8, 24, "", "adet"),
+      mkProduct("ekmek", "fırın", 15, 10, 8, "", "adet"),
+      mkProduct("beyaz peynir", "süt ürünleri", 5, 2, 180, "", "kg")
     ];
   }
 
-  function mkProduct(name, category, qty, min, price, barcode) {
+  function mkProduct(name, category, qty, min, price, barcode, unit) {
     return {
       id: genId(),
       name,
@@ -164,7 +165,8 @@
       qty: Number(qty) || 0,
       min: Number(min) || 0,
       price: Number(price) || 0,
-      barcode: (barcode || "").trim()
+      barcode: (barcode || "").trim(),
+      unit: unit === "kg" ? "kg" : "adet"
     };
   }
 
@@ -352,6 +354,13 @@
     return String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   }
 
+  function formatQty(p) {
+    if (p.unit === "kg") {
+      return (Math.round(p.qty * 1000) / 1000).toLocaleString("tr-TR", { minimumFractionDigits: 0, maximumFractionDigits: 3 }) + " kg";
+    }
+    return p.qty + " adet";
+  }
+
   function formatTL(n) {
     return (Number(n) || 0).toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " ₺";
   }
@@ -364,6 +373,7 @@
     const qtyInput = document.getElementById("newQty");
     const priceInput = document.getElementById("newPrice");
     const barcodeInput = document.getElementById("newBarcode");
+    const unitInput = document.getElementById("newUnit");
 
     const name = nameInput.value.trim();
     if (!name) {
@@ -375,14 +385,16 @@
     const qty = Number(qtyInput.value) || 0;
     const price = Number(priceInput.value) || 0;
     const barcode = barcodeInput.value.trim();
+    const unit = unitInput.value;
 
-    products.push(mkProduct(name, category, qty, min, price, barcode));
+    products.push(mkProduct(name, category, qty, min, price, barcode, unit));
     nameInput.value = "";
     catInput.value = "";
     minInput.value = "5";
     qtyInput.value = "0";
     priceInput.value = "0";
     barcodeInput.value = "";
+    unitInput.value = "adet";
     save();
     renderAll();
     nameInput.focus();
@@ -398,7 +410,7 @@
   function adjustQty(id, delta) {
     const p = products.find((x) => x.id === id);
     if (!p) return;
-    p.qty = Math.max(0, p.qty + delta);
+    p.qty = Math.max(0, Math.round((p.qty + delta) * 1000) / 1000);
     save();
     renderAll();
     if (activeProductId === id) updateModalContent(p);
@@ -414,6 +426,7 @@
     p.min = Number(document.getElementById("editMin").value) || 0;
     p.price = Number(document.getElementById("editPrice").value) || 0;
     p.barcode = document.getElementById("editBarcode").value.trim();
+    p.unit = document.getElementById("editUnit").value;
     save();
     renderAll();
     updateModalContent(p);
@@ -430,11 +443,12 @@
   // ---------- Rendering: Products ----------
   function productRowHtml(p) {
     const status = getStatus(p);
+    const priceLabel = p.unit === "kg" ? formatTL(p.price) + "/kg" : formatTL(p.price);
     return `
       <div class="product-row" data-id="${p.id}">
         <div class="product-info">
           <p class="product-name">${escapeHtml(p.name)}</p>
-          <p class="product-meta">${escapeHtml(p.category)} · Stok: ${p.qty} · ${formatTL(p.price)}</p>
+          <p class="product-meta">${escapeHtml(p.category)} · Stok: ${formatQty(p)} · ${priceLabel}</p>
         </div>
         <span class="status-badge ${STATUS_CLASS[status]}">${STATUS_LABEL[status]}</span>
       </div>`;
@@ -496,6 +510,7 @@
     document.getElementById("editMin").value = p.min;
     document.getElementById("editPrice").value = p.price;
     document.getElementById("editBarcode").value = p.barcode || "";
+    document.getElementById("editUnit").value = p.unit || "adet";
     updateModalContent(p);
     document.getElementById("detailModal").style.display = "flex";
     renderQrCode(p.id);
@@ -503,7 +518,7 @@
 
   function updateModalContent(p) {
     document.getElementById("modalProductName").textContent = p.name;
-    document.getElementById("modalQty").textContent = p.qty;
+    document.getElementById("modalQty").textContent = formatQty(p);
     const status = getStatus(p);
     const pill = document.getElementById("modalStatus");
     pill.textContent = STATUS_LABEL[status];
@@ -594,11 +609,23 @@
       return;
     }
     stopScan();
-    const action = confirm(`${p.name}\nMevcut stok: ${p.qty}\n\nStok GİRİŞİ için Tamam, ÇIKIŞI için İptal'e bas.`);
-    if (action) {
-      adjustQty(p.id, 1);
+    if (p.unit === "kg") {
+      const action = confirm(`${p.name}\nMevcut stok: ${formatQty(p)}\n\nStok GİRİŞİ için Tamam, ÇIKIŞI için İptal'e bas.`);
+      const input = prompt("Kaç kg?", "");
+      if (input === null) return;
+      const weight = parseFloat(input.replace(",", "."));
+      if (!weight || weight <= 0) {
+        alert("Geçerli bir ağırlık girmedin.");
+        return;
+      }
+      adjustQty(p.id, action ? weight : -weight);
     } else {
-      adjustQty(p.id, -1);
+      const action = confirm(`${p.name}\nMevcut stok: ${p.qty}\n\nStok GİRİŞİ için Tamam, ÇIKIŞI için İptal'e bas.`);
+      if (action) {
+        adjustQty(p.id, 1);
+      } else {
+        adjustQty(p.id, -1);
+      }
     }
   }
 
@@ -645,12 +672,29 @@
       alert("Bu kod kayıtlı bir ürüne ait değil.");
       return;
     }
-    addToCart(p);
-    kasaScanCooldown = true;
-    showKasaScanFeedback(p.name);
-    setTimeout(() => {
-      kasaScanCooldown = false;
-    }, 3000);
+
+    if (p.unit === "kg") {
+      const input = prompt(`${p.name} — kaç kg?`, "");
+      if (input === null) return;
+      const weight = parseFloat(input.replace(",", "."));
+      if (!weight || weight <= 0) {
+        alert("Geçerli bir ağırlık girmedin.");
+        return;
+      }
+      addToCart(p, weight);
+      kasaScanCooldown = true;
+      showKasaScanFeedback(`${p.name} (${weight} kg)`);
+      setTimeout(() => {
+        kasaScanCooldown = false;
+      }, 3000);
+    } else {
+      addToCart(p, 1);
+      kasaScanCooldown = true;
+      showKasaScanFeedback(p.name);
+      setTimeout(() => {
+        kasaScanCooldown = false;
+      }, 3000);
+    }
   }
 
   function showKasaScanFeedback(name) {
@@ -671,13 +715,73 @@
     }, 3000);
   }
 
+  function manualAddToCart(productId) {
+    const p = products.find((x) => x.id === productId);
+    if (!p) return;
+    let amount;
+    if (p.unit === "kg") {
+      const input = prompt(`${p.name} — kaç kg?`, "");
+      if (input === null) return;
+      amount = parseFloat(input.replace(",", "."));
+    } else {
+      const input = prompt(`${p.name} — kaç adet?`, "1");
+      if (input === null) return;
+      amount = parseFloat(input.replace(",", "."));
+    }
+    if (!amount || amount <= 0) {
+      alert("Geçerli bir miktar girmedin.");
+      return;
+    }
+    addToCart(p, amount);
+    document.getElementById("manualAddSearch").value = "";
+    renderManualAddResults();
+  }
+
+  function renderManualAddResults() {
+    const searchEl = document.getElementById("manualAddSearch");
+    const resultsEl = document.getElementById("manualAddResults");
+    if (!searchEl || !resultsEl) return;
+    const q = (searchEl.value || "").toLowerCase().trim();
+    if (!q) {
+      resultsEl.innerHTML = "";
+      return;
+    }
+    const matches = products
+      .filter((p) => p.name.toLowerCase().includes(q) || p.category.toLowerCase().includes(q))
+      .slice(0, 8);
+
+    if (!matches.length) {
+      resultsEl.innerHTML = `<p class="empty-state" style="display:block;">Eşleşen ürün yok.</p>`;
+      return;
+    }
+
+    resultsEl.innerHTML = matches
+      .map((p) => {
+        const priceLabel = p.unit === "kg" ? formatTL(p.price) + "/kg" : formatTL(p.price);
+        return `
+          <div class="product-row manual-add-row" data-id="${p.id}">
+            <div class="product-info">
+              <p class="product-name">${escapeHtml(p.name)}</p>
+              <p class="product-meta">${escapeHtml(p.category)} · Stok: ${formatQty(p)} · ${priceLabel}</p>
+            </div>
+            <button class="btn btn-sm manual-add-btn" data-id="${p.id}">Ekle</button>
+          </div>`;
+      })
+      .join("");
+
+    resultsEl.querySelectorAll(".manual-add-btn").forEach((btn) => {
+      btn.addEventListener("click", () => manualAddToCart(btn.dataset.id));
+    });
+  }
+
   // ---------- Kasa: Sepet ----------
-  function addToCart(p) {
+  function addToCart(p, amount) {
+    amount = amount || 1;
     const existing = cart.find((c) => c.productId === p.id);
     if (existing) {
-      existing.qty += 1;
+      existing.qty = Math.round((existing.qty + amount) * 1000) / 1000;
     } else {
-      cart.push({ productId: p.id, name: p.name, price: p.price, qty: 1 });
+      cart.push({ productId: p.id, name: p.name, price: p.price, qty: amount, unit: p.unit || "adet" });
     }
     renderCart();
   }
@@ -689,6 +793,20 @@
     if (item.qty <= 0) {
       cart = cart.filter((c) => c.productId !== productId);
     }
+    renderCart();
+  }
+
+  function editCartWeight(productId) {
+    const item = cart.find((c) => c.productId === productId);
+    if (!item) return;
+    const input = prompt(`${item.name} — yeni ağırlık (kg)`, item.qty);
+    if (input === null) return;
+    const weight = parseFloat(input.replace(",", "."));
+    if (!weight || weight <= 0) {
+      removeCartItem(productId);
+      return;
+    }
+    item.qty = Math.round(weight * 1000) / 1000;
     renderCart();
   }
 
@@ -704,16 +822,26 @@
 
   function cartRowHtml(item) {
     const lineTotal = item.price * item.qty;
+    const isKg = item.unit === "kg";
+    const qtyDisplay = isKg
+      ? (Math.round(item.qty * 1000) / 1000).toLocaleString("tr-TR", { maximumFractionDigits: 3 }) + " kg"
+      : item.qty;
+    const controlsHtml = isKg
+      ? `
+          <button class="cart-edit-weight-btn" data-id="${item.productId}" aria-label="Ağırlığı düzenle"><i class="ti ti-pencil" aria-hidden="true"></i></button>
+          <span class="cart-qty-value">${qtyDisplay}</span>`
+      : `
+          <button class="cart-qty-btn cart-minus" data-id="${item.productId}" aria-label="Azalt"><i class="ti ti-minus" aria-hidden="true"></i></button>
+          <span class="cart-qty-value">${item.qty}</span>
+          <button class="cart-qty-btn cart-plus" data-id="${item.productId}" aria-label="Arttır"><i class="ti ti-plus" aria-hidden="true"></i></button>`;
     return `
       <div class="cart-row" data-id="${item.productId}">
         <div class="cart-info">
           <p class="cart-name">${escapeHtml(item.name)}</p>
-          <p class="cart-meta">${formatTL(item.price)} / adet</p>
+          <p class="cart-meta">${formatTL(item.price)} / ${isKg ? "kg" : "adet"}</p>
         </div>
         <div class="cart-controls">
-          <button class="cart-qty-btn cart-minus" data-id="${item.productId}" aria-label="Azalt"><i class="ti ti-minus" aria-hidden="true"></i></button>
-          <span class="cart-qty-value">${item.qty}</span>
-          <button class="cart-qty-btn cart-plus" data-id="${item.productId}" aria-label="Arttır"><i class="ti ti-plus" aria-hidden="true"></i></button>
+          ${controlsHtml}
           <span class="cart-line-total">${formatTL(lineTotal)}</span>
           <button class="cart-remove-btn" data-id="${item.productId}" aria-label="Kaldır"><i class="ti ti-x" aria-hidden="true"></i></button>
         </div>
@@ -738,6 +866,9 @@
     });
     list.querySelectorAll(".cart-minus").forEach((btn) => {
       btn.addEventListener("click", () => adjustCartQty(btn.dataset.id, -1));
+    });
+    list.querySelectorAll(".cart-edit-weight-btn").forEach((btn) => {
+      btn.addEventListener("click", () => editCartWeight(btn.dataset.id));
     });
     list.querySelectorAll(".cart-remove-btn").forEach((btn) => {
       btn.addEventListener("click", () => removeCartItem(btn.dataset.id));
@@ -795,7 +926,7 @@
     sales.push({
       id: genId(),
       timestamp: new Date().toISOString(),
-      items: cart.map((c) => ({ name: c.name, qty: c.qty, price: c.price })),
+      items: cart.map((c) => ({ name: c.name, qty: c.qty, price: c.price, unit: c.unit || "adet" })),
       subtotal,
       discount,
       total,
@@ -850,7 +981,9 @@
   function saleRowHtml(sale) {
     const d = new Date(sale.timestamp);
     const timeStr = d.toLocaleString("tr-TR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
-    const itemsSummary = sale.items.map((i) => `${escapeHtml(i.name)} x${i.qty}`).join(", ");
+    const itemsSummary = sale.items
+      .map((i) => `${escapeHtml(i.name)} x${i.unit === "kg" ? i.qty + "kg" : i.qty}`)
+      .join(", ");
     const paymentBadge = sale.paymentType === "veresiye" ? `<span class="sale-payment-badge">Veresiye${sale.customerName ? ": " + escapeHtml(sale.customerName) : ""}</span>` : "";
     return `
       <div class="sale-row">
@@ -989,8 +1122,14 @@
   document.getElementById("detailModal").addEventListener("click", (e) => {
     if (e.target.id === "detailModal") closeModal();
   });
-  document.getElementById("qtyPlusBtn").addEventListener("click", () => adjustQty(activeProductId, 1));
-  document.getElementById("qtyMinusBtn").addEventListener("click", () => adjustQty(activeProductId, -1));
+  document.getElementById("qtyPlusBtn").addEventListener("click", () => {
+    const p = products.find((x) => x.id === activeProductId);
+    adjustQty(activeProductId, p && p.unit === "kg" ? 0.1 : 1);
+  });
+  document.getElementById("qtyMinusBtn").addEventListener("click", () => {
+    const p = products.find((x) => x.id === activeProductId);
+    adjustQty(activeProductId, p && p.unit === "kg" ? -0.1 : -1);
+  });
   document.getElementById("saveEditBtn").addEventListener("click", saveEdit);
   document.getElementById("deleteProductBtn").addEventListener("click", () => {
     if (confirm("Bu ürünü silmek istediğine emin misin?")) deleteProduct(activeProductId);
@@ -1007,6 +1146,7 @@
   document.getElementById("startScanBtn").addEventListener("click", startScan);
   document.getElementById("stopScanBtn").addEventListener("click", stopScan);
 
+  document.getElementById("manualAddSearch").addEventListener("input", renderManualAddResults);
   document.getElementById("startKasaScanBtn").addEventListener("click", startScanKasa);
   document.getElementById("stopKasaScanBtn").addEventListener("click", stopScanKasa);
   document.getElementById("clearCartBtn").addEventListener("click", () => {
