@@ -56,4 +56,3 @@ ara sıra ekran görüntüsü almanı öneririm.
 3. Çıkan QR kodu yazdırıp ürünün rafına/kutusuna yapıştır.
 4. Stok değiştiğinde **QR Tara** sekmesinden kamerayı aç, ilgili QR kodu okut.
 5. Çıkan pencerede stok **girişi** mi **çıkışı** mı olduğunu seç.
-6. 
