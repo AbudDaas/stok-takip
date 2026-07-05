@@ -210,6 +210,7 @@ input:focus{outline:2px solid var(--navy-light);outline-offset:1px;}
   display:flex;
   padding:6px 0 max(6px, env(safe-area-inset-bottom));
   z-index:10;
+  overflow-x:auto;
 }
 .nav-btn{
   flex:1;
@@ -223,7 +224,7 @@ input:focus{outline:2px solid var(--navy-light);outline-offset:1px;}
   font-size:10px;
   color:var(--text-muted);
   cursor:pointer;
-  min-width:0;
+  min-width:64px;
 }
 .nav-btn span{
   white-space:nowrap;
@@ -392,3 +393,188 @@ input:focus{outline:2px solid var(--navy-light);outline-offset:1px;}
   gap:6px;
 }
 .scan-feedback.show{display:flex;}
+
+/* Kasa: indirim, ödeme tipi */
+.cart-subtotal-row{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  font-size:13px;
+  color:var(--text-secondary);
+  padding-top:10px;
+}
+.payment-type-row{
+  display:flex;
+  gap:8px;
+  margin:12px 0;
+}
+.payment-type-btn{
+  flex:1;
+  height:40px;
+  border:1px solid var(--border);
+  background:#fff;
+  border-radius:8px;
+  font-size:13px;
+  font-weight:600;
+  color:var(--text-secondary);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:6px;
+  cursor:pointer;
+}
+.payment-type-btn.active{
+  background:var(--navy);
+  border-color:var(--navy);
+  color:#fff;
+}
+#veresiyeCustomerRow select{
+  width:100%;
+  height:40px;
+  border:1px solid var(--border);
+  border-radius:8px;
+  padding:0 12px;
+  font-size:14px;
+  background:#fff;
+  color:var(--text-primary);
+}
+
+/* Satışlar: dönem filtresi */
+.period-filter{
+  display:flex;
+  gap:6px;
+  margin-bottom:14px;
+  overflow-x:auto;
+}
+.period-btn{
+  flex-shrink:0;
+  padding:6px 14px;
+  border-radius:999px;
+  border:1px solid var(--border);
+  background:#fff;
+  font-size:12px;
+  font-weight:600;
+  color:var(--text-secondary);
+  cursor:pointer;
+}
+.period-btn.active{
+  background:var(--navy);
+  border-color:var(--navy);
+  color:#fff;
+}
+
+.sale-row-with-delete{
+  display:flex;
+  align-items:flex-start;
+  gap:8px;
+}
+.sale-row-with-delete .sale-row{flex:1;}
+.sale-delete-btn{
+  background:none;
+  border:none;
+  color:var(--red);
+  font-size:16px;
+  cursor:pointer;
+  padding:8px;
+  flex-shrink:0;
+}
+.sale-payment-badge{
+  display:inline-block;
+  font-size:11px;
+  font-weight:700;
+  padding:2px 8px;
+  border-radius:999px;
+  margin-left:6px;
+}
+.sale-payment-nakit{background:var(--green-bg);color:var(--green-text);}
+.sale-payment-veresiye{background:var(--amber-bg);color:var(--amber-text);}
+
+.sale-row-bottom{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  margin-top:6px;
+}
+.sale-cancel-btn{
+  background:none;
+  border:none;
+  color:var(--red);
+  font-size:12px;
+  font-weight:600;
+  cursor:pointer;
+  padding:4px 6px;
+  display:flex;
+  align-items:center;
+  gap:4px;
+  margin-left:auto;
+}
+
+.top-product-row{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:var(--radius);
+  padding:10px 14px;
+}
+.top-product-rank{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  width:22px;height:22px;
+  border-radius:50%;
+  background:var(--navy);
+  color:#fff;
+  font-size:11px;
+  font-weight:700;
+  margin-right:8px;
+}
+
+/* Veresiye (müşteri) */
+.customer-row{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:var(--radius);
+  padding:10px 14px;
+  cursor:pointer;
+}
+.customer-info{min-width:0;}
+.customer-name{margin:0;font-size:14px;font-weight:600;}
+.customer-phone{margin:2px 0 0;font-size:12px;color:var(--text-muted);}
+.customer-debt{
+  font-size:14px;
+  font-weight:700;
+  flex-shrink:0;
+}
+.customer-debt.has-debt{color:var(--red);}
+.customer-debt.no-debt{color:var(--green-text);}
+
+.debt-display{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  background:var(--bg);
+  border-radius:var(--radius);
+  padding:14px;
+  font-size:14px;
+  font-weight:600;
+  margin-bottom:4px;
+}
+.debt-amount{font-size:20px;color:var(--red);}
+
+.history-row{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  font-size:13px;
+  padding:8px 0;
+  border-bottom:1px solid var(--border);
+}
+.history-row:last-child{border-bottom:none;}
+.history-amount-debt{color:var(--red);font-weight:600;}
+.history-amount-payment{color:var(--green-text);font-weight:600;}
