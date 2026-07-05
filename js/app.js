@@ -4,8 +4,13 @@
   const STORAGE_KEY = "bakkal_urunler_v2";
   let products = [];
   let sales = [];
+  let customers = [];
+  let payments = [];
   let cart = []; // { productId, name, price, qty }
   let activeProductId = null;
+  let activeCustomerId = null;
+  let selectedPaymentType = "nakit";
+  let currentSalesPeriod = "today";
 
   let html5QrCode = null;
   let scanning = false;
@@ -43,11 +48,20 @@
             const data = snap.data();
             products = data.products;
             sales = data.sales || [];
+            customers = data.customers || [];
+            payments = data.payments || [];
           } else {
-            const initial = { products: products.length ? products : seedData(), sales: sales || [] };
+            const initial = {
+              products: products.length ? products : seedData(),
+              sales: sales || [],
+              customers: customers || [],
+              payments: payments || []
+            };
             docRef.set(initial);
             products = initial.products;
             sales = initial.sales;
+            customers = initial.customers;
+            payments = initial.payments;
           }
           setSyncStatus("connected");
           renderAll();
@@ -89,12 +103,18 @@
       const parsed = raw ? JSON.parse(raw) : null;
       products = (parsed && parsed.products) || seedData();
       sales = (parsed && parsed.sales) || [];
+      customers = (parsed && parsed.customers) || [];
+      payments = (parsed && parsed.payments) || [];
     } catch (e) {
       products = seedData();
       sales = [];
+      customers = [];
+      payments = [];
     }
     if (!Array.isArray(products) || !products.length) products = seedData();
     if (!Array.isArray(sales)) sales = [];
+    if (!Array.isArray(customers)) customers = [];
+    if (!Array.isArray(payments)) payments = [];
     renderAll();
     initCloud();
 
@@ -114,13 +134,13 @@
 
   function save() {
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify({ products, sales }));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({ products, sales, customers, payments }));
     } catch (e) {
       console.error("Yerel kaydetme hatası", e);
     }
     if (cloudEnabled && docRef) {
       suppressNextSnapshot = true;
-      docRef.set({ products, sales }).catch((e) => {
+      docRef.set({ products, sales, customers, payments }).catch((e) => {
         console.error("Bulut kaydetme hatası", e);
         setSyncStatus("error");
       });
@@ -150,6 +170,172 @@
 
   function genId() {
     return "p" + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+  }
+
+  // ---------- Müşteri (Veresiye) ----------
+  function mkCustomer(name, phone) {
+    return { id: genId(), name, phone: phone || "" };
+  }
+
+  function addCustomer() {
+    const nameInput = document.getElementById("newCustomerName");
+    const phoneInput = document.getElementById("newCustomerPhone");
+    const name = nameInput.value.trim();
+    if (!name) {
+      nameInput.focus();
+      return;
+    }
+    customers.push(mkCustomer(name, phoneInput.value.trim()));
+    nameInput.value = "";
+    phoneInput.value = "";
+    save();
+    renderCustomers();
+  }
+
+  function deleteCustomer(id) {
+    const debt = getCustomerDebt(id);
+    if (debt > 0 && !confirm(`Bu müşterinin ${formatTL(debt)} bakiyesi var. Yine de silmek istediğine emin misin?`)) {
+      return;
+    }
+    customers = customers.filter((c) => c.id !== id);
+    closeCustomerModal();
+    save();
+    renderCustomers();
+  }
+
+  function saveCustomerEdit() {
+    const c = customers.find((x) => x.id === activeCustomerId);
+    if (!c) return;
+    const name = document.getElementById("editCustomerName").value.trim();
+    if (!name) return;
+    c.name = name;
+    c.phone = document.getElementById("editCustomerPhone").value.trim();
+    save();
+    renderCustomers();
+    openCustomerModal(c.id);
+  }
+
+  function getCustomerDebt(customerId) {
+    const debtFromSales = sales
+      .filter((s) => s.paymentType === "veresiye" && s.customerId === customerId)
+      .reduce((sum, s) => sum + s.total, 0);
+    const paid = payments.filter((p) => p.customerId === customerId).reduce((sum, p) => sum + p.amount, 0);
+    return Math.max(0, debtFromSales - paid);
+  }
+
+  function recordPayment() {
+    const c = customers.find((x) => x.id === activeCustomerId);
+    if (!c) return;
+    const input = document.getElementById("paymentAmountInput");
+    const amount = Number(input.value);
+    if (!amount || amount <= 0) {
+      input.focus();
+      return;
+    }
+    payments.push({
+      id: genId(),
+      customerId: c.id,
+      customerName: c.name,
+      amount,
+      timestamp: new Date().toISOString()
+    });
+    input.value = "";
+    save();
+    renderCustomers();
+    openCustomerModal(c.id);
+  }
+
+  function customerRowHtml(c) {
+    const debt = getCustomerDebt(c.id);
+    const debtClass = debt > 0 ? "has-debt" : "no-debt";
+    return `
+      <div class="customer-row" data-id="${c.id}">
+        <div class="customer-info">
+          <p class="customer-name">${escapeHtml(c.name)}</p>
+          <p class="customer-phone">${escapeHtml(c.phone || "—")}</p>
+        </div>
+        <span class="customer-debt ${debtClass}">${formatTL(debt)}</span>
+      </div>`;
+  }
+
+  function renderCustomers() {
+    const list = document.getElementById("customerList");
+    const empty = document.getElementById("customerEmptyState");
+    if (!list) return;
+
+    if (!customers.length) {
+      list.innerHTML = "";
+      empty.style.display = "block";
+    } else {
+      empty.style.display = "none";
+      list.innerHTML = customers.map(customerRowHtml).join("");
+    }
+    list.querySelectorAll(".customer-row").forEach((row) => {
+      row.addEventListener("click", () => openCustomerModal(row.dataset.id));
+    });
+
+    const totalDebt = customers.reduce((sum, c) => sum + getCustomerDebt(c.id), 0);
+    document.getElementById("statTotalDebt").textContent = formatTL(totalDebt);
+    document.getElementById("statCustomerCount").textContent = customers.length;
+
+    populateVeresiyeCustomerSelect();
+  }
+
+  function populateVeresiyeCustomerSelect() {
+    const select = document.getElementById("veresiyeCustomerSelect");
+    if (!select) return;
+    const prevValue = select.value;
+    select.innerHTML = customers.map((c) => `<option value="${c.id}">${escapeHtml(c.name)}</option>`).join("");
+    if (prevValue) select.value = prevValue;
+  }
+
+  function openCustomerModal(id) {
+    const c = customers.find((x) => x.id === id);
+    if (!c) return;
+    activeCustomerId = id;
+    document.getElementById("customerModalName").textContent = c.name;
+    document.getElementById("customerModalDebt").textContent = formatTL(getCustomerDebt(id));
+    document.getElementById("editCustomerName").value = c.name;
+    document.getElementById("editCustomerPhone").value = c.phone || "";
+    document.getElementById("paymentAmountInput").value = "";
+    renderCustomerHistory(id);
+    document.getElementById("customerModal").style.display = "flex";
+  }
+
+  function closeCustomerModal() {
+    document.getElementById("customerModal").style.display = "none";
+    activeCustomerId = null;
+  }
+
+  function renderCustomerHistory(customerId) {
+    const list = document.getElementById("customerHistoryList");
+    if (!list) return;
+    const debtEntries = sales
+      .filter((s) => s.paymentType === "veresiye" && s.customerId === customerId)
+      .map((s) => ({ type: "debt", timestamp: s.timestamp, amount: s.total, label: s.items.map((i) => `${i.name} x${i.qty}`).join(", ") }));
+    const paymentEntries = payments
+      .filter((p) => p.customerId === customerId)
+      .map((p) => ({ type: "payment", timestamp: p.timestamp, amount: p.amount, label: "Ödeme alındı" }));
+    const combined = [...debtEntries, ...paymentEntries].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+    if (!combined.length) {
+      list.innerHTML = `<p class="empty-state" style="display:block;">Henüz işlem yok.</p>`;
+      return;
+    }
+
+    list.innerHTML = combined
+      .map((e) => {
+        const d = new Date(e.timestamp);
+        const timeStr = d.toLocaleString("tr-TR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
+        const amountClass = e.type === "debt" ? "history-amount-debt" : "history-amount-payment";
+        const sign = e.type === "debt" ? "+" : "-";
+        return `
+          <div class="history-row">
+            <span>${timeStr} · ${escapeHtml(e.label)}</span>
+            <span class="${amountClass}">${sign}${formatTL(e.amount)}</span>
+          </div>`;
+      })
+      .join("");
   }
 
   // ---------- Status helpers ----------
@@ -297,6 +483,7 @@
 
     renderCart();
     renderSales();
+    renderCustomers();
   }
 
   // ---------- Modal ----------
@@ -556,8 +743,20 @@
       btn.addEventListener("click", () => removeCartItem(btn.dataset.id));
     });
 
-    const total = cart.reduce((sum, c) => sum + c.price * c.qty, 0);
+    const subtotal = cart.reduce((sum, c) => sum + c.price * c.qty, 0);
+    const discountInput = document.getElementById("cartDiscount");
+    const discount = Math.min(Number(discountInput.value) || 0, subtotal);
+    const total = Math.max(0, subtotal - discount);
+
+    document.getElementById("cartSubtotal").textContent = formatTL(subtotal);
     document.getElementById("cartTotal").textContent = formatTL(total);
+  }
+
+  function setPaymentType(type) {
+    selectedPaymentType = type;
+    document.getElementById("payNakitBtn").classList.toggle("active", type === "nakit");
+    document.getElementById("payVeresiyeBtn").classList.toggle("active", type === "veresiye");
+    document.getElementById("veresiyeCustomerRow").style.display = type === "veresiye" ? "block" : "none";
   }
 
   function completeSale() {
@@ -565,7 +764,28 @@
       alert("Sepet boş.");
       return;
     }
-    const total = cart.reduce((sum, c) => sum + c.price * c.qty, 0);
+
+    let customerId = null;
+    let customerName = null;
+    if (selectedPaymentType === "veresiye") {
+      const select = document.getElementById("veresiyeCustomerSelect");
+      if (!customers.length) {
+        alert("Önce Veresiye sekmesinden bir müşteri eklemen gerekiyor.");
+        return;
+      }
+      customerId = select.value;
+      const c = customers.find((x) => x.id === customerId);
+      if (!c) {
+        alert("Lütfen bir müşteri seç.");
+        return;
+      }
+      customerName = c.name;
+    }
+
+    const subtotal = cart.reduce((sum, c) => sum + c.price * c.qty, 0);
+    const discountInput = document.getElementById("cartDiscount");
+    const discount = Math.min(Number(discountInput.value) || 0, subtotal);
+    const total = Math.max(0, subtotal - discount);
 
     cart.forEach((item) => {
       const p = products.find((x) => x.id === item.productId);
@@ -576,26 +796,62 @@
       id: genId(),
       timestamp: new Date().toISOString(),
       items: cart.map((c) => ({ name: c.name, qty: c.qty, price: c.price })),
-      total
+      subtotal,
+      discount,
+      total,
+      paymentType: selectedPaymentType,
+      customerId,
+      customerName
     });
 
     cart = [];
+    discountInput.value = "0";
+    setPaymentType("nakit");
     save();
     renderAll();
-    alert(`Satış tamamlandı: ${formatTL(total)}`);
+    alert(`Satış tamamlandı: ${formatTL(total)}${customerName ? " (Veresiye: " + customerName + ")" : ""}`);
   }
 
-  // ---------- Satışlar (geçmiş) ----------
-  function isToday(isoString) {
+  function cancelSale(saleId) {
+    const sale = sales.find((s) => s.id === saleId);
+    if (!sale) return;
+    if (!confirm(`Bu satış iptal edilsin mi?\n${formatTL(sale.total)} tutarındaki satış silinecek ve ürünler stoğa geri eklenecek.`)) {
+      return;
+    }
+    sale.items.forEach((item) => {
+      const p = products.find((x) => x.name === item.name);
+      if (p) p.qty += item.qty;
+    });
+    sales = sales.filter((s) => s.id !== saleId);
+    save();
+    renderAll();
+  }
+
+  // ---------- Satışlar (geçmiş + rapor) ----------
+  function isInPeriod(isoString, period) {
     const d = new Date(isoString);
     const now = new Date();
-    return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth() && d.getDate() === now.getDate();
+    if (period === "today") {
+      return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth() && d.getDate() === now.getDate();
+    }
+    if (period === "week") {
+      const dayOfWeek = (now.getDay() + 6) % 7; // Pazartesi=0
+      const monday = new Date(now);
+      monday.setHours(0, 0, 0, 0);
+      monday.setDate(now.getDate() - dayOfWeek);
+      return d >= monday;
+    }
+    if (period === "month") {
+      return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
+    }
+    return true; // 'all'
   }
 
   function saleRowHtml(sale) {
     const d = new Date(sale.timestamp);
     const timeStr = d.toLocaleString("tr-TR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
     const itemsSummary = sale.items.map((i) => `${escapeHtml(i.name)} x${i.qty}`).join(", ");
+    const paymentBadge = sale.paymentType === "veresiye" ? `<span class="sale-payment-badge">Veresiye${sale.customerName ? ": " + escapeHtml(sale.customerName) : ""}</span>` : "";
     return `
       <div class="sale-row">
         <div class="sale-row-top">
@@ -603,15 +859,35 @@
           <span class="sale-amount">${formatTL(sale.total)}</span>
         </div>
         <p class="sale-items">${itemsSummary}</p>
+        <div class="sale-row-bottom">
+          ${paymentBadge}
+          <button class="sale-cancel-btn" data-id="${sale.id}">
+            <i class="ti ti-arrow-back-up" aria-hidden="true"></i> İptal et
+          </button>
+        </div>
+      </div>`;
+  }
+
+  function topProductRowHtml(item, rank) {
+    return `
+      <div class="product-row">
+        <div class="product-info">
+          <p class="product-name">${rank}. ${escapeHtml(item.name)}</p>
+          <p class="product-meta">${item.qty} adet satıldı</p>
+        </div>
+        <span class="sale-amount">${formatTL(item.revenue)}</span>
       </div>`;
   }
 
   function renderSales() {
     const list = document.getElementById("salesList");
     const empty = document.getElementById("salesEmptyState");
+    const topList = document.getElementById("topProductsList");
+    const topEmpty = document.getElementById("topProductsEmptyState");
     if (!list) return;
 
-    const sorted = [...sales].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+    const periodSales = sales.filter((s) => isInPeriod(s.timestamp, currentSalesPeriod));
+    const sorted = [...periodSales].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
 
     if (!sorted.length) {
       list.innerHTML = "";
@@ -619,12 +895,35 @@
     } else {
       empty.style.display = "none";
       list.innerHTML = sorted.map(saleRowHtml).join("");
+      list.querySelectorAll(".sale-cancel-btn").forEach((btn) => {
+        btn.addEventListener("click", () => cancelSale(btn.dataset.id));
+      });
     }
 
-    const todaySales = sales.filter((s) => isToday(s.timestamp));
-    const todayTotal = todaySales.reduce((sum, s) => sum + s.total, 0);
-    document.getElementById("statTodayTotal").textContent = formatTL(todayTotal);
-    document.getElementById("statTodayCount").textContent = todaySales.length;
+    // En çok satan ürünler
+    const productTotals = {};
+    periodSales.forEach((s) => {
+      s.items.forEach((i) => {
+        if (!productTotals[i.name]) productTotals[i.name] = { name: i.name, qty: 0, revenue: 0 };
+        productTotals[i.name].qty += i.qty;
+        productTotals[i.name].revenue += i.qty * i.price;
+      });
+    });
+    const topProducts = Object.values(productTotals)
+      .sort((a, b) => b.qty - a.qty)
+      .slice(0, 5);
+
+    if (!topProducts.length) {
+      topList.innerHTML = "";
+      topEmpty.style.display = "block";
+    } else {
+      topEmpty.style.display = "none";
+      topList.innerHTML = topProducts.map((item, i) => topProductRowHtml(item, i + 1)).join("");
+    }
+
+    const periodTotal = periodSales.reduce((sum, s) => sum + s.total, 0);
+    document.getElementById("statPeriodTotal").textContent = formatTL(periodTotal);
+    document.getElementById("statPeriodCount").textContent = periodSales.length;
   }
 
   // ---------- Hızlı barkod tarama (ürün ekle/düzenle formları için) ----------
@@ -714,6 +1013,28 @@
     if (!cart.length || confirm("Sepeti boşaltmak istediğine emin misin?")) clearCart();
   });
   document.getElementById("completeSaleBtn").addEventListener("click", completeSale);
+  document.getElementById("cartDiscount").addEventListener("input", renderCart);
+  document.getElementById("payNakitBtn").addEventListener("click", () => setPaymentType("nakit"));
+  document.getElementById("payVeresiyeBtn").addEventListener("click", () => setPaymentType("veresiye"));
+
+  document.querySelectorAll(".period-btn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      currentSalesPeriod = btn.dataset.period;
+      document.querySelectorAll(".period-btn").forEach((b) => b.classList.toggle("active", b === btn));
+      renderSales();
+    });
+  });
+
+  document.getElementById("addCustomerBtn").addEventListener("click", addCustomer);
+  document.getElementById("closeCustomerModalBtn").addEventListener("click", closeCustomerModal);
+  document.getElementById("customerModal").addEventListener("click", (e) => {
+    if (e.target.id === "customerModal") closeCustomerModal();
+  });
+  document.getElementById("recordPaymentBtn").addEventListener("click", recordPayment);
+  document.getElementById("saveCustomerEditBtn").addEventListener("click", saveCustomerEdit);
+  document.getElementById("deleteCustomerBtn").addEventListener("click", () => {
+    if (confirm("Bu müşteriyi silmek istediğine emin misin?")) deleteCustomer(activeCustomerId);
+  });
 
   document.querySelectorAll(".nav-btn").forEach((btn) => {
     btn.addEventListener("click", () => switchTab(btn.dataset.tab));
