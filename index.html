@@ -47,11 +47,18 @@
         </div>
         <div class="form-row two-col">
           <input id="newCategory" type="text" placeholder="Kategori, örn. içecekler" />
-          <input id="newMin" type="number" min="0" placeholder="Min. stok" value="5" />
+          <input id="newMin" type="number" min="0" step="any" placeholder="Min. stok" value="5" />
         </div>
         <div class="form-row two-col">
-          <input id="newQty" type="number" min="0" placeholder="Başlangıç stok" value="0" />
+          <input id="newQty" type="number" min="0" step="any" placeholder="Başlangıç stok" value="0" />
           <input id="newPrice" type="number" min="0" step="0.01" placeholder="Fiyat (₺)" value="0" />
+        </div>
+        <div class="form-row">
+          <label class="field-label">Satış birimi</label>
+          <select id="newUnit">
+            <option value="adet">Adet (tam sayı)</option>
+            <option value="kg">Kg (tartılı / açık ürün)</option>
+          </select>
         </div>
         <div class="form-row barcode-row">
           <input id="newBarcode" type="text" placeholder="Barkod (opsiyonel)" />
@@ -105,6 +112,14 @@
         <button id="stopKasaScanBtn" class="btn btn-block" style="display:none;">
           <i class="ti ti-player-stop" aria-hidden="true"></i> Taramayı durdur
         </button>
+      </div>
+
+      <div class="card">
+        <p class="card-title">Ürün seç ve ekle (QR'sız)</p>
+        <div class="form-row">
+          <input id="manualAddSearch" type="text" placeholder="Ürün ara..." />
+        </div>
+        <div id="manualAddResults" class="list"></div>
       </div>
 
       <div class="card">
@@ -255,11 +270,16 @@
             </div>
             <div>
               <label class="field-label">Min. stok</label>
-              <input id="editMin" type="number" min="0" />
+              <input id="editMin" type="number" min="0" step="any" />
             </div>
           </div>
           <label class="field-label">Fiyat (₺)</label>
           <input id="editPrice" type="number" min="0" step="0.01" />
+          <label class="field-label">Satış birimi</label>
+          <select id="editUnit">
+            <option value="adet">Adet (tam sayı)</option>
+            <option value="kg">Kg (tartılı / açık ürün)</option>
+          </select>
           <label class="field-label">Barkod</label>
           <div class="form-row barcode-row">
             <input id="editBarcode" type="text" placeholder="Barkod (opsiyonel)" />
