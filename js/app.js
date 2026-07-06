@@ -20,61 +20,92 @@
   let kasaScanCooldown = false;
 
   let db = null;
+  let auth = null;
   let docRef = null;
   let cloudEnabled = false;
   let suppressNextSnapshot = false;
+  let firestoreUnsubscribe = null;
+  let currentUser = null;
+  let authMode = "login";
 
   // ---------- Firebase setup ----------
-  function initCloud() {
+  function initFirebaseIfConfigured() {
     try {
-      if (typeof firebaseConfig === "undefined") return;
-      if (!firebaseConfig.apiKey || firebaseConfig.apiKey.indexOf("BURAYA") === 0) {
-        setSyncStatus("local");
-        return;
-      }
+      if (typeof firebaseConfig === "undefined") return false;
+      if (!firebaseConfig.apiKey || firebaseConfig.apiKey.indexOf("BURAYA") === 0) return false;
       firebase.initializeApp(firebaseConfig);
       db = firebase.firestore();
-      docRef = db.collection("bakkal").doc("veri");
+      auth = firebase.auth();
       cloudEnabled = true;
-      setSyncStatus("connecting");
-
-      docRef.onSnapshot(
-        (snap) => {
-          if (suppressNextSnapshot) {
-            suppressNextSnapshot = false;
-            return;
-          }
-          if (snap.exists && snap.data().products) {
-            const data = snap.data();
-            products = data.products;
-            sales = data.sales || [];
-            customers = data.customers || [];
-            payments = data.payments || [];
-          } else {
-            const initial = {
-              products: products.length ? products : seedData(),
-              sales: sales || [],
-              customers: customers || [],
-              payments: payments || []
-            };
-            docRef.set(initial);
-            products = initial.products;
-            sales = initial.sales;
-            customers = initial.customers;
-            payments = initial.payments;
-          }
-          setSyncStatus("connected");
-          renderAll();
-        },
-        (err) => {
-          console.error("Firestore hata", err);
-          setSyncStatus("error");
-        }
-      );
+      return true;
     } catch (e) {
       console.error("Firebase başlatma hatası", e);
+      return false;
+    }
+  }
+
+  function showApp(show) {
+    document.getElementById("app").style.display = show ? "block" : "none";
+    document.querySelector(".bottom-nav").style.display = show ? "flex" : "none";
+  }
+
+  function handleAuthChange(user) {
+    if (firestoreUnsubscribe) {
+      firestoreUnsubscribe();
+      firestoreUnsubscribe = null;
+    }
+    if (user) {
+      currentUser = user;
+      document.getElementById("authScreen").style.display = "none";
+      document.getElementById("logoutBtn").style.display = "flex";
+      showApp(true);
+      docRef = db.collection("isletmeler").doc(user.uid);
+      setSyncStatus("connecting");
+      attachFirestoreListener();
+    } else {
+      currentUser = null;
+      docRef = null;
+      products = [];
+      sales = [];
+      customers = [];
+      payments = [];
+      cart = [];
+      document.getElementById("authScreen").style.display = "flex";
+      document.getElementById("logoutBtn").style.display = "none";
+      showApp(false);
       setSyncStatus("local");
     }
+  }
+
+  function attachFirestoreListener() {
+    firestoreUnsubscribe = docRef.onSnapshot(
+      (snap) => {
+        if (suppressNextSnapshot) {
+          suppressNextSnapshot = false;
+          return;
+        }
+        if (snap.exists && snap.data().products) {
+          const data = snap.data();
+          products = data.products;
+          sales = data.sales || [];
+          customers = data.customers || [];
+          payments = data.payments || [];
+        } else {
+          const initial = { products: seedData(), sales: [], customers: [], payments: [] };
+          docRef.set(initial);
+          products = initial.products;
+          sales = initial.sales;
+          customers = initial.customers;
+          payments = initial.payments;
+        }
+        setSyncStatus("connected");
+        renderAll();
+      },
+      (err) => {
+        console.error("Firestore hata", err);
+        setSyncStatus("error");
+      }
+    );
   }
 
   function setSyncStatus(state) {
@@ -96,27 +127,84 @@
     }
   }
 
+  // ---------- Giriş / Kayıt ----------
+  function switchAuthTab(mode) {
+    authMode = mode;
+    document.getElementById("authTabLogin").classList.toggle("active", mode === "login");
+    document.getElementById("authTabSignup").classList.toggle("active", mode === "signup");
+    document.getElementById("authSubmitBtn").textContent = mode === "login" ? "Giriş Yap" : "Kayıt Ol";
+    document.getElementById("authError").style.display = "none";
+  }
+
+  function showAuthError(message) {
+    const el = document.getElementById("authError");
+    el.textContent = message;
+    el.style.display = "block";
+  }
+
+  function mapAuthError(code) {
+    const messages = {
+      "auth/invalid-email": "Geçersiz e-posta adresi.",
+      "auth/user-not-found": "Bu e-posta ile kayıtlı bir hesap bulunamadı.",
+      "auth/wrong-password": "Şifre hatalı.",
+      "auth/email-already-in-use": "Bu e-posta zaten kayıtlı, giriş yapmayı dene.",
+      "auth/weak-password": "Şifre en az 6 karakter olmalı.",
+      "auth/invalid-credential": "E-posta veya şifre hatalı.",
+      "auth/too-many-requests": "Çok fazla deneme yapıldı, biraz sonra tekrar dene."
+    };
+    return messages[code] || "Bir hata oluştu, tekrar dene.";
+  }
+
+  function submitAuth() {
+    const email = document.getElementById("authEmail").value.trim();
+    const password = document.getElementById("authPassword").value;
+    if (!email || !password) {
+      showAuthError("E-posta ve şifre gerekli.");
+      return;
+    }
+    document.getElementById("authError").style.display = "none";
+    if (authMode === "login") {
+      auth.signInWithEmailAndPassword(email, password).catch((e) => showAuthError(mapAuthError(e.code)));
+    } else {
+      auth.createUserWithEmailAndPassword(email, password).catch((e) => showAuthError(mapAuthError(e.code)));
+    }
+  }
+
+  function logout() {
+    if (confirm("Çıkış yapmak istediğine emin misin?")) {
+      auth.signOut();
+    }
+  }
+
   // ---------- Persistence ----------
   function load() {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      const parsed = raw ? JSON.parse(raw) : null;
-      products = (parsed && parsed.products) || seedData();
-      sales = (parsed && parsed.sales) || [];
-      customers = (parsed && parsed.customers) || [];
-      payments = (parsed && parsed.payments) || [];
-    } catch (e) {
-      products = seedData();
-      sales = [];
-      customers = [];
-      payments = [];
+    const cloudReady = initFirebaseIfConfigured();
+
+    if (!cloudReady) {
+      // Yerel mod: Firebase ayarlanmamış, tek cihazlık kullanım
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        const parsed = raw ? JSON.parse(raw) : null;
+        products = (parsed && parsed.products) || seedData();
+        sales = (parsed && parsed.sales) || [];
+        customers = (parsed && parsed.customers) || [];
+        payments = (parsed && parsed.payments) || [];
+      } catch (e) {
+        products = seedData();
+        sales = [];
+        customers = [];
+        payments = [];
+      }
+      if (!Array.isArray(products) || !products.length) products = seedData();
+      if (!Array.isArray(sales)) sales = [];
+      if (!Array.isArray(customers)) customers = [];
+      if (!Array.isArray(payments)) payments = [];
+      renderAll();
+    } else {
+      // Bulut modu: giriş yapılana kadar uygulama gizli
+      showApp(false);
+      auth.onAuthStateChanged(handleAuthChange);
     }
-    if (!Array.isArray(products) || !products.length) products = seedData();
-    if (!Array.isArray(sales)) sales = [];
-    if (!Array.isArray(customers)) customers = [];
-    if (!Array.isArray(payments)) payments = [];
-    renderAll();
-    initCloud();
 
     // Service worker tamamen kaldırıldı (eski önbellek sorunlarına neden oluyordu).
     // Varsa önceden kayıtlı service worker'ları ve önbellekleri temizle.
@@ -133,17 +221,19 @@
   }
 
   function save() {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify({ products, sales, customers, payments }));
-    } catch (e) {
-      console.error("Yerel kaydetme hatası", e);
-    }
-    if (cloudEnabled && docRef) {
+    if (cloudEnabled) {
+      if (!docRef) return;
       suppressNextSnapshot = true;
       docRef.set({ products, sales, customers, payments }).catch((e) => {
         console.error("Bulut kaydetme hatası", e);
         setSyncStatus("error");
       });
+    } else {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify({ products, sales, customers, payments }));
+      } catch (e) {
+        console.error("Yerel kaydetme hatası", e);
+      }
     }
   }
 
@@ -1179,6 +1269,14 @@
   document.querySelectorAll(".nav-btn").forEach((btn) => {
     btn.addEventListener("click", () => switchTab(btn.dataset.tab));
   });
+
+  document.getElementById("authTabLogin").addEventListener("click", () => switchAuthTab("login"));
+  document.getElementById("authTabSignup").addEventListener("click", () => switchAuthTab("signup"));
+  document.getElementById("authSubmitBtn").addEventListener("click", submitAuth);
+  document.getElementById("authPassword").addEventListener("keydown", (e) => {
+    if (e.key === "Enter") submitAuth();
+  });
+  document.getElementById("logoutBtn").addEventListener("click", logout);
 
   load();
 })();
