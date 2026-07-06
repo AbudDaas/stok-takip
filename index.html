@@ -17,11 +17,39 @@
       <i class="ti ti-building-store" aria-hidden="true"></i>
       <span>Bakkal Stok Takip</span>
     </div>
-    <div id="syncBadge" class="sync-badge" title="Senkronizasyon durumu">
-      <i class="ti ti-cloud-off" id="syncIcon" aria-hidden="true"></i>
-      <span id="syncText">Yerel</span>
+    <div class="topbar-right">
+      <div id="syncBadge" class="sync-badge" title="Senkronizasyon durumu">
+        <i class="ti ti-cloud-off" id="syncIcon" aria-hidden="true"></i>
+        <span id="syncText">Yerel</span>
+      </div>
+      <button id="logoutBtn" class="icon-btn-topbar" title="Çıkış yap" style="display:none;">
+        <i class="ti ti-logout" aria-hidden="true"></i>
+      </button>
     </div>
   </header>
+
+  <!-- GİRİŞ / KAYIT EKRANI (yalnızca bulut senkronizasyonu ayarlıysa gösterilir) -->
+  <div id="authScreen" class="auth-screen" style="display:none;">
+    <div class="auth-box">
+      <div class="auth-logo">
+        <i class="ti ti-building-store" aria-hidden="true"></i>
+        <span>Bakkal Stok Takip</span>
+      </div>
+      <div class="auth-tabs">
+        <button id="authTabLogin" class="auth-tab active">Giriş Yap</button>
+        <button id="authTabSignup" class="auth-tab">Kayıt Ol</button>
+      </div>
+      <p id="authError" class="auth-error" style="display:none;"></p>
+      <div class="form-row">
+        <input id="authEmail" type="email" placeholder="E-posta" autocomplete="username" />
+      </div>
+      <div class="form-row">
+        <input id="authPassword" type="password" placeholder="Şifre (en az 6 karakter)" autocomplete="current-password" />
+      </div>
+      <button id="authSubmitBtn" class="btn btn-primary btn-block">Giriş Yap</button>
+      <p class="auth-hint">İşletmenize özel bir hesap oluşturun. Her işletmenin verisi diğerlerinden tamamen ayrı ve gizlidir.</p>
+    </div>
+  </div>
 
   <main id="app">
 
@@ -385,6 +413,7 @@
   <!-- Firebase (bulut senkronizasyonu) -->
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
   <script src="js/firebase-config.js"></script>
 
   <script src="js/app.js"></script>
