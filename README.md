@@ -102,12 +102,22 @@ görünür (ve tam tersi). Google'ın ücretsiz **Firebase** servisini kullanıy
    verisini görür/değiştirir — farklı işletmelerin verileri birbirinden tamamen izole
    olur.
 
-### 7) Kontrol et
-Siteyi yenile. Karşına bir **Giriş Yap / Kayıt Ol** ekranı çıkmalı. "Kayıt Ol"
-sekmesinden bir e-posta ve şifre ile hesap oluştur, ardından telefonunda da aynı
-hesapla giriş yap — üst çubukta **"Senkron"** yazısını ve az önce eklediğin ürünleri
-görmen lazım. Farklı bir e-posta ile kayıt olursan, tamamen boş/ayrı bir işletme
-verisiyle karşılaşırsın — bu, çoklu işletme desteğinin çalıştığının kanıtıdır.
+### 7) Yeni bir işletmeye hesap açma (yalnızca sen yapabilirsin)
+Uygulamada "Kayıt Ol" seçeneği yok — hesaplar sadece senin onayınla, Firebase
+Console üzerinden açılıyor. Yeni bir işletmeye erişim vermek için:
+1. Firebase Console → **Authentication → Users** sekmesi.
+2. **"Add user"** butonuna tıkla.
+3. İşletmenin e-postasını ve senin belirlediğin bir şifreyi gir → **Add user**.
+4. Bu e-posta/şifreyi işletmeyle paylaş — artık sadece o bilgilerle giriş yapabilirler,
+   kendi başlarına yeni hesap açamazlar.
+5. İşletme dilerse **"Şifremi unuttum"** ile kendi şifresini değiştirebilir, ama yeni
+   hesap açamaz.
+
+### 8) Kontrol et
+Siteyi yenile. Karşına bir **Giriş Yap** ekranı çıkmalı. Yukarıdaki adımla oluşturduğun
+e-posta/şifre ile giriş yap — üst çubukta **"Senkron"** yazısını görmen lazım. Aynı
+hesapla telefonunda da giriş yaparsan, aynı ürünleri göreceksin. Farklı bir işletmeye
+farklı bir hesap açarsan, o işletmenin verisi seninkinden tamamen ayrı ve boş olur.
 
 ## Ürün QR kodu nasıl kullanılır
 
