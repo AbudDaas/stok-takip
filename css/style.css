@@ -639,26 +639,24 @@ input:focus{outline:2px solid var(--navy-light);outline-offset:1px;}
   color:var(--navy);
 }
 .auth-logo i{font-size:36px;}
-.auth-tabs{
-  display:flex;
-  border:1px solid var(--border);
-  border-radius:8px;
-  overflow:hidden;
-  margin-bottom:16px;
+.auth-title{
+  text-align:center;
+  font-size:15px;
+  font-weight:700;
+  color:var(--text-primary);
+  margin:0 0 16px;
 }
-.auth-tab{
-  flex:1;
-  padding:10px 0;
-  background:#fff;
+.link-btn{
+  display:block;
+  width:100%;
+  background:none;
   border:none;
-  font-size:14px;
+  color:var(--navy);
+  font-size:13px;
   font-weight:600;
-  color:var(--text-secondary);
+  text-align:center;
+  padding:10px 0 0;
   cursor:pointer;
-}
-.auth-tab.active{
-  background:var(--navy);
-  color:#fff;
 }
 .auth-error{
   background:var(--red-bg);
