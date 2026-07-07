@@ -26,7 +26,6 @@
   let suppressNextSnapshot = false;
   let firestoreUnsubscribe = null;
   let currentUser = null;
-  let authMode = "login";
 
   // ---------- Firebase setup ----------
   function initFirebaseIfConfigured() {
@@ -128,14 +127,6 @@
   }
 
   // ---------- Giriş / Kayıt ----------
-  function switchAuthTab(mode) {
-    authMode = mode;
-    document.getElementById("authTabLogin").classList.toggle("active", mode === "login");
-    document.getElementById("authTabSignup").classList.toggle("active", mode === "signup");
-    document.getElementById("authSubmitBtn").textContent = mode === "login" ? "Giriş Yap" : "Kayıt Ol";
-    document.getElementById("authError").style.display = "none";
-  }
-
   function showAuthError(message) {
     const el = document.getElementById("authError");
     el.textContent = message;
@@ -145,10 +136,8 @@
   function mapAuthError(code) {
     const messages = {
       "auth/invalid-email": "Geçersiz e-posta adresi.",
-      "auth/user-not-found": "Bu e-posta ile kayıtlı bir hesap bulunamadı.",
+      "auth/user-not-found": "Bu e-posta ile kayıtlı bir hesap bulunamadı. İşletme sahibinden hesap açmasını isteyin.",
       "auth/wrong-password": "Şifre hatalı.",
-      "auth/email-already-in-use": "Bu e-posta zaten kayıtlı, giriş yapmayı dene.",
-      "auth/weak-password": "Şifre en az 6 karakter olmalı.",
       "auth/invalid-credential": "E-posta veya şifre hatalı.",
       "auth/too-many-requests": "Çok fazla deneme yapıldı, biraz sonra tekrar dene."
     };
@@ -163,11 +152,20 @@
       return;
     }
     document.getElementById("authError").style.display = "none";
-    if (authMode === "login") {
-      auth.signInWithEmailAndPassword(email, password).catch((e) => showAuthError(mapAuthError(e.code)));
-    } else {
-      auth.createUserWithEmailAndPassword(email, password).catch((e) => showAuthError(mapAuthError(e.code)));
+    auth.signInWithEmailAndPassword(email, password).catch((e) => showAuthError(mapAuthError(e.code)));
+  }
+
+  function forgotPassword() {
+    const email = document.getElementById("authEmail").value.trim();
+    if (!email) {
+      showAuthError("Şifre sıfırlama bağlantısı göndermek için önce e-posta adresini yaz.");
+      return;
     }
+    document.getElementById("authError").style.display = "none";
+    auth
+      .sendPasswordResetEmail(email)
+      .then(() => alert("Şifre sıfırlama bağlantısı e-postana gönderildi. Gelen kutunu (ve spam klasörünü) kontrol et."))
+      .catch((e) => showAuthError(mapAuthError(e.code)));
   }
 
   function logout() {
@@ -1270,12 +1268,11 @@
     btn.addEventListener("click", () => switchTab(btn.dataset.tab));
   });
 
-  document.getElementById("authTabLogin").addEventListener("click", () => switchAuthTab("login"));
-  document.getElementById("authTabSignup").addEventListener("click", () => switchAuthTab("signup"));
   document.getElementById("authSubmitBtn").addEventListener("click", submitAuth);
   document.getElementById("authPassword").addEventListener("keydown", (e) => {
     if (e.key === "Enter") submitAuth();
   });
+  document.getElementById("forgotPasswordBtn").addEventListener("click", forgotPassword);
   document.getElementById("logoutBtn").addEventListener("click", logout);
 
   load();
