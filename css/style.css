@@ -326,7 +326,7 @@ input:focus{outline:2px solid var(--navy-light);outline-offset:1px;}
   display:flex;align-items:center;justify-content:center;
 }
 .cart-qty-value{min-width:18px;text-align:center;font-weight:700;font-size:14px;}
-.cart-line-total{font-weight:700;font-size:14px;min-width:70px;text-align:right;}
+.cart-line-total{font-weight:700;font-size:14px;min-width:70px;text-align:end;}
 .cart-remove-btn{
   background:none;border:none;color:var(--red);font-size:16px;cursor:pointer;padding:2px;
 }
@@ -506,7 +506,7 @@ input:focus{outline:2px solid var(--navy-light);outline-offset:1px;}
   display:flex;
   align-items:center;
   gap:4px;
-  margin-left:auto;
+  margin-inline-start:auto;
 }
 
 .top-product-row{
@@ -610,6 +610,11 @@ input:focus{outline:2px solid var(--navy-light);outline-offset:1px;}
   font-size:17px;
   cursor:pointer;
 }
+.lang-toggle-btn{
+  font-size:12px;
+  font-weight:700;
+  letter-spacing:0.3px;
+}
 .auth-screen{
   position:fixed;
   inset:0;
@@ -672,4 +677,17 @@ input:focus{outline:2px solid var(--navy-light);outline-offset:1px;}
   text-align:center;
   margin-top:14px;
   line-height:1.4;
+}
+
+/* ---------- Arapça / RTL desteği (Arabic / RTL support) ---------- */
+[dir="rtl"] body{
+  font-family:"Noto Sans Arabic","Segoe UI",Tahoma,Arial,sans-serif;
+}
+[dir="rtl"] .top-product-rank{
+  margin-right:0;
+  margin-left:8px;
+}
+[dir="rtl"] .sale-payment-badge{
+  margin-left:0;
+  margin-right:6px;
 }
