@@ -126,3 +126,80 @@ farklı bir hesap açarsan, o işletmenin verisi seninkinden tamamen ayrı ve bo
 3. Çıkan QR kodu yazdırıp ürünün rafına/kutusuna yapıştır.
 4. Stok değiştiğinde **QR Tara** sekmesinden kamerayı aç, ilgili QR kodu okut.
 5. Çıkan pencerede stok **girişi** mi **çıkışı** mı olduğunu seç.
+
+## Toplu ürün tarama (AI ile raf fotoğrafından) kurulumu
+
+Bu özellik, bir raf fotoğrafı çekip yapay zekanın ürünleri tanımasını ve sistemde
+olmayanları toplu eklemeni sağlar. Kurulumu biraz teknik ama tek seferlik ve tamamen
+tarayıcı üzerinden (terminal/kod yazmadan) yapılabiliyor.
+
+**Maliyet:** Fotoğraf başına yaklaşık 0,1-1 kuruş (1000 fotoğraf ≈ 1-3 dolar).
+Firebase'in "Blaze" (kullandıkça öde) planına geçmen gerekiyor, ama bu plan da
+belirli bir ücretsiz kotaya kadar bedava — sadece kredi kartı bilgisi istiyor.
+
+### 1) Firebase'i Blaze planına yükselt
+1. [console.firebase.google.com](https://console.firebase.google.com) → projen (`bakkal-stok`).
+2. Sol altta **"Spark" → "Upgrade"** (Yükselt) butonuna tıkla.
+3. **Blaze (Pay as you go)** planını seç, kredi kartı bilgisini gir.
+4. Endişelenme: küçük kullanım ücretsiz kotanın içinde kalır, otomatik yüksek fatura
+   çıkmaz — istersen Firebase Console'dan bütçe uyarısı da kurabilirsin.
+
+### 2) Anthropic (Claude) API anahtarı al
+1. [console.anthropic.com](https://console.anthropic.com) adresine git, hesap oluştur.
+2. **API Keys** bölümünden yeni bir anahtar oluştur, kopyala (bir daha gösterilmez,
+   kaybedersen yenisini oluşturman gerekir).
+3. Hesabına birkaç dolarlık bakiye ekle (kredi kartıyla, dakikalar sürer).
+
+### 3) Cloud Function'ı tarayıcıdan oluştur (kod yazmadan)
+1. [console.cloud.google.com](https://console.cloud.google.com) → üstten **aynı
+   `bakkal-stok` projesini** seç (Firebase ile aynı Google Cloud projesidir).
+2. Arama kutusuna **"Cloud Functions"** yaz, aç → **"Create Function"**.
+3. **Environment:** "2nd gen" seç.
+4. **Function name:** `recognizeShelf` yaz.
+5. **Region:** sana yakın bir bölge seç (örn. `europe-west1`).
+6. **Trigger type:** HTTPS. **Authentication:** "Allow unauthenticated invocations"
+   seçili olsun → **Next/Save**.
+7. Aşağıda **"Runtime, build, connections and security settings"** başlığını aç →
+   **Runtime environment variables** bölümüne 2 değişken ekle:
+   - `ANTHROPIC_API_KEY` → az önce aldığın Claude API anahtarı
+   - `APP_SECRET` → kendi belirlediğin rastgele bir metin (örn. `bakkal2026gizli`,
+     kimseyle paylaşma)
+8. **Runtime:** Node.js 20 seç → **Next**.
+9. **Source code:** "Inline editor" seçili olsun. Bu depodaki `cloud-function/index.js`
+   dosyasının içeriğini kopyalayıp editördeki `index.js`'in üzerine yapıştır.
+10. Sol taraftaki `package.json` dosyasına da bu depodaki `cloud-function/package.json`
+    içeriğini yapıştır.
+11. **Entry point** kutusuna `recognizeShelf` yaz.
+12. **Deploy** butonuna bas, 1-2 dakika bekle (yeşil onay işareti çıkacak).
+
+### 4) Fonksiyonun adresini (URL) kopyala
+1. Fonksiyon listesinde `recognizeShelf`'e tıkla.
+2. Üstteki **"Trigger"** sekmesinde bir URL göreceksin, örn:
+   `https://europe-west1-bakkal-stok.cloudfunctions.net/recognizeShelf`
+3. Bu adresi kopyala.
+
+### 5) Uygulamaya bağla
+1. GitHub reponda `js/bulk-scan-config.js` dosyasını aç, düzenle (kalem ikonu).
+2. İçeriği şu şekilde doldur:
+   ```javascript
+   const bulkScanConfig = {
+     endpoint: "BURAYA_KOPYALADIĞIN_URL",
+     secret: "BURAYA_APP_SECRET_DEĞERİN"
+   };
+   ```
+   (`secret` değeri, Cloud Function'a eklediğin `APP_SECRET` ile birebir aynı olmalı.)
+3. Commit changes.
+
+### 6) Test et
+Siteyi yenile, **Ürünler** sekmesinde **"Fotoğraf çek / seç"** butonuna bas, bir raf
+fotoğrafı çek. Birkaç saniye içinde "Sistemde olmayan N ürün bulundu" ekranı çıkmalı.
+İstediğin ürünlerin işaretini bırak/kaldır, **"Hepsini ekle"** ile toplu ekle.
+
+### Önemli notlar
+- `APP_SECRET` değerini ve fonksiyon adresini kimseyle paylaşma — bu, faturana
+  yansıyacak API çağrılarını yapabilmenin tek koruması.
+- Google Cloud Console'da **Billing → Budgets & alerts** kısmından örn. "10$'ı
+  geçerse e-posta at" gibi bir bütçe uyarısı kurmanı öneririm, gönül rahatlığı için.
+- Bu özellik kurulmadan da uygulamanın geri kalanı sorunsuz çalışmaya devam eder;
+  `bulk-scan-config.js` boş/varsayılan kalırsa sadece bu buton "henüz kurulmadı"
+  uyarısı verir.
