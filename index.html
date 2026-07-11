@@ -1,34 +1,32 @@
 <!DOCTYPE html>
-<html lang="tr">
+<html lang="tr" dir="ltr">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<title>Bakkal Stok Takip</title>
-<meta name="theme-color" content="#1F3864" />
-<link rel="manifest" href="manifest.json" />
-<link rel="icon" href="icons/icon-192.png" />
-<link rel="apple-touch-icon" href="icons/icon-192.png" />
-<link rel="stylesheet" href="css/style.css" />
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Bakkal Stok Takip</title>
+  <meta name="theme-color" content="#1F3864" />
+  <link rel="manifest" href="manifest.json" />
+  <link rel="icon" href="icons/logo.png" />
+  <link rel="apple-touch-icon" href="icons/logo.png" />
+  <link rel="stylesheet" href="css/style.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.1/css/all.min.css" integrity="sha512-2SwdPD6INVrV/lHTZbO2nodKhrnDdJK9/kg2XD1r9uGqPo1cUbujc+IYdlYdEErWNu69gVcYgdxlmVmzTWnetw==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+Arabic:wght@400;600;700&display=swap" />
 </head>
 <body>
 
   <header class="topbar">
     <div class="topbar-title">
       <i class="ti ti-building-store" aria-hidden="true"></i>
-      <span data-i18n="appName">Bakkal Stok Takip</span>
+      <span data-i18n="app_title">Bakkal Stok Takip</span>
     </div>
     <div class="topbar-right">
-      <div class="lang-switch">
-        <button class="lang-btn" data-lang="tr">TR</button>
-        <button class="lang-btn" data-lang="en">EN</button>
-        <button class="lang-btn" data-lang="ar">AR</button>
-      </div>
-      <div id="syncBadge" class="sync-badge" data-i18n-title="syncLocal" title="Senkronizasyon durumu">
+      <div id="syncBadge" class="sync-badge" data-i18n-title="sync_status_tooltip" title="Senkronizasyon durumu">
         <i class="ti ti-cloud-off" id="syncIcon" aria-hidden="true"></i>
-        <span id="syncText" data-i18n="syncLocal">Yerel</span>
+        <span id="syncText" data-i18n="sync_local">Yerel</span>
       </div>
-      <button id="logoutBtn" class="icon-btn-topbar" data-i18n-title="logoutTitle" title="Çıkış yap" style="display:none;">
-        <i class="ti ti-logout" aria-hidden="true"></i>
+      <button id="langToggleBtn" class="icon-btn-topbar lang-toggle-btn" type="button">AR</button>
+      <button id="logoutBtn" class="icon-btn-topbar" data-i18n-title="logout_tooltip" title="Çıkış yap" style="display:none;">
+        <i class="fa-solid fa-arrow-right-from-bracket" aria-hidden="true"></i>
       </button>
     </div>
   </header>
@@ -38,19 +36,19 @@
     <div class="auth-box">
       <div class="auth-logo">
         <i class="ti ti-building-store" aria-hidden="true"></i>
-        <span data-i18n="appName">Bakkal Stok Takip</span>
+        <span data-i18n="app_title">Bakkal Stok Takip</span>
       </div>
-      <p class="auth-title" data-i18n="authTitle">Giriş Yap</p>
+      <p class="auth-title" data-i18n="auth_title">Giriş Yap</p>
       <p id="authError" class="auth-error" style="display:none;"></p>
       <div class="form-row">
-        <input id="authEmail" type="email" data-i18n-placeholder="authEmailPh" placeholder="E-posta" autocomplete="username" />
+        <input id="authEmail" type="email" data-i18n-placeholder="auth_email_placeholder" placeholder="E-posta" autocomplete="username" />
       </div>
       <div class="form-row">
-        <input id="authPassword" type="password" data-i18n-placeholder="authPasswordPh" placeholder="Şifre" autocomplete="current-password" />
+        <input id="authPassword" type="password" data-i18n-placeholder="auth_password_placeholder" placeholder="Şifre" autocomplete="current-password" />
       </div>
-      <button id="authSubmitBtn" class="btn btn-primary btn-block" data-i18n="authSubmit">Giriş Yap</button>
-      <button id="forgotPasswordBtn" class="link-btn" data-i18n="authForgot">Şifremi unuttum</button>
-      <p class="auth-hint" data-i18n="authHint">Hesabınız yoksa işletme sahibinden/yöneticinizden hesap açmasını isteyin.</p>
+      <button id="authSubmitBtn" class="btn btn-primary btn-block" data-i18n="auth_submit">Giriş Yap</button>
+      <button id="forgotPasswordBtn" class="link-btn" data-i18n="auth_forgot">Şifremi unuttum</button>
+      <p class="auth-hint" data-i18n="auth_hint">Hesabınız yoksa işletme sahibinden/yöneticinizden hesap açmasını isteyin.</p>
     </div>
   </div>
 
@@ -59,11 +57,11 @@
     <!-- ÖZET -->
     <section class="stats-grid">
       <div class="stat-card">
-        <p class="stat-label" data-i18n="statTotalProducts">Toplam ürün</p>
+        <p class="stat-label" data-i18n="stat_total_products">Toplam ürün</p>
         <p class="stat-value" id="statTotal">0</p>
       </div>
       <div class="stat-card stat-danger">
-        <p class="stat-label" data-i18n="statOrderNeeded">Sipariş gerekli</p>
+        <p class="stat-label" data-i18n="stat_order_needed">Sipariş gerekli</p>
         <p class="stat-value" id="statOrder">0</p>
       </div>
     </section>
@@ -72,130 +70,117 @@
     <section id="tab-products" class="tab-panel active">
 
       <div class="card">
-        <p class="card-title" data-i18n="addProductTitle">Ürün ekle</p>
+        <p class="card-title" data-i18n="card_add_product">Ürün ekle</p>
         <div class="form-row">
-          <input id="newName" type="text" data-i18n-placeholder="namePh" placeholder="Ürün adı, örn. pepsi 1 lt" />
+          <input id="newName" type="text" data-i18n-placeholder="placeholder_product_name" placeholder="Ürün adı, örn. pepsi 1 lt" />
         </div>
         <div class="form-row two-col">
-          <input id="newCategory" type="text" data-i18n-placeholder="categoryPh" placeholder="Kategori, örn. içecekler" />
-          <input id="newMin" type="number" min="0" step="any" data-i18n-placeholder="minStockPh" placeholder="Min. stok" value="5" />
+          <input id="newCategory" type="text" data-i18n-placeholder="placeholder_category" placeholder="Kategori, örn. içecekler" />
+          <input id="newMin" type="number" min="0" step="any" data-i18n-placeholder="placeholder_min_stock" placeholder="Min. stok" value="5" />
         </div>
         <div class="form-row two-col">
-          <input id="newQty" type="number" min="0" step="any" data-i18n-placeholder="startStockPh" placeholder="Başlangıç stok" value="0" />
-          <input id="newPrice" type="number" min="0" step="0.01" data-i18n-placeholder="pricePh" placeholder="Fiyat (₺)" value="0" />
+          <input id="newQty" type="number" min="0" step="any" data-i18n-placeholder="placeholder_initial_stock" placeholder="Başlangıç stok" value="0" />
+          <input id="newPrice" type="number" min="0" step="0.01" data-i18n-placeholder="placeholder_price" placeholder="Fiyat (₺)" value="0" />
         </div>
         <div class="form-row">
-          <label class="field-label" data-i18n="unitLabel">Satış birimi</label>
+          <label class="field-label" data-i18n="label_unit">Satış birimi</label>
           <select id="newUnit">
-            <option value="adet" data-i18n="unitAdet">Adet (tam sayı)</option>
-            <option value="kg" data-i18n="unitKg">Kg (tartılı / açık ürün)</option>
+            <option value="adet" data-i18n="unit_option_adet">Adet (tam sayı)</option>
+            <option value="kg" data-i18n="unit_option_kg">Kg (tartılı / açık ürün)</option>
           </select>
         </div>
         <div class="form-row barcode-row">
-          <input id="newBarcode" type="text" data-i18n-placeholder="barcodePh" placeholder="Barkod (opsiyonel)" />
-          <button id="scanNewBarcodeBtn" type="button" class="btn btn-icon-only" data-i18n-aria="scanBarcodeAria" aria-label="Barkod tara">
+          <input id="newBarcode" type="text" data-i18n-placeholder="placeholder_barcode" placeholder="Barkod (opsiyonel)" />
+          <button id="scanNewBarcodeBtn" type="button" class="btn btn-icon-only" data-i18n-aria="aria_scan_barcode" aria-label="Barkod tara">
             <i class="ti ti-barcode" aria-hidden="true"></i>
           </button>
         </div>
         <button id="addBtn" class="btn btn-primary btn-block">
-          <i class="ti ti-plus" aria-hidden="true"></i> <span data-i18n="addProductBtn">Ürün ekle</span>
+          <i class="ti ti-plus" aria-hidden="true"></i> <span data-i18n="btn_add_product">Ürün ekle</span>
         </button>
-      </div>
-
-      <div class="card">
-        <p class="card-title" data-i18n="bulkScanTitle">Rafı fotoğrafla (toplu ekle)</p>
-        <p class="card-subtitle" data-i18n="bulkScanSubtitle">Bir raf fotoğrafı çek, yapay zeka ürünleri tanısın, sistemde olmayanları toplu ekle.</p>
-        <input id="shelfPhotoInput" type="file" accept="image/*" capture="environment" style="display:none;" />
-        <button id="shelfPhotoBtn" class="btn btn-primary btn-block">
-          <i class="ti ti-camera" aria-hidden="true"></i> <span data-i18n="bulkScanBtn">Fotoğraf çek / seç</span>
-        </button>
-        <div id="bulkScanLoading" class="bulk-scan-loading" style="display:none;">
-          <i class="ti ti-loader-2 spin" aria-hidden="true"></i>
-          <span data-i18n="bulkScanAnalyzing">Fotoğraf analiz ediliyor...</span>
-        </div>
       </div>
 
       <div class="section-header">
-        <p class="card-title" data-i18n="allProductsTitle">Tüm ürünler</p>
-        <input id="searchBox" type="text" class="search-input" data-i18n-placeholder="searchPh" placeholder="Ürün ara..." />
+        <p class="card-title" data-i18n="card_all_products">Tüm ürünler</p>
+        <input id="searchBox" type="text" class="search-input" data-i18n-placeholder="placeholder_search_product" placeholder="Ürün ara..." />
       </div>
 
       <div id="productList" class="list"></div>
-      <p id="emptyState" class="empty-state" data-i18n="emptyProducts">Henüz ürün yok. Yukarıdan ekleyerek başla.</p>
+      <p id="emptyState" class="empty-state" data-i18n="empty_no_products">Henüz ürün yok. Yukarıdan ekleyerek başla.</p>
     </section>
 
     <!-- SEKME: QR TARA (STOK GİRİŞ/ÇIKIŞ) -->
     <section id="tab-scan" class="tab-panel">
       <div class="card">
-        <p class="card-title" data-i18n="scanTitle">QR kod ile giriş / çıkış</p>
-        <p class="card-subtitle" data-i18n="scanSubtitle">Bir ürünün QR kodunu okutarak stok girişi veya çıkışı yapabilirsin.</p>
+        <p class="card-title" data-i18n="card_qr_scan_title">QR kod ile giriş / çıkış</p>
+        <p class="card-subtitle" data-i18n="card_qr_scan_subtitle">Bir ürünün QR kodunu okutarak stok girişi veya çıkışı yapabilirsin.</p>
         <button id="startScanBtn" class="btn btn-primary btn-block">
-          <i class="ti ti-scan" aria-hidden="true"></i> <span data-i18n="startCamera">Kamerayı başlat</span>
+          <i class="ti ti-scan" aria-hidden="true"></i> <span data-i18n="btn_start_camera">Kamerayı başlat</span>
         </button>
         <div id="qrReader" class="qr-reader"></div>
         <button id="stopScanBtn" class="btn btn-block" style="display:none;">
-          <i class="ti ti-player-stop" aria-hidden="true"></i> <span data-i18n="stopScan">Taramayı durdur</span>
+          <i class="ti ti-player-stop" aria-hidden="true"></i> <span data-i18n="btn_stop_scan">Taramayı durdur</span>
         </button>
       </div>
 
       <div class="card">
-        <p class="card-title" data-i18n="printQrTitle">QR kodları yazdır</p>
-        <p class="card-subtitle" data-i18n="printQrSubtitle">Her ürün için bir QR kod oluşturup rafa yapıştırabilirsin. Ürünler listesinden bir ürüne dokun, "QR kodu göster" seçeneğini kullan.</p>
+        <p class="card-title" data-i18n="card_print_qr_title">QR kodları yazdır</p>
+        <p class="card-subtitle" data-i18n="card_print_qr_subtitle">Her ürün için bir QR kod oluşturup rafa yapıştırabilirsin. Ürünler listesinden bir ürüne dokun, "QR kodu göster" seçeneğini kullan.</p>
       </div>
     </section>
 
     <!-- SEKME: KASA (SATIŞ) -->
     <section id="tab-kasa" class="tab-panel">
       <div class="card">
-        <p class="card-title" data-i18n="kasaTitle">Kasa — QR okutarak satış</p>
-        <p class="card-subtitle" data-i18n="kasaSubtitle">Müşterinin aldığı ürünlerin QR kodunu sırayla okut, sepete otomatik eklensin.</p>
+        <p class="card-title" data-i18n="card_kasa_title">Kasa — QR okutarak satış</p>
+        <p class="card-subtitle" data-i18n="card_kasa_subtitle">Müşterinin aldığı ürünlerin QR kodunu sırayla okut, sepete otomatik eklensin.</p>
         <button id="startKasaScanBtn" class="btn btn-primary btn-block">
-          <i class="ti ti-scan" aria-hidden="true"></i> <span data-i18n="startCamera">Kamerayı başlat</span>
+          <i class="ti ti-scan" aria-hidden="true"></i> <span data-i18n="btn_start_camera">Kamerayı başlat</span>
         </button>
         <div id="qrReaderKasa" class="qr-reader"></div>
         <button id="stopKasaScanBtn" class="btn btn-block" style="display:none;">
-          <i class="ti ti-player-stop" aria-hidden="true"></i> <span data-i18n="stopScan">Taramayı durdur</span>
+          <i class="ti ti-player-stop" aria-hidden="true"></i> <span data-i18n="btn_stop_scan">Taramayı durdur</span>
         </button>
       </div>
 
       <div class="card">
-        <p class="card-title" data-i18n="manualAddTitle">Ürün seç ve ekle (QR'sız)</p>
+        <p class="card-title" data-i18n="card_manual_add_title">Ürün seç ve ekle (QR'sız)</p>
         <div class="form-row">
-          <input id="manualAddSearch" type="text" data-i18n-placeholder="searchPh" placeholder="Ürün ara..." />
+          <input id="manualAddSearch" type="text" data-i18n-placeholder="placeholder_search_product" placeholder="Ürün ara..." />
         </div>
         <div id="manualAddResults" class="list"></div>
       </div>
 
       <div class="card">
         <div class="card-header-row">
-          <p class="card-title" data-i18n="cartTitle">Sepet</p>
+          <p class="card-title" data-i18n="card_cart_title">Sepet</p>
           <button id="clearCartBtn" class="btn btn-sm">
-            <i class="ti ti-trash" aria-hidden="true"></i> <span data-i18n="clearCart">Sepeti boşalt</span>
+            <i class="ti ti-trash" aria-hidden="true"></i> <span data-i18n="btn_clear_cart">Sepeti boşalt</span>
           </button>
         </div>
         <div id="cartList" class="list"></div>
-        <p id="cartEmptyState" class="empty-state" data-i18n="emptyCart">Sepet boş. Ürün QR kodunu okutarak ekle.</p>
+        <p id="cartEmptyState" class="empty-state" data-i18n="empty_cart">Sepet boş. Ürün QR kodunu okutarak ekle.</p>
 
         <div class="form-row">
-          <label class="field-label" data-i18n="discountLabel">İndirim (₺)</label>
+          <label class="field-label" data-i18n="label_discount">İndirim (₺)</label>
           <input id="cartDiscount" type="number" min="0" step="0.01" value="0" />
         </div>
 
         <div class="cart-subtotal-row">
-          <span data-i18n="subtotalLabel">Ara toplam</span>
+          <span data-i18n="label_subtotal">Ara toplam</span>
           <span id="cartSubtotal">0,00 ₺</span>
         </div>
         <div class="cart-total-row">
-          <span data-i18n="totalLabel">Toplam</span>
+          <span data-i18n="label_total">Toplam</span>
           <span id="cartTotal">0,00 ₺</span>
         </div>
 
         <div class="payment-type-row">
           <button id="payNakitBtn" class="payment-type-btn active" data-type="nakit">
-            <i class="ti ti-cash" aria-hidden="true"></i> <span data-i18n="payNakit">Nakit</span>
+            <i class="ti ti-cash" aria-hidden="true"></i> <span data-i18n="payment_cash">Nakit</span>
           </button>
           <button id="payVeresiyeBtn" class="payment-type-btn" data-type="veresiye">
-            <i class="ti ti-notebook" aria-hidden="true"></i> <span data-i18n="payVeresiye">Veresiye</span>
+            <i class="ti ti-notebook" aria-hidden="true"></i> <span data-i18n="payment_credit">Veresiye</span>
           </button>
         </div>
         <div id="veresiyeCustomerRow" class="form-row" style="display:none;">
@@ -203,7 +188,7 @@
         </div>
 
         <button id="completeSaleBtn" class="btn btn-primary btn-block">
-          <i class="ti ti-check" aria-hidden="true"></i> <span data-i18n="completeSaleBtn">Satışı tamamla</span>
+          <i class="ti ti-check" aria-hidden="true"></i> <span data-i18n="btn_complete_sale">Satışı tamamla</span>
         </button>
       </div>
     </section>
@@ -211,73 +196,73 @@
     <!-- SEKME: SATIŞLAR -->
     <section id="tab-sales" class="tab-panel">
       <div class="period-filter">
-        <button class="period-btn active" data-period="today" data-i18n="periodToday">Bugün</button>
-        <button class="period-btn" data-period="week" data-i18n="periodWeek">Bu Hafta</button>
-        <button class="period-btn" data-period="month" data-i18n="periodMonth">Bu Ay</button>
-        <button class="period-btn" data-period="all" data-i18n="periodAll">Tümü</button>
+        <button class="period-btn active" data-period="today" data-i18n="period_today">Bugün</button>
+        <button class="period-btn" data-period="week" data-i18n="period_week">Bu Hafta</button>
+        <button class="period-btn" data-period="month" data-i18n="period_month">Bu Ay</button>
+        <button class="period-btn" data-period="all" data-i18n="period_all">Tümü</button>
       </div>
 
       <div class="stats-grid">
         <div class="stat-card">
-          <p class="stat-label" data-i18n="statPeriodTotal">Toplam ciro</p>
+          <p class="stat-label" data-i18n="stat_total_revenue">Toplam ciro</p>
           <p class="stat-value" id="statPeriodTotal">0,00 ₺</p>
         </div>
         <div class="stat-card">
-          <p class="stat-label" data-i18n="statPeriodCount">İşlem sayısı</p>
+          <p class="stat-label" data-i18n="stat_transaction_count">İşlem sayısı</p>
           <p class="stat-value" id="statPeriodCount">0</p>
         </div>
       </div>
 
-      <p class="card-title" data-i18n="topProductsTitle">En çok satan ürünler</p>
+      <p class="card-title" data-i18n="card_top_products">En çok satan ürünler</p>
       <div id="topProductsList" class="list"></div>
-      <p id="topProductsEmptyState" class="empty-state" data-i18n="emptyTopProducts">Bu dönemde satış yok.</p>
+      <p id="topProductsEmptyState" class="empty-state" data-i18n="empty_no_sales_period">Bu dönemde satış yok.</p>
 
-      <p class="card-title" data-i18n="salesHistoryTitle">Satış geçmişi</p>
+      <p class="card-title" data-i18n="card_sales_history">Satış geçmişi</p>
       <div id="salesList" class="list"></div>
-      <p id="salesEmptyState" class="empty-state" data-i18n="emptySales">Bu dönemde satış yapılmadı.</p>
+      <p id="salesEmptyState" class="empty-state" data-i18n="empty_no_sales_made">Bu dönemde satış yapılmadı.</p>
     </section>
 
     <!-- SEKME: VERESİYE -->
     <section id="tab-veresiye" class="tab-panel">
       <div class="card">
-        <p class="card-title" data-i18n="addCustomerTitle">Müşteri ekle</p>
+        <p class="card-title" data-i18n="card_add_customer">Müşteri ekle</p>
         <div class="form-row">
-          <input id="newCustomerName" type="text" data-i18n-placeholder="customerNamePh" placeholder="Müşteri adı" />
+          <input id="newCustomerName" type="text" data-i18n-placeholder="placeholder_customer_name" placeholder="Müşteri adı" />
         </div>
         <div class="form-row">
-          <input id="newCustomerPhone" type="text" data-i18n-placeholder="customerPhonePh" placeholder="Telefon (opsiyonel)" />
+          <input id="newCustomerPhone" type="text" data-i18n-placeholder="placeholder_customer_phone" placeholder="Telefon (opsiyonel)" />
         </div>
         <button id="addCustomerBtn" class="btn btn-primary btn-block">
-          <i class="ti ti-user-plus" aria-hidden="true"></i> <span data-i18n="addCustomerBtn">Müşteri ekle</span>
+          <i class="ti ti-user-plus" aria-hidden="true"></i> <span data-i18n="btn_add_customer">Müşteri ekle</span>
         </button>
       </div>
 
       <div class="stats-grid">
         <div class="stat-card stat-danger">
-          <p class="stat-label" data-i18n="statTotalDebt">Toplam alacak</p>
+          <p class="stat-label" data-i18n="stat_total_debt">Toplam alacak</p>
           <p class="stat-value" id="statTotalDebt">0,00 ₺</p>
         </div>
         <div class="stat-card">
-          <p class="stat-label" data-i18n="statCustomerCount">Müşteri sayısı</p>
+          <p class="stat-label" data-i18n="stat_customer_count">Müşteri sayısı</p>
           <p class="stat-value" id="statCustomerCount">0</p>
         </div>
       </div>
 
-      <p class="card-title" data-i18n="customersTitle">Müşteriler</p>
+      <p class="card-title" data-i18n="card_customers">Müşteriler</p>
       <div id="customerList" class="list"></div>
-      <p id="customerEmptyState" class="empty-state" data-i18n="emptyCustomers">Henüz müşteri yok.</p>
+      <p id="customerEmptyState" class="empty-state" data-i18n="empty_no_customers">Henüz müşteri yok.</p>
     </section>
 
     <!-- SEKME: SİPARİŞ LİSTESİ -->
     <section id="tab-orders" class="tab-panel">
       <div class="card-header-row">
-        <p class="card-title" data-i18n="orderListTitle">Acil sipariş listesi</p>
+        <p class="card-title" data-i18n="card_urgent_orders">Acil sipariş listesi</p>
         <button id="resetBtn" class="btn btn-sm">
-          <i class="ti ti-refresh" aria-hidden="true"></i> <span data-i18n="resetAllBtn">Tümünü sıfırla</span>
+          <i class="ti ti-refresh" aria-hidden="true"></i> <span data-i18n="btn_reset_all">Tümünü sıfırla</span>
         </button>
       </div>
       <div id="orderList" class="list"></div>
-      <p id="orderEmptyState" class="empty-state" data-i18n="emptyOrders">Şu anda sipariş edilmesi gereken ürün yok.</p>
+      <p id="orderEmptyState" class="empty-state" data-i18n="empty_no_orders_needed">Şu anda sipariş edilmesi gereken ürün yok.</p>
     </section>
 
   </main>
@@ -287,53 +272,53 @@
     <div class="modal">
       <div class="modal-header">
         <p id="modalProductName" class="modal-title"></p>
-        <button id="closeModalBtn" class="icon-btn" aria-label="Kapat"><i class="ti ti-x" aria-hidden="true"></i></button>
+        <button id="closeModalBtn" class="icon-btn" data-i18n-aria="aria_close" aria-label="Kapat"><i class="ti ti-x" aria-hidden="true"></i></button>
       </div>
       <div class="modal-body">
         <div class="qty-control">
-          <button id="qtyMinusBtn" class="qty-btn" aria-label="Stok azalt"><i class="ti ti-minus" aria-hidden="true"></i></button>
+          <button id="qtyMinusBtn" class="qty-btn" data-i18n-aria="aria_decrease_stock" aria-label="Stok azalt"><i class="fa-solid fa-circle-minus" aria-hidden="true"></i></button>
           <span id="modalQty" class="qty-display">0</span>
-          <button id="qtyPlusBtn" class="qty-btn" aria-label="Stok arttır"><i class="ti ti-plus" aria-hidden="true"></i></button>
+          <button id="qtyPlusBtn" class="qty-btn" data-i18n-aria="aria_increase_stock" aria-label="Stok arttır"><i class="fa-solid fa-circle-plus" aria-hidden="true"></i></button>
         </div>
         <p id="modalStatus" class="status-pill"></p>
 
         <div class="modal-section">
           <div id="modalQrCode" class="qr-code-box"></div>
           <button id="printQrBtn" class="btn btn-block">
-            <i class="ti ti-printer" aria-hidden="true"></i> <span data-i18n="printQrBtn">QR kodu yazdır</span>
+            <i class="ti ti-printer" aria-hidden="true"></i> <span data-i18n="btn_print_qr">QR kodu yazdır</span>
           </button>
         </div>
 
         <div class="modal-section">
-          <label class="field-label" data-i18n="productNameLabel">Ürün adı</label>
+          <label class="field-label" data-i18n="label_product_name">Ürün adı</label>
           <input id="editName" type="text" />
           <div class="form-row two-col">
             <div>
-              <label class="field-label" data-i18n="categoryLabel">Kategori</label>
+              <label class="field-label" data-i18n="label_category">Kategori</label>
               <input id="editCategory" type="text" />
             </div>
             <div>
-              <label class="field-label" data-i18n="minStockLabel">Min. stok</label>
+              <label class="field-label" data-i18n="label_min_stock2">Min. stok</label>
               <input id="editMin" type="number" min="0" step="any" />
             </div>
           </div>
-          <label class="field-label" data-i18n="priceLabel">Fiyat (₺)</label>
+          <label class="field-label" data-i18n="label_price">Fiyat (₺)</label>
           <input id="editPrice" type="number" min="0" step="0.01" />
-          <label class="field-label" data-i18n="unitLabel">Satış birimi</label>
+          <label class="field-label" data-i18n="label_unit">Satış birimi</label>
           <select id="editUnit">
-            <option value="adet" data-i18n="unitAdet">Adet (tam sayı)</option>
-            <option value="kg" data-i18n="unitKg">Kg (tartılı / açık ürün)</option>
+            <option value="adet" data-i18n="unit_option_adet">Adet (tam sayı)</option>
+            <option value="kg" data-i18n="unit_option_kg">Kg (tartılı / açık ürün)</option>
           </select>
-          <label class="field-label" data-i18n="barcodeLabel">Barkod</label>
+          <label class="field-label" data-i18n="label_barcode">Barkod</label>
           <div class="form-row barcode-row">
-            <input id="editBarcode" type="text" data-i18n-placeholder="barcodePh" placeholder="Barkod (opsiyonel)" />
-            <button id="scanEditBarcodeBtn" type="button" class="btn btn-icon-only" data-i18n-aria="scanBarcodeAria" aria-label="Barkod tara">
+            <input id="editBarcode" type="text" data-i18n-placeholder="placeholder_barcode" placeholder="Barkod (opsiyonel)" />
+            <button id="scanEditBarcodeBtn" type="button" class="btn btn-icon-only" data-i18n-aria="aria_scan_barcode" aria-label="Barkod tara">
               <i class="ti ti-barcode" aria-hidden="true"></i>
             </button>
           </div>
-          <button id="saveEditBtn" class="btn btn-primary btn-block" data-i18n="saveBtn">Kaydet</button>
+          <button id="saveEditBtn" class="btn btn-primary btn-block" data-i18n="btn_save">Kaydet</button>
           <button id="deleteProductBtn" class="btn btn-danger btn-block">
-            <i class="ti ti-trash" aria-hidden="true"></i> <span data-i18n="deleteProductBtn">Ürünü sil</span>
+            <i class="ti ti-trash" aria-hidden="true"></i> <span data-i18n="btn_delete_product">Ürünü sil</span>
           </button>
         </div>
       </div>
@@ -344,28 +329,12 @@
   <div id="barcodeScanModal" class="modal-overlay" style="display:none;">
     <div class="modal">
       <div class="modal-header">
-        <p class="modal-title" data-i18n="quickBarcodeTitle">Barkodu tara</p>
-        <button id="closeBarcodeModalBtn" class="icon-btn" aria-label="Kapat"><i class="ti ti-x" aria-hidden="true"></i></button>
+        <p class="modal-title" data-i18n="modal_scan_barcode_title">Barkodu tara</p>
+        <button id="closeBarcodeModalBtn" class="icon-btn" data-i18n-aria="aria_close" aria-label="Kapat"><i class="ti ti-x" aria-hidden="true"></i></button>
       </div>
       <div class="modal-body">
-        <p class="card-subtitle" data-i18n="quickBarcodeSubtitle">Ürünün üzerindeki barkodu kameraya göster.</p>
+        <p class="card-subtitle" data-i18n="modal_scan_barcode_subtitle">Ürünün üzerindeki barkodu kameraya göster.</p>
         <div id="quickScanReader" class="qr-reader"></div>
-      </div>
-    </div>
-  </div>
-
-  <!-- TOPLU FOTOĞRAF TARAMA SONUÇ MODAL -->
-  <div id="bulkScanModal" class="modal-overlay" style="display:none;">
-    <div class="modal">
-      <div class="modal-header">
-        <p id="bulkScanModalTitle" class="modal-title"></p>
-        <button id="closeBulkScanModalBtn" class="icon-btn" aria-label="Kapat"><i class="ti ti-x" aria-hidden="true"></i></button>
-      </div>
-      <div class="modal-body">
-        <div id="bulkScanResultsList" class="list"></div>
-        <button id="bulkAddAllBtn" class="btn btn-primary btn-block">
-          <span data-i18n="bulkAddAllBtn">Hepsini ekle</span>
-        </button>
       </div>
     </div>
   </div>
@@ -375,35 +344,35 @@
     <div class="modal">
       <div class="modal-header">
         <p id="customerModalName" class="modal-title"></p>
-        <button id="closeCustomerModalBtn" class="icon-btn" aria-label="Kapat"><i class="ti ti-x" aria-hidden="true"></i></button>
+        <button id="closeCustomerModalBtn" class="icon-btn" data-i18n-aria="aria_close" aria-label="Kapat"><i class="ti ti-x" aria-hidden="true"></i></button>
       </div>
       <div class="modal-body">
         <p class="debt-display">
-          <span data-i18n="currentBalance">Güncel bakiye</span>
+          <span data-i18n="label_current_balance">Güncel bakiye</span>
           <span id="customerModalDebt" class="debt-amount">0,00 ₺</span>
         </p>
 
         <div class="modal-section">
-          <label class="field-label" data-i18n="takePayment">Ödeme al</label>
+          <label class="field-label" data-i18n="label_take_payment">Ödeme al</label>
           <div class="form-row barcode-row">
-            <input id="paymentAmountInput" type="number" min="0" step="0.01" data-i18n-placeholder="amountPh" placeholder="Tutar (₺)" />
-            <button id="recordPaymentBtn" class="btn btn-primary" style="width:auto;padding:0 16px;" data-i18n="saveBtn">Kaydet</button>
+            <input id="paymentAmountInput" type="number" min="0" step="0.01" data-i18n-placeholder="placeholder_amount" placeholder="Tutar (₺)" />
+            <button id="recordPaymentBtn" class="btn btn-primary" style="width:auto;padding:0 16px;" data-i18n="btn_save">Kaydet</button>
           </div>
         </div>
 
         <div class="modal-section">
-          <label class="field-label" data-i18n="customerNameLabel">Müşteri adı</label>
+          <label class="field-label" data-i18n="placeholder_customer_name">Müşteri adı</label>
           <input id="editCustomerName" type="text" />
-          <label class="field-label" data-i18n="phoneLabel">Telefon</label>
+          <label class="field-label" data-i18n="label_edit_customer_phone">Telefon</label>
           <input id="editCustomerPhone" type="text" />
-          <button id="saveCustomerEditBtn" class="btn btn-primary btn-block" data-i18n="saveBtn">Kaydet</button>
+          <button id="saveCustomerEditBtn" class="btn btn-primary btn-block" data-i18n="btn_save">Kaydet</button>
           <button id="deleteCustomerBtn" class="btn btn-danger btn-block">
-            <i class="ti ti-trash" aria-hidden="true"></i> <span data-i18n="deleteCustomerBtn">Müşteriyi sil</span>
+            <i class="fa-solid fa-person-circle-xmark" aria-hidden="true"></i> <span data-i18n="btn_delete_customer">Müşteriyi sil</span>
           </button>
         </div>
 
         <div class="modal-section">
-          <p class="field-label" data-i18n="historyTitle">İşlem geçmişi</p>
+          <p class="field-label" data-i18n="label_transaction_history">İşlem geçmişi</p>
           <div id="customerHistoryList" class="list"></div>
         </div>
       </div>
@@ -413,28 +382,28 @@
   <!-- ALT NAVİGASYON -->
   <nav class="bottom-nav">
     <button class="nav-btn active" data-tab="tab-products">
-      <i class="ti ti-list" aria-hidden="true"></i>
-      <span data-i18n="navProducts">Ürünler</span>
+      <i class="fa-solid fa-dolly" aria-hidden="true"></i>
+      <span data-i18n="tab_products">Ürünler</span>
     </button>
     <button class="nav-btn" data-tab="tab-kasa">
-      <i class="ti ti-cash-register" aria-hidden="true"></i>
-      <span data-i18n="navKasa">Kasa</span>
+      <i class="fa-solid fa-wallet" aria-hidden="true"></i>
+      <span data-i18n="tab_kasa">Kasa</span>
     </button>
     <button class="nav-btn" data-tab="tab-scan">
-      <i class="ti ti-qrcode" aria-hidden="true"></i>
-      <span data-i18n="navScan">QR Tara</span>
+      <i class="fa-solid fa-qrcode" aria-hidden="true"></i>
+      <span data-i18n="tab_scan">QR Tara</span>
     </button>
     <button class="nav-btn" data-tab="tab-sales">
-      <i class="ti ti-receipt" aria-hidden="true"></i>
-      <span data-i18n="navSales">Satışlar</span>
+      <i class="fa-brands fa-shopify" aria-hidden="true"></i>
+      <span data-i18n="tab_sales">Satışlar</span>
     </button>
     <button class="nav-btn" data-tab="tab-veresiye">
-      <i class="ti ti-notebook" aria-hidden="true"></i>
-      <span data-i18n="navVeresiye">Veresiye</span>
+      <i class="fa-solid fa-book" aria-hidden="true"></i>
+      <span data-i18n="tab_veresiye">Veresiye</span>
     </button>
     <button class="nav-btn" data-tab="tab-orders">
-      <i class="ti ti-alert-triangle" aria-hidden="true"></i>
-      <span data-i18n="navOrders">Sipariş</span>
+      <i class="fa-solid fa-cart-arrow-down" aria-hidden="true"></i>
+      <span data-i18n="tab_orders">Sipariş</span>
     </button>
   </nav>
 
@@ -447,9 +416,10 @@
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
   <script src="js/firebase-config.js"></script>
-  <script src="js/bulk-scan-config.js"></script>
 
+  <!-- Dil desteği (Language support) -->
   <script src="js/i18n.js"></script>
+
   <script src="js/app.js"></script>
 </body>
 </html>
