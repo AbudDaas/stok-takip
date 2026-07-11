@@ -11,6 +11,7 @@
   let activeCustomerId = null;
   let selectedPaymentType = "nakit";
   let currentSalesPeriod = "today";
+  let lastSyncState = "local";
 
   let html5QrCode = null;
   let scanning = false;
@@ -108,21 +109,22 @@
   }
 
   function setSyncStatus(state) {
+    lastSyncState = state;
     const icon = document.getElementById("syncIcon");
     const text = document.getElementById("syncText");
     if (!icon || !text) return;
     if (state === "connected") {
       icon.className = "ti ti-cloud-check";
-      text.textContent = "Senkron";
+      text.textContent = t("sync_connected");
     } else if (state === "connecting") {
       icon.className = "ti ti-cloud-up";
-      text.textContent = "Bağlanıyor";
+      text.textContent = t("sync_connecting");
     } else if (state === "error") {
       icon.className = "ti ti-cloud-x";
-      text.textContent = "Hata";
+      text.textContent = t("sync_error");
     } else {
       icon.className = "ti ti-cloud-off";
-      text.textContent = "Yerel";
+      text.textContent = t("sync_local");
     }
   }
 
@@ -135,20 +137,20 @@
 
   function mapAuthError(code) {
     const messages = {
-      "auth/invalid-email": "Geçersiz e-posta adresi.",
-      "auth/user-not-found": "Bu e-posta ile kayıtlı bir hesap bulunamadı. İşletme sahibinden hesap açmasını isteyin.",
-      "auth/wrong-password": "Şifre hatalı.",
-      "auth/invalid-credential": "E-posta veya şifre hatalı.",
-      "auth/too-many-requests": "Çok fazla deneme yapıldı, biraz sonra tekrar dene."
+      "auth/invalid-email": t("auth_error_invalid_email"),
+      "auth/user-not-found": t("auth_error_user_not_found"),
+      "auth/wrong-password": t("auth_error_wrong_password"),
+      "auth/invalid-credential": t("auth_error_invalid_credential"),
+      "auth/too-many-requests": t("auth_error_too_many_requests")
     };
-    return messages[code] || "Bir hata oluştu, tekrar dene.";
+    return messages[code] || t("auth_error_generic");
   }
 
   function submitAuth() {
     const email = document.getElementById("authEmail").value.trim();
     const password = document.getElementById("authPassword").value;
     if (!email || !password) {
-      showAuthError("E-posta ve şifre gerekli.");
+      showAuthError(t("auth_fields_required"));
       return;
     }
     document.getElementById("authError").style.display = "none";
@@ -158,18 +160,18 @@
   function forgotPassword() {
     const email = document.getElementById("authEmail").value.trim();
     if (!email) {
-      showAuthError("Şifre sıfırlama bağlantısı göndermek için önce e-posta adresini yaz.");
+      showAuthError(t("auth_forgot_need_email"));
       return;
     }
     document.getElementById("authError").style.display = "none";
     auth
       .sendPasswordResetEmail(email)
-      .then(() => alert("Şifre sıfırlama bağlantısı e-postana gönderildi. Gelen kutunu (ve spam klasörünü) kontrol et."))
+      .then(() => alert(t("auth_forgot_sent")))
       .catch((e) => showAuthError(mapAuthError(e.code)));
   }
 
   function logout() {
-    if (confirm("Çıkış yapmak istediğine emin misin?")) {
+    if (confirm(t("confirm_logout"))) {
       auth.signOut();
     }
   }
@@ -284,7 +286,7 @@
 
   function deleteCustomer(id) {
     const debt = getCustomerDebt(id);
-    if (debt > 0 && !confirm(`Bu müşterinin ${formatTL(debt)} bakiyesi var. Yine de silmek istediğine emin misin?`)) {
+    if (debt > 0 && !confirm(t("confirm_delete_customer_with_debt", { amount: formatTL(debt) }))) {
       return;
     }
     customers = customers.filter((c) => c.id !== id);
@@ -405,11 +407,11 @@
       .map((s) => ({ type: "debt", timestamp: s.timestamp, amount: s.total, label: s.items.map((i) => `${i.name} x${i.qty}`).join(", ") }));
     const paymentEntries = payments
       .filter((p) => p.customerId === customerId)
-      .map((p) => ({ type: "payment", timestamp: p.timestamp, amount: p.amount, label: "Ödeme alındı" }));
+      .map((p) => ({ type: "payment", timestamp: p.timestamp, amount: p.amount, label: t("label_payment_received") }));
     const combined = [...debtEntries, ...paymentEntries].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
 
     if (!combined.length) {
-      list.innerHTML = `<p class="empty-state" style="display:block;">Henüz işlem yok.</p>`;
+      list.innerHTML = `<p class="empty-state" style="display:block;">${t("empty_no_history")}</p>`;
       return;
     }
 
@@ -435,7 +437,7 @@
     return "yeterli";
   }
 
-  const STATUS_LABEL = { tukendi: "Tükendi", kritik: "Kritik", yeterli: "Yeterli" };
+  const STATUS_LABEL_KEY = { tukendi: "status_tukendi", kritik: "status_kritik", yeterli: "status_yeterli" };
   const STATUS_CLASS = { tukendi: "status-tukendi", kritik: "status-kritik", yeterli: "status-yeterli" };
 
   function escapeHtml(s) {
@@ -444,9 +446,9 @@
 
   function formatQty(p) {
     if (p.unit === "kg") {
-      return (Math.round(p.qty * 1000) / 1000).toLocaleString("tr-TR", { minimumFractionDigits: 0, maximumFractionDigits: 3 }) + " kg";
+      return (Math.round(p.qty * 1000) / 1000).toLocaleString("tr-TR", { minimumFractionDigits: 0, maximumFractionDigits: 3 }) + " " + t("unit_kg");
     }
-    return p.qty + " adet";
+    return p.qty + " " + t("unit_adet");
   }
 
   function formatTL(n) {
@@ -468,7 +470,7 @@
       nameInput.focus();
       return;
     }
-    const category = catInput.value.trim() || "diğer";
+    const category = catInput.value.trim() || t("category_other");
     const min = Number(minInput.value) || 0;
     const qty = Number(qtyInput.value) || 0;
     const price = Number(priceInput.value) || 0;
@@ -510,7 +512,7 @@
     const name = document.getElementById("editName").value.trim();
     if (!name) return;
     p.name = name;
-    p.category = document.getElementById("editCategory").value.trim() || "diğer";
+    p.category = document.getElementById("editCategory").value.trim() || t("category_other");
     p.min = Number(document.getElementById("editMin").value) || 0;
     p.price = Number(document.getElementById("editPrice").value) || 0;
     p.barcode = document.getElementById("editBarcode").value.trim();
@@ -531,14 +533,14 @@
   // ---------- Rendering: Products ----------
   function productRowHtml(p) {
     const status = getStatus(p);
-    const priceLabel = p.unit === "kg" ? formatTL(p.price) + "/kg" : formatTL(p.price);
+    const priceLabel = p.unit === "kg" ? formatTL(p.price) + "/" + t("unit_kg") : formatTL(p.price);
     return `
       <div class="product-row" data-id="${p.id}">
         <div class="product-info">
           <p class="product-name">${escapeHtml(p.name)}</p>
-          <p class="product-meta">${escapeHtml(p.category)} · Stok: ${formatQty(p)} · ${priceLabel}</p>
+          <p class="product-meta">${escapeHtml(p.category)} · ${formatQty(p)} · ${priceLabel}</p>
         </div>
-        <span class="status-badge ${STATUS_CLASS[status]}">${STATUS_LABEL[status]}</span>
+        <span class="status-badge ${STATUS_CLASS[status]}">${t(STATUS_LABEL_KEY[status])}</span>
       </div>`;
   }
 
@@ -609,7 +611,7 @@
     document.getElementById("modalQty").textContent = formatQty(p);
     const status = getStatus(p);
     const pill = document.getElementById("modalStatus");
-    pill.textContent = STATUS_LABEL[status];
+    pill.textContent = t(STATUS_LABEL_KEY[status]);
     pill.className = "status-pill " + STATUS_CLASS[status];
   }
 
@@ -630,7 +632,7 @@
         colorLight: "#ffffff"
       });
     } else {
-      box.textContent = "QR kütüphanesi yüklenemedi (internet bağlantısını kontrol et).";
+      box.textContent = t("alert_qr_lib_error");
     }
   }
 
@@ -639,7 +641,7 @@
     const p = products.find((x) => x.id === activeProductId);
     const win = window.open("", "_blank");
     win.document.write(`
-      <html><head><title>QR Yazdır</title></head>
+      <html><head><title>${escapeHtml(t("print_qr_window_title"))}</title></head>
       <body style="text-align:center;font-family:sans-serif;padding:40px;">
         <h3>${escapeHtml(p ? p.name : "")}</h3>
         ${box.innerHTML}
@@ -672,7 +674,7 @@
         () => {}
       )
       .catch((err) => {
-        alert("Kamera başlatılamadı. Tarayıcı izinlerini kontrol et.\n" + err);
+        alert(t("alert_camera_error") + "\n" + err);
         stopScan();
       });
   }
@@ -693,22 +695,22 @@
     if (stokScanCooldown) return;
     const p = findProductByScan(decodedText);
     if (!p) {
-      alert("Bu kod kayıtlı bir ürüne ait değil.");
+      alert(t("alert_scan_not_found"));
       return;
     }
     stopScan();
     if (p.unit === "kg") {
-      const action = confirm(`${p.name}\nMevcut stok: ${formatQty(p)}\n\nStok GİRİŞİ için Tamam, ÇIKIŞI için İptal'e bas.`);
-      const input = prompt("Kaç kg?", "");
+      const action = confirm(t("confirm_stock_action", { name: p.name, stock: formatQty(p) }));
+      const input = prompt(t("prompt_kg"), "");
       if (input === null) return;
       const weight = parseFloat(input.replace(",", "."));
       if (!weight || weight <= 0) {
-        alert("Geçerli bir ağırlık girmedin.");
+        alert(t("alert_invalid_weight"));
         return;
       }
       adjustQty(p.id, action ? weight : -weight);
     } else {
-      const action = confirm(`${p.name}\nMevcut stok: ${p.qty}\n\nStok GİRİŞİ için Tamam, ÇIKIŞI için İptal'e bas.`);
+      const action = confirm(t("confirm_stock_action", { name: p.name, stock: String(p.qty) }));
       if (action) {
         adjustQty(p.id, 1);
       } else {
@@ -736,7 +738,7 @@
         () => {}
       )
       .catch((err) => {
-        alert("Kamera başlatılamadı. Tarayıcı izinlerini kontrol et.\n" + err);
+        alert(t("alert_camera_error") + "\n" + err);
         stopScanKasa();
       });
   }
@@ -757,21 +759,21 @@
     if (kasaScanCooldown) return;
     const p = findProductByScan(decodedText);
     if (!p) {
-      alert("Bu kod kayıtlı bir ürüne ait değil.");
+      alert(t("alert_scan_not_found"));
       return;
     }
 
     if (p.unit === "kg") {
-      const input = prompt(`${p.name} — kaç kg?`, "");
+      const input = prompt(t("prompt_kg_kasa", { name: p.name }), "");
       if (input === null) return;
       const weight = parseFloat(input.replace(",", "."));
       if (!weight || weight <= 0) {
-        alert("Geçerli bir ağırlık girmedin.");
+        alert(t("alert_invalid_weight"));
         return;
       }
       addToCart(p, weight);
       kasaScanCooldown = true;
-      showKasaScanFeedback(`${p.name} (${weight} kg)`);
+      showKasaScanFeedback(`${p.name} (${weight} ${t("unit_kg")})`);
       setTimeout(() => {
         kasaScanCooldown = false;
       }, 3000);
@@ -795,7 +797,7 @@
       badge.className = "scan-feedback";
       readerEl.parentElement.insertBefore(badge, readerEl.nextSibling);
     }
-    badge.innerHTML = `<i class="ti ti-check" aria-hidden="true"></i> ${escapeHtml(name)} eklendi`;
+    badge.innerHTML = `<i class="ti ti-check" aria-hidden="true"></i> ${escapeHtml(t("scan_feedback_added", { name }))}`;
     badge.classList.add("show");
     clearTimeout(badge._hideTimer);
     badge._hideTimer = setTimeout(() => {
@@ -808,16 +810,16 @@
     if (!p) return;
     let amount;
     if (p.unit === "kg") {
-      const input = prompt(`${p.name} — kaç kg?`, "");
+      const input = prompt(t("prompt_kg_kasa", { name: p.name }), "");
       if (input === null) return;
       amount = parseFloat(input.replace(",", "."));
     } else {
-      const input = prompt(`${p.name} — kaç adet?`, "1");
+      const input = prompt(t("prompt_adet_kasa", { name: p.name }), "1");
       if (input === null) return;
       amount = parseFloat(input.replace(",", "."));
     }
     if (!amount || amount <= 0) {
-      alert("Geçerli bir miktar girmedin.");
+      alert(t("alert_invalid_amount"));
       return;
     }
     addToCart(p, amount);
@@ -839,20 +841,20 @@
       .slice(0, 8);
 
     if (!matches.length) {
-      resultsEl.innerHTML = `<p class="empty-state" style="display:block;">Eşleşen ürün yok.</p>`;
+      resultsEl.innerHTML = `<p class="empty-state" style="display:block;">${t("empty_no_match_product")}</p>`;
       return;
     }
 
     resultsEl.innerHTML = matches
       .map((p) => {
-        const priceLabel = p.unit === "kg" ? formatTL(p.price) + "/kg" : formatTL(p.price);
+        const priceLabel = p.unit === "kg" ? formatTL(p.price) + "/" + t("unit_kg") : formatTL(p.price);
         return `
           <div class="product-row manual-add-row" data-id="${p.id}">
             <div class="product-info">
               <p class="product-name">${escapeHtml(p.name)}</p>
-              <p class="product-meta">${escapeHtml(p.category)} · Stok: ${formatQty(p)} · ${priceLabel}</p>
+              <p class="product-meta">${escapeHtml(p.category)} · ${formatQty(p)} · ${priceLabel}</p>
             </div>
-            <button class="btn btn-sm manual-add-btn" data-id="${p.id}">Ekle</button>
+            <button class="btn btn-sm manual-add-btn" data-id="${p.id}">${t("btn_manual_add")}</button>
           </div>`;
       })
       .join("");
@@ -887,7 +889,7 @@
   function editCartWeight(productId) {
     const item = cart.find((c) => c.productId === productId);
     if (!item) return;
-    const input = prompt(`${item.name} — yeni ağırlık (kg)`, item.qty);
+    const input = prompt(t("prompt_edit_weight", { name: item.name }), item.qty);
     if (input === null) return;
     const weight = parseFloat(input.replace(",", "."));
     if (!weight || weight <= 0) {
@@ -912,26 +914,26 @@
     const lineTotal = item.price * item.qty;
     const isKg = item.unit === "kg";
     const qtyDisplay = isKg
-      ? (Math.round(item.qty * 1000) / 1000).toLocaleString("tr-TR", { maximumFractionDigits: 3 }) + " kg"
+      ? (Math.round(item.qty * 1000) / 1000).toLocaleString("tr-TR", { maximumFractionDigits: 3 }) + " " + t("unit_kg")
       : item.qty;
     const controlsHtml = isKg
       ? `
-          <button class="cart-edit-weight-btn" data-id="${item.productId}" aria-label="Ağırlığı düzenle"><i class="ti ti-pencil" aria-hidden="true"></i></button>
+          <button class="cart-edit-weight-btn" data-id="${item.productId}" aria-label="${escapeHtml(t("aria_edit_weight"))}"><i class="ti ti-pencil" aria-hidden="true"></i></button>
           <span class="cart-qty-value">${qtyDisplay}</span>`
       : `
-          <button class="cart-qty-btn cart-minus" data-id="${item.productId}" aria-label="Azalt"><i class="ti ti-minus" aria-hidden="true"></i></button>
+          <button class="cart-qty-btn cart-minus" data-id="${item.productId}" aria-label="${escapeHtml(t("aria_decrease_cart_qty"))}"><i class="ti ti-minus" aria-hidden="true"></i></button>
           <span class="cart-qty-value">${item.qty}</span>
-          <button class="cart-qty-btn cart-plus" data-id="${item.productId}" aria-label="Arttır"><i class="ti ti-plus" aria-hidden="true"></i></button>`;
+          <button class="cart-qty-btn cart-plus" data-id="${item.productId}" aria-label="${escapeHtml(t("aria_increase_cart_qty"))}"><i class="ti ti-plus" aria-hidden="true"></i></button>`;
     return `
       <div class="cart-row" data-id="${item.productId}">
         <div class="cart-info">
           <p class="cart-name">${escapeHtml(item.name)}</p>
-          <p class="cart-meta">${formatTL(item.price)} / ${isKg ? "kg" : "adet"}</p>
+          <p class="cart-meta">${formatTL(item.price)} / ${isKg ? t("unit_kg") : t("unit_adet")}</p>
         </div>
         <div class="cart-controls">
           ${controlsHtml}
           <span class="cart-line-total">${formatTL(lineTotal)}</span>
-          <button class="cart-remove-btn" data-id="${item.productId}" aria-label="Kaldır"><i class="ti ti-x" aria-hidden="true"></i></button>
+          <button class="cart-remove-btn" data-id="${item.productId}" aria-label="${escapeHtml(t("aria_remove_from_cart"))}"><i class="ti ti-x" aria-hidden="true"></i></button>
         </div>
       </div>`;
   }
@@ -980,7 +982,7 @@
 
   function completeSale() {
     if (!cart.length) {
-      alert("Sepet boş.");
+      alert(t("alert_cart_empty"));
       return;
     }
 
@@ -989,13 +991,13 @@
     if (selectedPaymentType === "veresiye") {
       const select = document.getElementById("veresiyeCustomerSelect");
       if (!customers.length) {
-        alert("Önce Veresiye sekmesinden bir müşteri eklemen gerekiyor.");
+        alert(t("alert_need_customer_first"));
         return;
       }
       customerId = select.value;
       const c = customers.find((x) => x.id === customerId);
       if (!c) {
-        alert("Lütfen bir müşteri seç.");
+        alert(t("alert_select_customer"));
         return;
       }
       customerName = c.name;
@@ -1028,13 +1030,13 @@
     setPaymentType("nakit");
     save();
     renderAll();
-    alert(`Satış tamamlandı: ${formatTL(total)}${customerName ? " (Veresiye: " + customerName + ")" : ""}`);
+    alert(t("alert_sale_completed", { total: formatTL(total) }) + (customerName ? t("label_credit_suffix", { name: customerName }) : ""));
   }
 
   function cancelSale(saleId) {
     const sale = sales.find((s) => s.id === saleId);
     if (!sale) return;
-    if (!confirm(`Bu satış iptal edilsin mi?\n${formatTL(sale.total)} tutarındaki satış silinecek ve ürünler stoğa geri eklenecek.`)) {
+    if (!confirm(t("confirm_cancel_sale", { total: formatTL(sale.total) }))) {
       return;
     }
     sale.items.forEach((item) => {
@@ -1070,9 +1072,9 @@
     const d = new Date(sale.timestamp);
     const timeStr = d.toLocaleString("tr-TR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
     const itemsSummary = sale.items
-      .map((i) => `${escapeHtml(i.name)} x${i.unit === "kg" ? i.qty + "kg" : i.qty}`)
+      .map((i) => `${escapeHtml(i.name)} x${i.unit === "kg" ? i.qty + t("unit_kg") : i.qty}`)
       .join(", ");
-    const paymentBadge = sale.paymentType === "veresiye" ? `<span class="sale-payment-badge">Veresiye${sale.customerName ? ": " + escapeHtml(sale.customerName) : ""}</span>` : "";
+    const paymentBadge = sale.paymentType === "veresiye" ? `<span class="sale-payment-badge">${t("payment_credit")}${sale.customerName ? ": " + escapeHtml(sale.customerName) : ""}</span>` : "";
     return `
       <div class="sale-row">
         <div class="sale-row-top">
@@ -1083,7 +1085,7 @@
         <div class="sale-row-bottom">
           ${paymentBadge}
           <button class="sale-cancel-btn" data-id="${sale.id}">
-            <i class="ti ti-arrow-back-up" aria-hidden="true"></i> İptal et
+            <i class="ti ti-arrow-back-up" aria-hidden="true"></i> ${t("btn_cancel_sale")}
           </button>
         </div>
       </div>`;
@@ -1094,7 +1096,7 @@
       <div class="product-row">
         <div class="product-info">
           <p class="product-name">${rank}. ${escapeHtml(item.name)}</p>
-          <p class="product-meta">${item.qty} adet satıldı</p>
+          <p class="product-meta">${t("sold_qty_template", { qty: item.qty })}</p>
         </div>
         <span class="sale-amount">${formatTL(item.revenue)}</span>
       </div>`;
@@ -1169,7 +1171,7 @@
         () => {}
       )
       .catch((err) => {
-        alert("Kamera başlatılamadı. Tarayıcı izinlerini kontrol et.\n" + err);
+        alert(t("alert_camera_error") + "\n" + err);
         closeQuickBarcodeScan();
       });
   }
@@ -1203,7 +1205,7 @@
   });
   document.getElementById("searchBox").addEventListener("input", renderAll);
   document.getElementById("resetBtn").addEventListener("click", () => {
-    if (confirm("Tüm ürünlerin stoğu minimum seviyeye sıfırlansın mı?")) resetAll();
+    if (confirm(t("confirm_reset_all"))) resetAll();
   });
 
   document.getElementById("closeModalBtn").addEventListener("click", closeModal);
@@ -1220,7 +1222,7 @@
   });
   document.getElementById("saveEditBtn").addEventListener("click", saveEdit);
   document.getElementById("deleteProductBtn").addEventListener("click", () => {
-    if (confirm("Bu ürünü silmek istediğine emin misin?")) deleteProduct(activeProductId);
+    if (confirm(t("confirm_delete_product"))) deleteProduct(activeProductId);
   });
   document.getElementById("printQrBtn").addEventListener("click", printQr);
 
@@ -1238,7 +1240,7 @@
   document.getElementById("startKasaScanBtn").addEventListener("click", startScanKasa);
   document.getElementById("stopKasaScanBtn").addEventListener("click", stopScanKasa);
   document.getElementById("clearCartBtn").addEventListener("click", () => {
-    if (!cart.length || confirm("Sepeti boşaltmak istediğine emin misin?")) clearCart();
+    if (!cart.length || confirm(t("confirm_clear_cart"))) clearCart();
   });
   document.getElementById("completeSaleBtn").addEventListener("click", completeSale);
   document.getElementById("cartDiscount").addEventListener("input", renderCart);
@@ -1261,7 +1263,7 @@
   document.getElementById("recordPaymentBtn").addEventListener("click", recordPayment);
   document.getElementById("saveCustomerEditBtn").addEventListener("click", saveCustomerEdit);
   document.getElementById("deleteCustomerBtn").addEventListener("click", () => {
-    if (confirm("Bu müşteriyi silmek istediğine emin misin?")) deleteCustomer(activeCustomerId);
+    if (confirm(t("confirm_delete_customer"))) deleteCustomer(activeCustomerId);
   });
 
   document.querySelectorAll(".nav-btn").forEach((btn) => {
@@ -1274,6 +1276,19 @@
   });
   document.getElementById("forgotPasswordBtn").addEventListener("click", forgotPassword);
   document.getElementById("logoutBtn").addEventListener("click", logout);
+
+  // Dil değiştiğinde tüm dinamik içerikleri yeniden çiz (Re-render dynamic content on language change)
+  document.addEventListener("languagechanged", () => {
+    renderAll();
+    setSyncStatus(lastSyncState);
+    if (activeProductId) {
+      const p = products.find((x) => x.id === activeProductId);
+      if (p) updateModalContent(p);
+    }
+    if (activeCustomerId) {
+      openCustomerModal(activeCustomerId);
+    }
+  });
 
   load();
 })();
