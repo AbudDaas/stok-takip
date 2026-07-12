@@ -326,7 +326,7 @@ input:focus{outline:2px solid var(--navy-light);outline-offset:1px;}
   display:flex;align-items:center;justify-content:center;
 }
 .cart-qty-value{min-width:18px;text-align:center;font-weight:700;font-size:14px;}
-.cart-line-total{font-weight:700;font-size:14px;min-width:70px;text-align:end;}
+.cart-line-total{font-weight:700;font-size:14px;min-width:70px;text-align:right;}
 .cart-remove-btn{
   background:none;border:none;color:var(--red);font-size:16px;cursor:pointer;padding:2px;
 }
@@ -506,7 +506,7 @@ input:focus{outline:2px solid var(--navy-light);outline-offset:1px;}
   display:flex;
   align-items:center;
   gap:4px;
-  margin-inline-start:auto;
+  margin-left:auto;
 }
 
 .top-product-row{
@@ -610,11 +610,6 @@ input:focus{outline:2px solid var(--navy-light);outline-offset:1px;}
   font-size:17px;
   cursor:pointer;
 }
-.lang-toggle-btn{
-  font-size:12px;
-  font-weight:700;
-  letter-spacing:0.3px;
-}
 .auth-screen{
   position:fixed;
   inset:0;
@@ -679,15 +674,99 @@ input:focus{outline:2px solid var(--navy-light);outline-offset:1px;}
   line-height:1.4;
 }
 
-/* ---------- Arapça / RTL desteği (Arabic / RTL support) ---------- */
-[dir="rtl"] body{
-  font-family:"Noto Sans Arabic","Segoe UI",Tahoma,Arial,sans-serif;
+/* Dil seçici */
+.lang-switch{
+  display:flex;
+  gap:2px;
+  background:rgba(255,255,255,0.12);
+  border-radius:999px;
+  padding:2px;
 }
-[dir="rtl"] .top-product-rank{
-  margin-right:0;
-  margin-left:8px;
+.lang-btn{
+  border:none;
+  background:transparent;
+  color:rgba(255,255,255,0.75);
+  font-size:11px;
+  font-weight:700;
+  padding:4px 8px;
+  border-radius:999px;
+  cursor:pointer;
 }
-[dir="rtl"] .sale-payment-badge{
+.lang-btn.active{
+  background:#fff;
+  color:var(--navy);
+}
+
+/* ---------- RTL (Arapça) desteği ---------- */
+html[dir="rtl"] .topbar,
+html[dir="rtl"] .topbar-title,
+html[dir="rtl"] .topbar-right,
+html[dir="rtl"] .stat-card,
+html[dir="rtl"] .product-row,
+html[dir="rtl"] .cart-row,
+html[dir="rtl"] .cart-controls,
+html[dir="rtl"] .cart-total-row,
+html[dir="rtl"] .cart-subtotal-row,
+html[dir="rtl"] .card-header-row,
+html[dir="rtl"] .section-header,
+html[dir="rtl"] .sale-row-top,
+html[dir="rtl"] .sale-row-bottom,
+html[dir="rtl"] .modal-header,
+html[dir="rtl"] .qty-control,
+html[dir="rtl"] .payment-type-row,
+html[dir="rtl"] .debt-display,
+html[dir="rtl"] .barcode-row,
+html[dir="rtl"] .form-row.two-col{
+  direction:rtl;
+}
+html[dir="rtl"] .bottom-nav{
+  flex-direction:row-reverse;
+}
+html[dir="rtl"] .sale-cancel-btn{
   margin-left:0;
-  margin-right:6px;
+  margin-right:auto;
 }
+html[dir="rtl"] .cart-line-total{
+  text-align:left;
+}
+html[dir="rtl"] .status-badge,
+html[dir="rtl"] .sync-badge,
+html[dir="rtl"] .lang-switch{
+  direction:ltr;
+}
+
+/* Toplu fotoğraf tarama */
+.bulk-scan-loading{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+  margin-top:10px;
+  font-size:13px;
+  color:var(--text-secondary);
+}
+.spin{
+  animation: spin 1s linear infinite;
+}
+@keyframes spin{
+  from{transform:rotate(0deg);}
+  to{transform:rotate(360deg);}
+}
+
+.bulk-result-row{
+  display:flex;
+  align-items:flex-start;
+  gap:10px;
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:var(--radius);
+  padding:10px 12px;
+}
+.bulk-result-row input[type=checkbox]{
+  width:20px;height:20px;
+  margin-top:2px;
+  flex-shrink:0;
+}
+.bulk-result-info{min-width:0;flex:1;}
+.bulk-result-name{margin:0;font-size:14px;font-weight:600;}
+.bulk-result-meta{margin:2px 0 0;font-size:12px;color:var(--text-muted);}
