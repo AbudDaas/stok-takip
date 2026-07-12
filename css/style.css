@@ -770,3 +770,12 @@ html[dir="rtl"] .lang-switch{
 .bulk-result-info{min-width:0;flex:1;}
 .bulk-result-name{margin:0;font-size:14px;font-weight:600;}
 .bulk-result-meta{margin:2px 0 0;font-size:12px;color:var(--text-muted);}
+
+/* Yerel yedek içe aktarma butonu */
+.import-backup-btn{
+  background:var(--amber-bg);
+  color:var(--amber-text);
+  border:1px solid var(--amber-text);
+  font-weight:700;
+  margin-bottom:14px;
+}
