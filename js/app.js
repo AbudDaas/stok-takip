@@ -1,6 +1,14 @@
 (function () {
   "use strict";
 
+  const t = (key) => window.i18n.t(key);
+  function locale() {
+    const lang = window.i18n.getLang();
+    if (lang === "en") return "en-US";
+    if (lang === "ar") return "ar-SA";
+    return "tr-TR";
+  }
+
   const STORAGE_KEY = "bakkal_urunler_v2";
   let products = [];
   let sales = [];
@@ -11,7 +19,6 @@
   let activeCustomerId = null;
   let selectedPaymentType = "nakit";
   let currentSalesPeriod = "today";
-  let lastSyncState = "local";
 
   let html5QrCode = null;
   let scanning = false;
@@ -109,22 +116,21 @@
   }
 
   function setSyncStatus(state) {
-    lastSyncState = state;
     const icon = document.getElementById("syncIcon");
     const text = document.getElementById("syncText");
     if (!icon || !text) return;
     if (state === "connected") {
       icon.className = "ti ti-cloud-check";
-      text.textContent = t("sync_connected");
+      text.textContent = t("syncConnected");
     } else if (state === "connecting") {
       icon.className = "ti ti-cloud-up";
-      text.textContent = t("sync_connecting");
+      text.textContent = t("syncConnecting");
     } else if (state === "error") {
       icon.className = "ti ti-cloud-x";
-      text.textContent = t("sync_error");
+      text.textContent = t("syncError");
     } else {
       icon.className = "ti ti-cloud-off";
-      text.textContent = t("sync_local");
+      text.textContent = t("syncLocal");
     }
   }
 
@@ -137,20 +143,20 @@
 
   function mapAuthError(code) {
     const messages = {
-      "auth/invalid-email": t("auth_error_invalid_email"),
-      "auth/user-not-found": t("auth_error_user_not_found"),
-      "auth/wrong-password": t("auth_error_wrong_password"),
-      "auth/invalid-credential": t("auth_error_invalid_credential"),
-      "auth/too-many-requests": t("auth_error_too_many_requests")
+      "auth/invalid-email": t("authErrInvalidEmail"),
+      "auth/user-not-found": t("authErrUserNotFound"),
+      "auth/wrong-password": t("authErrWrongPassword"),
+      "auth/invalid-credential": t("authErrInvalidCredential"),
+      "auth/too-many-requests": t("authErrTooMany")
     };
-    return messages[code] || t("auth_error_generic");
+    return messages[code] || t("authErrGeneric");
   }
 
   function submitAuth() {
     const email = document.getElementById("authEmail").value.trim();
     const password = document.getElementById("authPassword").value;
     if (!email || !password) {
-      showAuthError(t("auth_fields_required"));
+      showAuthError(t("authErrRequired"));
       return;
     }
     document.getElementById("authError").style.display = "none";
@@ -160,18 +166,18 @@
   function forgotPassword() {
     const email = document.getElementById("authEmail").value.trim();
     if (!email) {
-      showAuthError(t("auth_forgot_need_email"));
+      showAuthError(t("authErrForgotNeedsEmail"));
       return;
     }
     document.getElementById("authError").style.display = "none";
     auth
       .sendPasswordResetEmail(email)
-      .then(() => alert(t("auth_forgot_sent")))
+      .then(() => alert(t("authResetSent")))
       .catch((e) => showAuthError(mapAuthError(e.code)));
   }
 
   function logout() {
-    if (confirm(t("confirm_logout"))) {
+    if (confirm(t("confirmLogout"))) {
       auth.signOut();
     }
   }
@@ -286,7 +292,7 @@
 
   function deleteCustomer(id) {
     const debt = getCustomerDebt(id);
-    if (debt > 0 && !confirm(t("confirm_delete_customer_with_debt", { amount: formatTL(debt) }))) {
+    if (debt > 0 && !confirm(`${t("confirmDeleteCustomerWithDebt")} ${formatTL(debt)} ${t("confirmDeleteCustomerWithDebtSuffix")}`)) {
       return;
     }
     customers = customers.filter((c) => c.id !== id);
@@ -407,18 +413,18 @@
       .map((s) => ({ type: "debt", timestamp: s.timestamp, amount: s.total, label: s.items.map((i) => `${i.name} x${i.qty}`).join(", ") }));
     const paymentEntries = payments
       .filter((p) => p.customerId === customerId)
-      .map((p) => ({ type: "payment", timestamp: p.timestamp, amount: p.amount, label: t("label_payment_received") }));
+      .map((p) => ({ type: "payment", timestamp: p.timestamp, amount: p.amount, label: t("paymentReceivedLabel") }));
     const combined = [...debtEntries, ...paymentEntries].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
 
     if (!combined.length) {
-      list.innerHTML = `<p class="empty-state" style="display:block;">${t("empty_no_history")}</p>`;
+      list.innerHTML = `<p class="empty-state" style="display:block;">${t("noTransactionsYet")}</p>`;
       return;
     }
 
     list.innerHTML = combined
       .map((e) => {
         const d = new Date(e.timestamp);
-        const timeStr = d.toLocaleString("tr-TR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
+        const timeStr = d.toLocaleString(locale(), { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
         const amountClass = e.type === "debt" ? "history-amount-debt" : "history-amount-payment";
         const sign = e.type === "debt" ? "+" : "-";
         return `
@@ -437,7 +443,12 @@
     return "yeterli";
   }
 
-  const STATUS_LABEL_KEY = { tukendi: "status_tukendi", kritik: "status_kritik", yeterli: "status_yeterli" };
+  function getStatusLabel(status) {
+    if (status === "tukendi") return t("statusTukendi");
+    if (status === "kritik") return t("statusKritik");
+    return t("statusYeterli");
+  }
+
   const STATUS_CLASS = { tukendi: "status-tukendi", kritik: "status-kritik", yeterli: "status-yeterli" };
 
   function escapeHtml(s) {
@@ -446,13 +457,13 @@
 
   function formatQty(p) {
     if (p.unit === "kg") {
-      return (Math.round(p.qty * 1000) / 1000).toLocaleString("tr-TR", { minimumFractionDigits: 0, maximumFractionDigits: 3 }) + " " + t("unit_kg");
+      return (Math.round(p.qty * 1000) / 1000).toLocaleString(locale(), { minimumFractionDigits: 0, maximumFractionDigits: 3 }) + " " + t("unitKgShort");
     }
-    return p.qty + " " + t("unit_adet");
+    return p.qty + " " + t("unitAdetShort");
   }
 
   function formatTL(n) {
-    return (Number(n) || 0).toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " ₺";
+    return (Number(n) || 0).toLocaleString(locale(), { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " ₺";
   }
 
   // ---------- CRUD ----------
@@ -470,7 +481,7 @@
       nameInput.focus();
       return;
     }
-    const category = catInput.value.trim() || t("category_other");
+    const category = catInput.value.trim() || t("categoryOtherDefault");
     const min = Number(minInput.value) || 0;
     const qty = Number(qtyInput.value) || 0;
     const price = Number(priceInput.value) || 0;
@@ -512,7 +523,7 @@
     const name = document.getElementById("editName").value.trim();
     if (!name) return;
     p.name = name;
-    p.category = document.getElementById("editCategory").value.trim() || t("category_other");
+    p.category = document.getElementById("editCategory").value.trim() || t("categoryOtherDefault");
     p.min = Number(document.getElementById("editMin").value) || 0;
     p.price = Number(document.getElementById("editPrice").value) || 0;
     p.barcode = document.getElementById("editBarcode").value.trim();
@@ -533,14 +544,14 @@
   // ---------- Rendering: Products ----------
   function productRowHtml(p) {
     const status = getStatus(p);
-    const priceLabel = p.unit === "kg" ? formatTL(p.price) + "/" + t("unit_kg") : formatTL(p.price);
+    const priceLabel = p.unit === "kg" ? formatTL(p.price) + t("perKgSuffix") : formatTL(p.price);
     return `
       <div class="product-row" data-id="${p.id}">
         <div class="product-info">
           <p class="product-name">${escapeHtml(p.name)}</p>
-          <p class="product-meta">${escapeHtml(p.category)} · ${formatQty(p)} · ${priceLabel}</p>
+          <p class="product-meta">${escapeHtml(p.category)} · ${t("stockShortLabel")}: ${formatQty(p)} · ${priceLabel}</p>
         </div>
-        <span class="status-badge ${STATUS_CLASS[status]}">${t(STATUS_LABEL_KEY[status])}</span>
+        <span class="status-badge ${STATUS_CLASS[status]}">${getStatusLabel(status)}</span>
       </div>`;
   }
 
@@ -611,7 +622,7 @@
     document.getElementById("modalQty").textContent = formatQty(p);
     const status = getStatus(p);
     const pill = document.getElementById("modalStatus");
-    pill.textContent = t(STATUS_LABEL_KEY[status]);
+    pill.textContent = getStatusLabel(status);
     pill.className = "status-pill " + STATUS_CLASS[status];
   }
 
@@ -632,7 +643,7 @@
         colorLight: "#ffffff"
       });
     } else {
-      box.textContent = t("alert_qr_lib_error");
+      box.textContent = t("qrLibError");
     }
   }
 
@@ -641,7 +652,7 @@
     const p = products.find((x) => x.id === activeProductId);
     const win = window.open("", "_blank");
     win.document.write(`
-      <html><head><title>${escapeHtml(t("print_qr_window_title"))}</title></head>
+      <html><head><title>${t("printWindowTitle")}</title></head>
       <body style="text-align:center;font-family:sans-serif;padding:40px;">
         <h3>${escapeHtml(p ? p.name : "")}</h3>
         ${box.innerHTML}
@@ -674,7 +685,7 @@
         () => {}
       )
       .catch((err) => {
-        alert(t("alert_camera_error") + "\n" + err);
+        alert(t("cameraError") + "\n" + err);
         stopScan();
       });
   }
@@ -695,22 +706,22 @@
     if (stokScanCooldown) return;
     const p = findProductByScan(decodedText);
     if (!p) {
-      alert(t("alert_scan_not_found"));
+      alert(t("alertNotRegistered"));
       return;
     }
     stopScan();
     if (p.unit === "kg") {
-      const action = confirm(t("confirm_stock_action", { name: p.name, stock: formatQty(p) }));
-      const input = prompt(t("prompt_kg"), "");
+      const action = confirm(`${p.name}\n${t("currentStockLabel")}: ${formatQty(p)}\n\n${t("confirmStockDirection")}`);
+      const input = prompt(t("promptKgAmount"), "");
       if (input === null) return;
       const weight = parseFloat(input.replace(",", "."));
       if (!weight || weight <= 0) {
-        alert(t("alert_invalid_weight"));
+        alert(t("alertInvalidWeight"));
         return;
       }
       adjustQty(p.id, action ? weight : -weight);
     } else {
-      const action = confirm(t("confirm_stock_action", { name: p.name, stock: String(p.qty) }));
+      const action = confirm(`${p.name}\n${t("currentStockLabel")}: ${p.qty}\n\n${t("confirmStockDirection")}`);
       if (action) {
         adjustQty(p.id, 1);
       } else {
@@ -738,7 +749,7 @@
         () => {}
       )
       .catch((err) => {
-        alert(t("alert_camera_error") + "\n" + err);
+        alert(t("cameraError") + "\n" + err);
         stopScanKasa();
       });
   }
@@ -759,21 +770,21 @@
     if (kasaScanCooldown) return;
     const p = findProductByScan(decodedText);
     if (!p) {
-      alert(t("alert_scan_not_found"));
+      alert(t("alertNotRegistered"));
       return;
     }
 
     if (p.unit === "kg") {
-      const input = prompt(t("prompt_kg_kasa", { name: p.name }), "");
+      const input = prompt(`${p.name} — ${t("promptKgAmount")}`, "");
       if (input === null) return;
       const weight = parseFloat(input.replace(",", "."));
       if (!weight || weight <= 0) {
-        alert(t("alert_invalid_weight"));
+        alert(t("alertInvalidWeight"));
         return;
       }
       addToCart(p, weight);
       kasaScanCooldown = true;
-      showKasaScanFeedback(`${p.name} (${weight} ${t("unit_kg")})`);
+      showKasaScanFeedback(`${p.name} (${weight} ${t("unitKgShort")})`);
       setTimeout(() => {
         kasaScanCooldown = false;
       }, 3000);
@@ -797,7 +808,7 @@
       badge.className = "scan-feedback";
       readerEl.parentElement.insertBefore(badge, readerEl.nextSibling);
     }
-    badge.innerHTML = `<i class="ti ti-check" aria-hidden="true"></i> ${escapeHtml(t("scan_feedback_added", { name }))}`;
+    badge.innerHTML = `<i class="ti ti-check" aria-hidden="true"></i> ${escapeHtml(name)} ${t("addedToCartSuffix")}`;
     badge.classList.add("show");
     clearTimeout(badge._hideTimer);
     badge._hideTimer = setTimeout(() => {
@@ -810,16 +821,16 @@
     if (!p) return;
     let amount;
     if (p.unit === "kg") {
-      const input = prompt(t("prompt_kg_kasa", { name: p.name }), "");
+      const input = prompt(`${p.name} — ${t("promptKgAmount")}`, "");
       if (input === null) return;
       amount = parseFloat(input.replace(",", "."));
     } else {
-      const input = prompt(t("prompt_adet_kasa", { name: p.name }), "1");
+      const input = prompt(`${p.name} — ${t("promptAdetAmount")}`, "1");
       if (input === null) return;
       amount = parseFloat(input.replace(",", "."));
     }
     if (!amount || amount <= 0) {
-      alert(t("alert_invalid_amount"));
+      alert(t("alertInvalidAmount"));
       return;
     }
     addToCart(p, amount);
@@ -841,20 +852,20 @@
       .slice(0, 8);
 
     if (!matches.length) {
-      resultsEl.innerHTML = `<p class="empty-state" style="display:block;">${t("empty_no_match_product")}</p>`;
+      resultsEl.innerHTML = `<p class="empty-state" style="display:block;">${t("noMatchingProducts")}</p>`;
       return;
     }
 
     resultsEl.innerHTML = matches
       .map((p) => {
-        const priceLabel = p.unit === "kg" ? formatTL(p.price) + "/" + t("unit_kg") : formatTL(p.price);
+        const priceLabel = p.unit === "kg" ? formatTL(p.price) + t("perKgSuffix") : formatTL(p.price);
         return `
           <div class="product-row manual-add-row" data-id="${p.id}">
             <div class="product-info">
               <p class="product-name">${escapeHtml(p.name)}</p>
-              <p class="product-meta">${escapeHtml(p.category)} · ${formatQty(p)} · ${priceLabel}</p>
+              <p class="product-meta">${escapeHtml(p.category)} · ${t("stockShortLabel")}: ${formatQty(p)} · ${priceLabel}</p>
             </div>
-            <button class="btn btn-sm manual-add-btn" data-id="${p.id}">${t("btn_manual_add")}</button>
+            <button class="btn btn-sm manual-add-btn" data-id="${p.id}">${t("addBtnShort")}</button>
           </div>`;
       })
       .join("");
@@ -889,7 +900,7 @@
   function editCartWeight(productId) {
     const item = cart.find((c) => c.productId === productId);
     if (!item) return;
-    const input = prompt(t("prompt_edit_weight", { name: item.name }), item.qty);
+    const input = prompt(`${item.name} — ${t("promptNewWeight")}`, item.qty);
     if (input === null) return;
     const weight = parseFloat(input.replace(",", "."));
     if (!weight || weight <= 0) {
@@ -914,26 +925,26 @@
     const lineTotal = item.price * item.qty;
     const isKg = item.unit === "kg";
     const qtyDisplay = isKg
-      ? (Math.round(item.qty * 1000) / 1000).toLocaleString("tr-TR", { maximumFractionDigits: 3 }) + " " + t("unit_kg")
+      ? (Math.round(item.qty * 1000) / 1000).toLocaleString(locale(), { maximumFractionDigits: 3 }) + " " + t("unitKgShort")
       : item.qty;
     const controlsHtml = isKg
       ? `
-          <button class="cart-edit-weight-btn" data-id="${item.productId}" aria-label="${escapeHtml(t("aria_edit_weight"))}"><i class="ti ti-pencil" aria-hidden="true"></i></button>
+          <button class="cart-edit-weight-btn" data-id="${item.productId}" aria-label="${t('editWeightAria')}"><i class="ti ti-pencil" aria-hidden="true"></i></button>
           <span class="cart-qty-value">${qtyDisplay}</span>`
       : `
-          <button class="cart-qty-btn cart-minus" data-id="${item.productId}" aria-label="${escapeHtml(t("aria_decrease_cart_qty"))}"><i class="ti ti-minus" aria-hidden="true"></i></button>
+          <button class="cart-qty-btn cart-minus" data-id="${item.productId}" aria-label="${t('decreaseAria')}"><i class="ti ti-minus" aria-hidden="true"></i></button>
           <span class="cart-qty-value">${item.qty}</span>
-          <button class="cart-qty-btn cart-plus" data-id="${item.productId}" aria-label="${escapeHtml(t("aria_increase_cart_qty"))}"><i class="ti ti-plus" aria-hidden="true"></i></button>`;
+          <button class="cart-qty-btn cart-plus" data-id="${item.productId}" aria-label="${t('increaseAria')}"><i class="ti ti-plus" aria-hidden="true"></i></button>`;
     return `
       <div class="cart-row" data-id="${item.productId}">
         <div class="cart-info">
           <p class="cart-name">${escapeHtml(item.name)}</p>
-          <p class="cart-meta">${formatTL(item.price)} / ${isKg ? t("unit_kg") : t("unit_adet")}</p>
+          <p class="cart-meta">${formatTL(item.price)} / ${isKg ? t("unitKgShort") : t("unitAdetShort")}</p>
         </div>
         <div class="cart-controls">
           ${controlsHtml}
           <span class="cart-line-total">${formatTL(lineTotal)}</span>
-          <button class="cart-remove-btn" data-id="${item.productId}" aria-label="${escapeHtml(t("aria_remove_from_cart"))}"><i class="ti ti-x" aria-hidden="true"></i></button>
+          <button class="cart-remove-btn" data-id="${item.productId}" aria-label="${t('removeAria')}"><i class="ti ti-x" aria-hidden="true"></i></button>
         </div>
       </div>`;
   }
@@ -982,7 +993,7 @@
 
   function completeSale() {
     if (!cart.length) {
-      alert(t("alert_cart_empty"));
+      alert(t("alertEmptyCart"));
       return;
     }
 
@@ -991,13 +1002,13 @@
     if (selectedPaymentType === "veresiye") {
       const select = document.getElementById("veresiyeCustomerSelect");
       if (!customers.length) {
-        alert(t("alert_need_customer_first"));
+        alert(t("alertNeedCustomer"));
         return;
       }
       customerId = select.value;
       const c = customers.find((x) => x.id === customerId);
       if (!c) {
-        alert(t("alert_select_customer"));
+        alert(t("alertSelectCustomer"));
         return;
       }
       customerName = c.name;
@@ -1030,13 +1041,13 @@
     setPaymentType("nakit");
     save();
     renderAll();
-    alert(t("alert_sale_completed", { total: formatTL(total) }) + (customerName ? t("label_credit_suffix", { name: customerName }) : ""));
+    alert(`${t("alertSaleComplete")} ${formatTL(total)}${customerName ? " (" + t("veresiyeLabel") + ": " + customerName + ")" : ""}`);
   }
 
   function cancelSale(saleId) {
     const sale = sales.find((s) => s.id === saleId);
     if (!sale) return;
-    if (!confirm(t("confirm_cancel_sale", { total: formatTL(sale.total) }))) {
+    if (!confirm(`${t("confirmCancelSale")}\n${formatTL(sale.total)} ${t("confirmCancelSaleDetail")}`)) {
       return;
     }
     sale.items.forEach((item) => {
@@ -1070,11 +1081,11 @@
 
   function saleRowHtml(sale) {
     const d = new Date(sale.timestamp);
-    const timeStr = d.toLocaleString("tr-TR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
+    const timeStr = d.toLocaleString(locale(), { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
     const itemsSummary = sale.items
-      .map((i) => `${escapeHtml(i.name)} x${i.unit === "kg" ? i.qty + t("unit_kg") : i.qty}`)
+      .map((i) => `${escapeHtml(i.name)} x${i.unit === "kg" ? i.qty + t("unitKgShort") : i.qty}`)
       .join(", ");
-    const paymentBadge = sale.paymentType === "veresiye" ? `<span class="sale-payment-badge">${t("payment_credit")}${sale.customerName ? ": " + escapeHtml(sale.customerName) : ""}</span>` : "";
+    const paymentBadge = sale.paymentType === "veresiye" ? `<span class="sale-payment-badge">${t("veresiyeLabel")}${sale.customerName ? ": " + escapeHtml(sale.customerName) : ""}</span>` : "";
     return `
       <div class="sale-row">
         <div class="sale-row-top">
@@ -1085,7 +1096,7 @@
         <div class="sale-row-bottom">
           ${paymentBadge}
           <button class="sale-cancel-btn" data-id="${sale.id}">
-            <i class="ti ti-arrow-back-up" aria-hidden="true"></i> ${t("btn_cancel_sale")}
+            <i class="ti ti-arrow-back-up" aria-hidden="true"></i> ${t("cancelSaleBtn")}
           </button>
         </div>
       </div>`;
@@ -1096,7 +1107,7 @@
       <div class="product-row">
         <div class="product-info">
           <p class="product-name">${rank}. ${escapeHtml(item.name)}</p>
-          <p class="product-meta">${t("sold_qty_template", { qty: item.qty })}</p>
+          <p class="product-meta">${item.qty} ${t("soldQtyLabel")}</p>
         </div>
         <span class="sale-amount">${formatTL(item.revenue)}</span>
       </div>`;
@@ -1167,11 +1178,12 @@
           const input = document.getElementById(quickScanTargetInputId);
           if (input) input.value = decodedText;
           closeQuickBarcodeScan();
+          lookupBarcodeAndFill(decodedText, quickScanTargetInputId);
         },
         () => {}
       )
       .catch((err) => {
-        alert(t("alert_camera_error") + "\n" + err);
+        alert(t("cameraError") + "\n" + err);
         closeQuickBarcodeScan();
       });
   }
@@ -1185,6 +1197,179 @@
         .catch(() => {});
       quickScanCode = null;
     }
+  }
+
+  // ---------- Open Food Facts: barkoddan otomatik ürün bilgisi ----------
+  function lookupBarcodeAndFill(barcode, targetInputId) {
+    const isNewForm = targetInputId === "newBarcode";
+    const nameInput = document.getElementById(isNewForm ? "newName" : "editName");
+    const categoryInput = document.getElementById(isNewForm ? "newCategory" : "editCategory");
+
+    fetch(`https://world.openfoodfacts.org/api/v2/product/${encodeURIComponent(barcode)}.json?fields=product_name,brands,categories_tags`)
+      .then((r) => r.json())
+      .then((data) => {
+        if (!data || data.status !== 1 || !data.product) return;
+        const p = data.product;
+        const brand = (p.brands || "").split(",")[0].trim();
+        const productName = p.product_name || "";
+        const fullName = [brand, productName].filter(Boolean).join(" ").trim();
+        if (fullName && !nameInput.value.trim()) {
+          nameInput.value = fullName;
+        }
+        if (p.categories_tags && p.categories_tags.length && !categoryInput.value.trim()) {
+          const rawCat = p.categories_tags[p.categories_tags.length - 1] || "";
+          categoryInput.value = rawCat.replace(/^\w\w:/, "").replace(/-/g, " ");
+        }
+      })
+      .catch(() => {});
+  }
+
+  // ---------- Toplu fotoğraf tarama (Google Gemini ücretsiz API ile raf tanıma) ----------
+  let bulkScanCandidates = [];
+
+  function isBulkScanConfigured() {
+    return typeof bulkScanConfig !== "undefined" && bulkScanConfig.apiKey && bulkScanConfig.apiKey.indexOf("BURAYA") !== 0;
+  }
+
+  function fileToBase64(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const result = reader.result;
+        resolve(result.split(",")[1]);
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  }
+
+  function productAlreadyExists(name) {
+    const normalized = name.trim().toLowerCase();
+    return products.some((p) => p.name.trim().toLowerCase() === normalized);
+  }
+
+  function handleShelfPhoto(file) {
+    if (!isBulkScanConfigured()) {
+      alert(t("bulkScanNotConfigured"));
+      return;
+    }
+    const loadingEl = document.getElementById("bulkScanLoading");
+    loadingEl.style.display = "flex";
+
+    const prompt = [
+      "Bu bir market/bakkal rafının fotoğrafı.",
+      "Fotoğrafta görünen HER FARKLI ürünü tek tek tespit et.",
+      "Her ürün için şu alanları çıkar:",
+      '- name: ürün adı ve varsa hacmi/boyutu (örn. "Pepsi 1 Lt")',
+      "- brand: marka adı",
+      "- category: genel kategori (örn. içecekler, atıştırmalık, temizlik)",
+      "- price: fiyat etiketinde açıkça görünüyorsa sayı olarak, görünmüyorsa null",
+      "",
+      "SADECE geçerli bir JSON dizisi döndür, başka hiçbir açıklama veya metin ekleme.",
+      'Format: [{"name":"...","brand":"...","category":"...","price":12.5}]',
+      "Aynı üründen birden fazla varsa yalnızca bir kez listele."
+    ].join("\n");
+
+    fileToBase64(file)
+      .then((base64) =>
+        fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${bulkScanConfig.apiKey}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            contents: [
+              {
+                parts: [{ text: prompt }, { inline_data: { mime_type: "image/jpeg", data: base64 } }]
+              }
+            ]
+          })
+        })
+      )
+      .then((r) => r.json())
+      .then((data) => {
+        loadingEl.style.display = "none";
+        const rawText = data && data.candidates && data.candidates[0] && data.candidates[0].content.parts[0].text;
+        if (!rawText) {
+          console.error("Gemini yanıtı beklenmedik formatta:", data);
+          alert(t("bulkScanError"));
+          return;
+        }
+        let detected = [];
+        try {
+          const cleaned = rawText.replace(/```json|```/g, "").trim();
+          detected = JSON.parse(cleaned);
+        } catch (e) {
+          console.error("JSON ayrıştırma hatası:", e, rawText);
+          alert(t("bulkScanError"));
+          return;
+        }
+
+        bulkScanCandidates = detected.filter((p) => p.name && !productAlreadyExists(p.name));
+
+        if (!bulkScanCandidates.length) {
+          alert(t("bulkScanNoNew"));
+          return;
+        }
+        renderBulkScanModal();
+      })
+      .catch((e) => {
+        console.error(e);
+        loadingEl.style.display = "none";
+        alert(t("bulkScanError"));
+      });
+  }
+
+  function renderBulkScanModal() {
+    const titleEl = document.getElementById("bulkScanModalTitle");
+    titleEl.textContent = t("bulkScanFoundTitle").replace("{n}", bulkScanCandidates.length);
+
+    const listEl = document.getElementById("bulkScanResultsList");
+    listEl.innerHTML = bulkScanCandidates
+      .map((p, i) => {
+        const metaParts = [p.brand, p.category].filter(Boolean).join(" · ");
+        const priceStr = p.price ? formatTL(p.price) : "";
+        return `
+          <label class="bulk-result-row">
+            <input type="checkbox" class="bulk-result-check" data-index="${i}" checked />
+            <div class="bulk-result-info">
+              <p class="bulk-result-name">${escapeHtml(p.name)}</p>
+              <p class="bulk-result-meta">${escapeHtml(metaParts)}${priceStr ? " · " + priceStr : ""}</p>
+            </div>
+          </label>`;
+      })
+      .join("");
+
+    document.getElementById("bulkScanModal").style.display = "flex";
+  }
+
+  function closeBulkScanModal() {
+    document.getElementById("bulkScanModal").style.display = "none";
+    bulkScanCandidates = [];
+  }
+
+  function addAllBulkScanProducts() {
+    const checks = document.querySelectorAll(".bulk-result-check");
+    let addedCount = 0;
+    checks.forEach((chk) => {
+      if (!chk.checked) return;
+      const candidate = bulkScanCandidates[Number(chk.dataset.index)];
+      if (!candidate) return;
+      products.push(
+        mkProduct(
+          candidate.name,
+          candidate.category || t("categoryOtherDefault"),
+          0,
+          5,
+          candidate.price || 0,
+          "",
+          "adet"
+        )
+      );
+      addedCount++;
+    });
+    save();
+    renderAll();
+    closeBulkScanModal();
+    alert(t("bulkAddedAlert").replace("{n}", addedCount));
   }
 
   // ---------- Tabs ----------
@@ -1205,7 +1390,7 @@
   });
   document.getElementById("searchBox").addEventListener("input", renderAll);
   document.getElementById("resetBtn").addEventListener("click", () => {
-    if (confirm(t("confirm_reset_all"))) resetAll();
+    if (confirm(t("confirmResetAll"))) resetAll();
   });
 
   document.getElementById("closeModalBtn").addEventListener("click", closeModal);
@@ -1222,13 +1407,27 @@
   });
   document.getElementById("saveEditBtn").addEventListener("click", saveEdit);
   document.getElementById("deleteProductBtn").addEventListener("click", () => {
-    if (confirm(t("confirm_delete_product"))) deleteProduct(activeProductId);
+    if (confirm(t("confirmDeleteProduct"))) deleteProduct(activeProductId);
   });
   document.getElementById("printQrBtn").addEventListener("click", printQr);
 
   document.getElementById("scanNewBarcodeBtn").addEventListener("click", () => openQuickBarcodeScan("newBarcode"));
   document.getElementById("scanEditBarcodeBtn").addEventListener("click", () => openQuickBarcodeScan("editBarcode"));
   document.getElementById("closeBarcodeModalBtn").addEventListener("click", closeQuickBarcodeScan);
+
+  document.getElementById("shelfPhotoBtn").addEventListener("click", () => {
+    document.getElementById("shelfPhotoInput").click();
+  });
+  document.getElementById("shelfPhotoInput").addEventListener("change", (e) => {
+    const file = e.target.files[0];
+    if (file) handleShelfPhoto(file);
+    e.target.value = "";
+  });
+  document.getElementById("closeBulkScanModalBtn").addEventListener("click", closeBulkScanModal);
+  document.getElementById("bulkScanModal").addEventListener("click", (e) => {
+    if (e.target.id === "bulkScanModal") closeBulkScanModal();
+  });
+  document.getElementById("bulkAddAllBtn").addEventListener("click", addAllBulkScanProducts);
   document.getElementById("barcodeScanModal").addEventListener("click", (e) => {
     if (e.target.id === "barcodeScanModal") closeQuickBarcodeScan();
   });
@@ -1240,7 +1439,7 @@
   document.getElementById("startKasaScanBtn").addEventListener("click", startScanKasa);
   document.getElementById("stopKasaScanBtn").addEventListener("click", stopScanKasa);
   document.getElementById("clearCartBtn").addEventListener("click", () => {
-    if (!cart.length || confirm(t("confirm_clear_cart"))) clearCart();
+    if (!cart.length || confirm(t("confirmClearCart"))) clearCart();
   });
   document.getElementById("completeSaleBtn").addEventListener("click", completeSale);
   document.getElementById("cartDiscount").addEventListener("input", renderCart);
@@ -1263,7 +1462,7 @@
   document.getElementById("recordPaymentBtn").addEventListener("click", recordPayment);
   document.getElementById("saveCustomerEditBtn").addEventListener("click", saveCustomerEdit);
   document.getElementById("deleteCustomerBtn").addEventListener("click", () => {
-    if (confirm(t("confirm_delete_customer"))) deleteCustomer(activeCustomerId);
+    if (confirm(t("confirmDeleteCustomer"))) deleteCustomer(activeCustomerId);
   });
 
   document.querySelectorAll(".nav-btn").forEach((btn) => {
@@ -1276,19 +1475,6 @@
   });
   document.getElementById("forgotPasswordBtn").addEventListener("click", forgotPassword);
   document.getElementById("logoutBtn").addEventListener("click", logout);
-
-  // Dil değiştiğinde tüm dinamik içerikleri yeniden çiz (Re-render dynamic content on language change)
-  document.addEventListener("languagechanged", () => {
-    renderAll();
-    setSyncStatus(lastSyncState);
-    if (activeProductId) {
-      const p = products.find((x) => x.id === activeProductId);
-      if (p) updateModalContent(p);
-    }
-    if (activeCustomerId) {
-      openCustomerModal(activeCustomerId);
-    }
-  });
 
   load();
 })();
