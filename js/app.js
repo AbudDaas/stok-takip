@@ -69,6 +69,8 @@
       docRef = db.collection("isletmeler").doc(user.uid);
       setSyncStatus("connecting");
       attachFirestoreListener();
+      const importBtn = document.getElementById("importBackupBtn");
+      if (importBtn) importBtn.style.display = hasImportableLocalBackup() ? "flex" : "none";
     } else {
       currentUser = null;
       docRef = null;
@@ -467,6 +469,65 @@
   }
 
   // ---------- CRUD ----------
+  // ---------- Eski (giriş öncesi) yerel yedeği içe aktar ----------
+  function hasImportableLocalBackup() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return false;
+      const parsed = JSON.parse(raw);
+      return Array.isArray(parsed.products) && parsed.products.length > 0;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  function importLocalBackup() {
+    let parsed;
+    try {
+      parsed = JSON.parse(localStorage.getItem(STORAGE_KEY));
+    } catch (e) {
+      alert(t("importParseError"));
+      return;
+    }
+    const localProducts = (parsed && parsed.products) || [];
+    if (!localProducts.length) {
+      alert(t("importNoLocalBackup"));
+      return;
+    }
+    if (!confirm(t("importConfirm").replace("{n}", localProducts.length))) return;
+
+    let addedCount = 0;
+    localProducts.forEach((lp) => {
+      if (!productAlreadyExists(lp.name)) {
+        products.push(lp);
+        addedCount++;
+      }
+    });
+    if (Array.isArray(parsed.sales)) {
+      const existingSaleIds = new Set(sales.map((s) => s.id));
+      parsed.sales.forEach((s) => {
+        if (!existingSaleIds.has(s.id)) sales.push(s);
+      });
+    }
+    if (Array.isArray(parsed.customers)) {
+      const existingCustomerIds = new Set(customers.map((c) => c.id));
+      parsed.customers.forEach((c) => {
+        if (!existingCustomerIds.has(c.id)) customers.push(c);
+      });
+    }
+    if (Array.isArray(parsed.payments)) {
+      const existingPaymentIds = new Set(payments.map((p) => p.id));
+      parsed.payments.forEach((p) => {
+        if (!existingPaymentIds.has(p.id)) payments.push(p);
+      });
+    }
+
+    save();
+    renderAll();
+    document.getElementById("importBackupBtn").style.display = "none";
+    alert(t("importSuccess").replace("{n}", addedCount));
+  }
+
   function addProduct() {
     const nameInput = document.getElementById("newName");
     const catInput = document.getElementById("newCategory");
@@ -1475,6 +1536,7 @@
   });
   document.getElementById("forgotPasswordBtn").addEventListener("click", forgotPassword);
   document.getElementById("logoutBtn").addEventListener("click", logout);
+  document.getElementById("importBackupBtn").addEventListener("click", importLocalBackup);
 
   load();
 })();
