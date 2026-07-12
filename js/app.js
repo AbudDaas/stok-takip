@@ -1538,5 +1538,15 @@
   document.getElementById("logoutBtn").addEventListener("click", logout);
   document.getElementById("importBackupBtn").addEventListener("click", importLocalBackup);
 
+  document.querySelectorAll(".lang-btn").forEach((btn) => {
+    btn.addEventListener("click", () => window.i18n.setLang(btn.dataset.lang));
+  });
+
+  window.onLangChanged = function () {
+    renderAll();
+  };
+
+  window.i18n.applyLang(window.i18n.getLang());
+
   load();
 })();
