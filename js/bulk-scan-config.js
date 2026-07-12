@@ -6,5 +6,5 @@
 // sorunsuz çalışmaya devam eder.
 
 const bulkScanConfig = {
-  apiKey: "BURAYA_GEMINI_API_ANAHTARI"
+  apiKey: "AIzaSyA_li-a_kh-TFwKhT5sSdgu-bnL2b2f5w0"
 };
