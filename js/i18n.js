@@ -175,8 +175,14 @@
       bulkScanNoNew: "Fotoğrafta sistemde olmayan yeni bir ürün bulunamadı.",
       bulkScanFoundTitle: "Sistemde olmayan {n} ürün bulundu",
       bulkAddAllBtn: "Hepsini ekle",
-      bulkAddedAlert: "{n} ürün eklendi."
+      bulkAddedAlert: "{n} ürün eklendi.",
+      importBackupBtn: "Yerel yedeği içe aktar (eski verileri geri yükle)",
+      importParseError: "Yerel yedek okunamadı.",
+      importNoLocalBackup: "Bu cihazda içe aktarılacak yerel bir yedek bulunamadı.",
+      importConfirm: "Bu cihazda {n} ürün bulundu. Bunları hesabına eklemek istiyor musun?",
+      importSuccess: "{n} ürün hesabına eklendi."
     },
+
 
 
     en: {
@@ -350,8 +356,14 @@
       bulkScanNoNew: "No new products (not already in your system) were found in the photo.",
       bulkScanFoundTitle: "{n} new products found",
       bulkAddAllBtn: "Add all",
-      bulkAddedAlert: "{n} products added."
+      bulkAddedAlert: "{n} products added.",
+      importBackupBtn: "Import local backup (restore old data)",
+      importParseError: "Couldn't read the local backup.",
+      importNoLocalBackup: "No local backup found on this device.",
+      importConfirm: "Found {n} products on this device. Add them to your account?",
+      importSuccess: "{n} products added to your account."
     },
+
 
 
     ar: {
@@ -525,7 +537,12 @@
       bulkScanNoNew: "لم يتم العثور على منتجات جديدة غير موجودة في نظامك.",
       bulkScanFoundTitle: "تم العثور على {n} منتج جديد",
       bulkAddAllBtn: "إضافة الكل",
-      bulkAddedAlert: "تمت إضافة {n} منتج."
+      bulkAddedAlert: "تمت إضافة {n} منتج.",
+      importBackupBtn: "استيراد النسخة المحلية (استعادة البيانات القديمة)",
+      importParseError: "تعذرت قراءة النسخة المحلية.",
+      importNoLocalBackup: "لم يتم العثور على نسخة محلية على هذا الجهاز.",
+      importConfirm: "تم العثور على {n} منتج على هذا الجهاز. هل تريد إضافتها إلى حسابك؟",
+      importSuccess: "تمت إضافة {n} منتج إلى حسابك."
     }
   };
 
