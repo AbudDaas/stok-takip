@@ -1333,9 +1333,12 @@
 
     fileToBase64(file)
       .then((base64) =>
-        fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${bulkScanConfig.apiKey}`, {
+        fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent`, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+            "X-goog-api-key": bulkScanConfig.apiKey
+          },
           body: JSON.stringify({
             contents: [
               {
