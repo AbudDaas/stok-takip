@@ -122,16 +122,16 @@
     const text = document.getElementById("syncText");
     if (!icon || !text) return;
     if (state === "connected") {
-      icon.className = "ti ti-cloud-check";
+      icon.className = "fa-solid fa-circle-check";
       text.textContent = t("syncConnected");
     } else if (state === "connecting") {
-      icon.className = "ti ti-cloud-up";
+      icon.className = "fa-solid fa-arrows-rotate";
       text.textContent = t("syncConnecting");
     } else if (state === "error") {
-      icon.className = "ti ti-cloud-x";
+      icon.className = "fa-solid fa-triangle-exclamation";
       text.textContent = t("syncError");
     } else {
-      icon.className = "ti ti-cloud-off";
+      icon.className = "fa-solid fa-cloud";
       text.textContent = t("syncLocal");
     }
   }
@@ -869,7 +869,7 @@
       badge.className = "scan-feedback";
       readerEl.parentElement.insertBefore(badge, readerEl.nextSibling);
     }
-    badge.innerHTML = `<i class="ti ti-check" aria-hidden="true"></i> ${escapeHtml(name)} ${t("addedToCartSuffix")}`;
+    badge.innerHTML = `<i class="fa-solid fa-check" aria-hidden="true"></i> ${escapeHtml(name)} ${t("addedToCartSuffix")}`;
     badge.classList.add("show");
     clearTimeout(badge._hideTimer);
     badge._hideTimer = setTimeout(() => {
@@ -990,12 +990,12 @@
       : item.qty;
     const controlsHtml = isKg
       ? `
-          <button class="cart-edit-weight-btn" data-id="${item.productId}" aria-label="${t('editWeightAria')}"><i class="ti ti-pencil" aria-hidden="true"></i></button>
+          <button class="cart-edit-weight-btn" data-id="${item.productId}" aria-label="${t('editWeightAria')}"><i class="fa-solid fa-pen" aria-hidden="true"></i></button>
           <span class="cart-qty-value">${qtyDisplay}</span>`
       : `
-          <button class="cart-qty-btn cart-minus" data-id="${item.productId}" aria-label="${t('decreaseAria')}"><i class="ti ti-minus" aria-hidden="true"></i></button>
+          <button class="cart-qty-btn cart-minus" data-id="${item.productId}" aria-label="${t('decreaseAria')}"><i class="fa-solid fa-minus" aria-hidden="true"></i></button>
           <span class="cart-qty-value">${item.qty}</span>
-          <button class="cart-qty-btn cart-plus" data-id="${item.productId}" aria-label="${t('increaseAria')}"><i class="ti ti-plus" aria-hidden="true"></i></button>`;
+          <button class="cart-qty-btn cart-plus" data-id="${item.productId}" aria-label="${t('increaseAria')}"><i class="fa-solid fa-plus" aria-hidden="true"></i></button>`;
     return `
       <div class="cart-row" data-id="${item.productId}">
         <div class="cart-info">
@@ -1005,7 +1005,7 @@
         <div class="cart-controls">
           ${controlsHtml}
           <span class="cart-line-total">${formatTL(lineTotal)}</span>
-          <button class="cart-remove-btn" data-id="${item.productId}" aria-label="${t('removeAria')}"><i class="ti ti-x" aria-hidden="true"></i></button>
+          <button class="cart-remove-btn" data-id="${item.productId}" aria-label="${t('removeAria')}"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button>
         </div>
       </div>`;
   }
@@ -1157,7 +1157,7 @@
         <div class="sale-row-bottom">
           ${paymentBadge}
           <button class="sale-cancel-btn" data-id="${sale.id}">
-            <i class="ti ti-arrow-back-up" aria-hidden="true"></i> ${t("cancelSaleBtn")}
+            <i class="fa-solid fa-rotate-left" aria-hidden="true"></i> ${t("cancelSaleBtn")}
           </button>
         </div>
       </div>`;
