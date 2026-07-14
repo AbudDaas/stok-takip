@@ -381,12 +381,50 @@
     populateVeresiyeCustomerSelect();
   }
 
+  let selectedVeresiyeCustomerId = null;
+
   function populateVeresiyeCustomerSelect() {
-    const select = document.getElementById("veresiyeCustomerSelect");
-    if (!select) return;
-    const prevValue = select.value;
-    select.innerHTML = customers.map((c) => `<option value="${c.id}">${escapeHtml(c.name)}</option>`).join("");
-    if (prevValue) select.value = prevValue;
+    // Aktif seçim varsa ama müşteri artık listede yoksa (silinmişse) sıfırla
+    if (selectedVeresiyeCustomerId && !customers.some((c) => c.id === selectedVeresiyeCustomerId)) {
+      clearVeresiyeCustomerSelection();
+    }
+  }
+
+  function renderVeresiyeCustomerResults(query) {
+    const resultsEl = document.getElementById("veresiyeCustomerResults");
+    if (!resultsEl) return;
+    const q = (query || "").toLowerCase().trim();
+    const matches = q ? customers.filter((c) => c.name.toLowerCase().includes(q)) : customers;
+
+    if (!matches.length) {
+      resultsEl.innerHTML = `<p class="searchable-result-empty">${t("noMatchingCustomers")}</p>`;
+    } else {
+      resultsEl.innerHTML = matches
+        .slice(0, 8)
+        .map((c) => `<div class="searchable-result-row" data-id="${c.id}">${escapeHtml(c.name)}</div>`)
+        .join("");
+      resultsEl.querySelectorAll(".searchable-result-row").forEach((row) => {
+        row.addEventListener("click", () => selectVeresiyeCustomer(row.dataset.id));
+      });
+    }
+    resultsEl.classList.add("show");
+  }
+
+  function selectVeresiyeCustomer(id) {
+    const c = customers.find((x) => x.id === id);
+    if (!c) return;
+    selectedVeresiyeCustomerId = id;
+    document.getElementById("veresiyeCustomerSelectedId").value = id;
+    document.getElementById("veresiyeCustomerSearch").value = c.name;
+    document.getElementById("veresiyeCustomerResults").classList.remove("show");
+  }
+
+  function clearVeresiyeCustomerSelection() {
+    selectedVeresiyeCustomerId = null;
+    const idInput = document.getElementById("veresiyeCustomerSelectedId");
+    const searchInput = document.getElementById("veresiyeCustomerSearch");
+    if (idInput) idInput.value = "";
+    if (searchInput) searchInput.value = "";
   }
 
   function openCustomerModal(id) {
@@ -1061,12 +1099,11 @@
     let customerId = null;
     let customerName = null;
     if (selectedPaymentType === "veresiye") {
-      const select = document.getElementById("veresiyeCustomerSelect");
       if (!customers.length) {
         alert(t("alertNeedCustomer"));
         return;
       }
-      customerId = select.value;
+      customerId = document.getElementById("veresiyeCustomerSelectedId").value;
       const c = customers.find((x) => x.id === customerId);
       if (!c) {
         alert(t("alertSelectCustomer"));
@@ -1099,6 +1136,7 @@
 
     cart = [];
     discountInput.value = "0";
+    clearVeresiyeCustomerSelection();
     setPaymentType("nakit");
     save();
     renderAll();
@@ -1509,6 +1547,21 @@
   document.getElementById("cartDiscount").addEventListener("input", renderCart);
   document.getElementById("payNakitBtn").addEventListener("click", () => setPaymentType("nakit"));
   document.getElementById("payVeresiyeBtn").addEventListener("click", () => setPaymentType("veresiye"));
+
+  document.getElementById("veresiyeCustomerSearch").addEventListener("input", (e) => {
+    selectedVeresiyeCustomerId = null;
+    document.getElementById("veresiyeCustomerSelectedId").value = "";
+    renderVeresiyeCustomerResults(e.target.value);
+  });
+  document.getElementById("veresiyeCustomerSearch").addEventListener("focus", (e) => {
+    renderVeresiyeCustomerResults(e.target.value);
+  });
+  document.addEventListener("click", (e) => {
+    const wrapper = document.getElementById("veresiyeCustomerRow");
+    if (wrapper && !wrapper.contains(e.target)) {
+      document.getElementById("veresiyeCustomerResults").classList.remove("show");
+    }
+  });
 
   document.querySelectorAll(".period-btn").forEach((btn) => {
     btn.addEventListener("click", () => {
