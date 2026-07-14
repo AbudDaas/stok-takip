@@ -180,7 +180,9 @@
       importParseError: "Yerel yedek okunamadı.",
       importNoLocalBackup: "Bu cihazda içe aktarılacak yerel bir yedek bulunamadı.",
       importConfirm: "Bu cihazda {n} ürün bulundu. Bunları hesabına eklemek istiyor musun?",
-      importSuccess: "{n} ürün hesabına eklendi."
+      importSuccess: "{n} ürün hesabına eklendi.",
+      searchCustomerPh: "Müşteri ara...",
+      noMatchingCustomers: "Eşleşen müşteri yok."
     },
 
 
@@ -361,7 +363,9 @@
       importParseError: "Couldn't read the local backup.",
       importNoLocalBackup: "No local backup found on this device.",
       importConfirm: "Found {n} products on this device. Add them to your account?",
-      importSuccess: "{n} products added to your account."
+      importSuccess: "{n} products added to your account.",
+      searchCustomerPh: "Search customer...",
+      noMatchingCustomers: "No matching customers."
     },
 
 
@@ -542,7 +546,9 @@
       importParseError: "تعذرت قراءة النسخة المحلية.",
       importNoLocalBackup: "لم يتم العثور على نسخة محلية على هذا الجهاز.",
       importConfirm: "تم العثور على {n} منتج على هذا الجهاز. هل تريد إضافتها إلى حسابك؟",
-      importSuccess: "تمت إضافة {n} منتج إلى حسابك."
+      importSuccess: "تمت إضافة {n} منتج إلى حسابك.",
+      searchCustomerPh: "ابحث عن عميل...",
+      noMatchingCustomers: "لا يوجد عملاء مطابقون."
     }
   };
 
