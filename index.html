@@ -204,7 +204,11 @@
           </button>
         </div>
         <div id="veresiyeCustomerRow" class="form-row" style="display:none;">
-          <select id="veresiyeCustomerSelect"></select>
+          <div class="searchable-select">
+            <input id="veresiyeCustomerSearch" type="text" data-i18n-placeholder="searchCustomerPh" placeholder="Müşteri ara..." autocomplete="off" />
+            <input type="hidden" id="veresiyeCustomerSelectedId" />
+            <div id="veresiyeCustomerResults" class="searchable-results"></div>
+          </div>
         </div>
 
         <button id="completeSaleBtn" class="btn btn-primary btn-block">
