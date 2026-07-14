@@ -1347,14 +1347,7 @@
     return products.some((p) => p.name.trim().toLowerCase() === normalized);
   }
 
-  function handleShelfPhoto(file) {
-    if (!isBulkScanConfigured()) {
-      alert(t("bulkScanNotConfigured"));
-      return;
-    }
-    const loadingEl = document.getElementById("bulkScanLoading");
-    loadingEl.style.display = "flex";
-
+  function analyzeOnePhoto(file) {
     const prompt = [
       "Bu bir market/bakkal rafının fotoğrafı.",
       "Fotoğrafta görünen HER FARKLI ürünü tek tek tespit et.",
@@ -1369,7 +1362,7 @@
       "Aynı üründen birden fazla varsa yalnızca bir kez listele."
     ].join("\n");
 
-    fileToBase64(file)
+    return fileToBase64(file)
       .then((base64) =>
         fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent`, {
           method: "POST",
@@ -1388,36 +1381,75 @@
       )
       .then((r) => r.json())
       .then((data) => {
-        loadingEl.style.display = "none";
         const rawText = data && data.candidates && data.candidates[0] && data.candidates[0].content.parts[0].text;
         if (!rawText) {
           console.error("Gemini yanıtı beklenmedik formatta:", data);
-          alert(t("bulkScanError"));
-          return;
+          return [];
         }
-        let detected = [];
         try {
           const cleaned = rawText.replace(/```json|```/g, "").trim();
-          detected = JSON.parse(cleaned);
+          return JSON.parse(cleaned);
         } catch (e) {
           console.error("JSON ayrıştırma hatası:", e, rawText);
-          alert(t("bulkScanError"));
-          return;
+          return [];
         }
+      })
+      .catch((e) => {
+        console.error(e);
+        return [];
+      });
+  }
 
-        bulkScanCandidates = detected.filter((p) => p.name && !productAlreadyExists(p.name));
+  function handleShelfPhotos(files) {
+    if (!isBulkScanConfigured()) {
+      alert(t("bulkScanNotConfigured"));
+      return;
+    }
+    const loadingEl = document.getElementById("bulkScanLoading");
+    const loadingText = loadingEl.querySelector("span");
+    loadingEl.style.display = "flex";
+
+    let allDetected = [];
+    let index = 0;
+
+    function processNext() {
+      if (index >= files.length) {
+        loadingEl.style.display = "none";
+        if (loadingText) loadingText.textContent = t("bulkScanAnalyzing");
+
+        // Aynı isimli ürünleri (farklı fotoğraflarda tekrar görünenleri) tekilleştir
+        const seen = new Set();
+        const deduped = [];
+        allDetected.forEach((p) => {
+          const key = (p.name || "").trim().toLowerCase();
+          if (key && !seen.has(key)) {
+            seen.add(key);
+            deduped.push(p);
+          }
+        });
+
+        bulkScanCandidates = deduped.filter((p) => p.name && !productAlreadyExists(p.name));
 
         if (!bulkScanCandidates.length) {
           alert(t("bulkScanNoNew"));
           return;
         }
         renderBulkScanModal();
-      })
-      .catch((e) => {
-        console.error(e);
-        loadingEl.style.display = "none";
-        alert(t("bulkScanError"));
+        return;
+      }
+
+      if (loadingText && files.length > 1) {
+        loadingText.textContent = `${t("bulkScanAnalyzing")} (${index + 1}/${files.length})`;
+      }
+
+      analyzeOnePhoto(files[index]).then((detected) => {
+        if (Array.isArray(detected)) allDetected = allDetected.concat(detected);
+        index++;
+        processNext();
       });
+    }
+
+    processNext();
   }
 
   function renderBulkScanModal() {
@@ -1521,8 +1553,8 @@
     document.getElementById("shelfPhotoInput").click();
   });
   document.getElementById("shelfPhotoInput").addEventListener("change", (e) => {
-    const file = e.target.files[0];
-    if (file) handleShelfPhoto(file);
+    const files = Array.from(e.target.files || []);
+    if (files.length) handleShelfPhotos(files);
     e.target.value = "";
   });
   document.getElementById("closeBulkScanModalBtn").addEventListener("click", closeBulkScanModal);
