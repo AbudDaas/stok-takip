@@ -202,4 +202,5 @@ fotoğrafı çek. Birkaç saniye içinde "Sistemde olmayan N ürün bulundu" ekr
   geçerse e-posta at" gibi bir bütçe uyarısı kurmanı öneririm, gönül rahatlığı için.
 - Bu özellik kurulmadan da uygulamanın geri kalanı sorunsuz çalışmaya devam eder;
   `bulk-scan-config.js` boş/varsayılan kalırsa sadece bu buton "henüz kurulmadı"
+  
   uyarısı verir.
