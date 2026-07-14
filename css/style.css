@@ -779,3 +779,58 @@ html[dir="rtl"] .lang-switch{
   font-weight:700;
   margin-bottom:14px;
 }
+
+/* Yazarak arama yapılabilen seçim kutusu (örn. Veresiye müşteri seçimi) */
+.searchable-select{
+  position:relative;
+}
+.searchable-results{
+  position:absolute;
+  top:100%;
+  left:0;
+  right:0;
+  z-index:50;
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-top:none;
+  border-radius:0 0 8px 8px;
+  max-height:220px;
+  overflow-y:auto;
+  display:none;
+}
+.searchable-results.show{display:block;}
+.searchable-result-row{
+  padding:10px 12px;
+  font-size:14px;
+  cursor:pointer;
+  border-bottom:1px solid var(--border);
+}
+.searchable-result-row:last-child{border-bottom:none;}
+.searchable-result-row:hover,
+.searchable-result-row.highlighted{
+  background:var(--bg);
+}
+.searchable-result-empty{
+  padding:10px 12px;
+  font-size:13px;
+  color:var(--text-muted);
+}
+.searchable-selected-badge{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  background:var(--green-bg);
+  color:var(--green-text);
+  border:1px solid var(--green-text);
+  border-radius:8px;
+  padding:10px 12px;
+  font-size:14px;
+  font-weight:600;
+}
+.searchable-selected-badge button{
+  background:none;
+  border:none;
+  color:var(--green-text);
+  font-size:16px;
+  cursor:pointer;
+}
