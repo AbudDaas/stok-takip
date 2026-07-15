@@ -834,3 +834,28 @@ html[dir="rtl"] .lang-switch{
   font-size:16px;
   cursor:pointer;
 }
+
+/* Net kâr vurgu kartı */
+.profit-highlight-card{
+  background:var(--green-bg);
+  border:1px solid var(--green-text);
+  border-radius:var(--radius);
+  padding:14px 16px;
+  margin-bottom:14px;
+  text-align:center;
+}
+.profit-highlight-card .stat-label{color:var(--green-text);}
+.profit-highlight-card .stat-value{color:var(--green-text);font-size:26px;}
+.profit-highlight-card.negative{
+  background:var(--red-bg);
+  border-color:var(--red-text);
+}
+.profit-highlight-card.negative .stat-label,
+.profit-highlight-card.negative .stat-value{color:var(--red-text);}
+
+.sale-profit{
+  margin:2px 0 0;
+  font-size:12px;
+  font-weight:600;
+  color:var(--green-text);
+}
