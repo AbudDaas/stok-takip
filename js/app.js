@@ -247,15 +247,15 @@
 
   function seedData() {
     return [
-      mkProduct("pepsi 1 lt", "içecekler", 12, 10, 22, "", "adet"),
-      mkProduct("pepsi 2.5 lt", "içecekler", 3, 5, 45, "", "adet"),
-      mkProduct("cocacola 1 lt", "içecekler", 0, 8, 24, "", "adet"),
-      mkProduct("ekmek", "fırın", 15, 10, 8, "", "adet"),
-      mkProduct("beyaz peynir", "süt ürünleri", 5, 2, 180, "", "kg")
+      mkProduct("pepsi 1 lt", "içecekler", 12, 10, 22, "", "adet", 16),
+      mkProduct("pepsi 2.5 lt", "içecekler", 3, 5, 45, "", "adet", 34),
+      mkProduct("cocacola 1 lt", "içecekler", 0, 8, 24, "", "adet", 17),
+      mkProduct("ekmek", "fırın", 15, 10, 8, "", "adet", 5),
+      mkProduct("beyaz peynir", "süt ürünleri", 5, 2, 180, "", "kg", 140)
     ];
   }
 
-  function mkProduct(name, category, qty, min, price, barcode, unit) {
+  function mkProduct(name, category, qty, min, price, barcode, unit, costPrice) {
     return {
       id: genId(),
       name,
@@ -263,6 +263,7 @@
       qty: Number(qty) || 0,
       min: Number(min) || 0,
       price: Number(price) || 0,
+      costPrice: Number(costPrice) || 0,
       barcode: (barcode || "").trim(),
       unit: unit === "kg" ? "kg" : "adet"
     };
@@ -572,6 +573,7 @@
     const minInput = document.getElementById("newMin");
     const qtyInput = document.getElementById("newQty");
     const priceInput = document.getElementById("newPrice");
+    const costPriceInput = document.getElementById("newCostPrice");
     const barcodeInput = document.getElementById("newBarcode");
     const unitInput = document.getElementById("newUnit");
 
@@ -584,15 +586,17 @@
     const min = Number(minInput.value) || 0;
     const qty = Number(qtyInput.value) || 0;
     const price = Number(priceInput.value) || 0;
+    const costPrice = Number(costPriceInput.value) || 0;
     const barcode = barcodeInput.value.trim();
     const unit = unitInput.value;
 
-    products.push(mkProduct(name, category, qty, min, price, barcode, unit));
+    products.push(mkProduct(name, category, qty, min, price, barcode, unit, costPrice));
     nameInput.value = "";
     catInput.value = "";
     minInput.value = "5";
     qtyInput.value = "0";
     priceInput.value = "0";
+    costPriceInput.value = "0";
     barcodeInput.value = "";
     unitInput.value = "adet";
     save();
@@ -625,6 +629,7 @@
     p.category = document.getElementById("editCategory").value.trim() || t("categoryOtherDefault");
     p.min = Number(document.getElementById("editMin").value) || 0;
     p.price = Number(document.getElementById("editPrice").value) || 0;
+    p.costPrice = Number(document.getElementById("editCostPrice").value) || 0;
     p.barcode = document.getElementById("editBarcode").value.trim();
     p.unit = document.getElementById("editUnit").value;
     save();
@@ -709,6 +714,7 @@
     document.getElementById("editCategory").value = p.category;
     document.getElementById("editMin").value = p.min;
     document.getElementById("editPrice").value = p.price;
+    document.getElementById("editCostPrice").value = p.costPrice || 0;
     document.getElementById("editBarcode").value = p.barcode || "";
     document.getElementById("editUnit").value = p.unit || "adet";
     updateModalContent(p);
@@ -1117,6 +1123,15 @@
     const discount = Math.min(Number(discountInput.value) || 0, subtotal);
     const total = Math.max(0, subtotal - discount);
 
+    let totalCost = 0;
+    const saleItems = cart.map((c) => {
+      const p = products.find((x) => x.id === c.productId);
+      const costPrice = p ? p.costPrice || 0 : 0;
+      totalCost += costPrice * c.qty;
+      return { name: c.name, qty: c.qty, price: c.price, unit: c.unit || "adet", costPrice };
+    });
+    const profit = total - totalCost;
+
     cart.forEach((item) => {
       const p = products.find((x) => x.id === item.productId);
       if (p) p.qty = Math.max(0, p.qty - item.qty);
@@ -1125,10 +1140,12 @@
     sales.push({
       id: genId(),
       timestamp: new Date().toISOString(),
-      items: cart.map((c) => ({ name: c.name, qty: c.qty, price: c.price, unit: c.unit || "adet" })),
+      items: saleItems,
       subtotal,
       discount,
       total,
+      cost: totalCost,
+      profit,
       paymentType: selectedPaymentType,
       customerId,
       customerName
@@ -1185,6 +1202,7 @@
       .map((i) => `${escapeHtml(i.name)} x${i.unit === "kg" ? i.qty + t("unitKgShort") : i.qty}`)
       .join(", ");
     const paymentBadge = sale.paymentType === "veresiye" ? `<span class="sale-payment-badge">${t("veresiyeLabel")}${sale.customerName ? ": " + escapeHtml(sale.customerName) : ""}</span>` : "";
+    const profitValue = sale.profit != null ? sale.profit : sale.total;
     return `
       <div class="sale-row">
         <div class="sale-row-top">
@@ -1192,6 +1210,7 @@
           <span class="sale-amount">${formatTL(sale.total)}</span>
         </div>
         <p class="sale-items">${itemsSummary}</p>
+        <p class="sale-profit">${t("profitLabel")}: ${formatTL(profitValue)}</p>
         <div class="sale-row-bottom">
           ${paymentBadge}
           <button class="sale-cancel-btn" data-id="${sale.id}">
@@ -1255,8 +1274,15 @@
     }
 
     const periodTotal = periodSales.reduce((sum, s) => sum + s.total, 0);
+    const periodProfit = periodSales.reduce((sum, s) => sum + (s.profit != null ? s.profit : s.total), 0);
     document.getElementById("statPeriodTotal").textContent = formatTL(periodTotal);
     document.getElementById("statPeriodCount").textContent = periodSales.length;
+    const profitEl = document.getElementById("statNetProfit");
+    if (profitEl) {
+      profitEl.textContent = formatTL(periodProfit);
+      const profitCard = profitEl.closest(".profit-highlight-card");
+      if (profitCard) profitCard.classList.toggle("negative", periodProfit < 0);
+    }
   }
 
   // ---------- Hızlı barkod tarama (ürün ekle/düzenle formları için) ----------
