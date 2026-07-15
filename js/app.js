@@ -1,1666 +1,476 @@
-(function () {
-  "use strict";
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Bakkal Stok Takip</title>
+<meta name="theme-color" content="#1F3864" />
+<link rel="manifest" href="manifest.json" />
+<link rel="icon" href="icons/icon-192.png" />
+<link rel="apple-touch-icon" href="icons/icon-192.png" />
+<link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
 
-  const t = (key) => window.i18n.t(key);
-  function locale() {
-    const lang = window.i18n.getLang();
-    if (lang === "en") return "en-US";
-    if (lang === "ar") return "ar-SA";
-    return "tr-TR";
-  }
+  <header class="topbar">
+    <div class="topbar-title">
+      <i class="fa-solid fa-store" aria-hidden="true"></i>
+      <span data-i18n="appName">Bakkal Stok Takip</span>
+    </div>
+    <div class="topbar-right">
+      <div class="lang-switch">
+        <button class="lang-btn" data-lang="tr">TR</button>
+        <button class="lang-btn" data-lang="en">EN</button>
+        <button class="lang-btn" data-lang="ar">AR</button>
+      </div>
+      <div id="syncBadge" class="sync-badge" title="Senkronizasyon durumu">
+        <i class="fa-solid fa-cloud" id="syncIcon" aria-hidden="true"></i>
+        <span id="syncText">Yerel</span>
+      </div>
+      <button id="logoutBtn" class="icon-btn-topbar" data-i18n-title="logoutTitle" title="Çıkış yap" style="display:none;">
+        <i class="fa-solid fa-right-from-bracket" aria-hidden="true"></i>
+      </button>
+    </div>
+  </header>
 
-  const STORAGE_KEY = "bakkal_urunler_v2";
-  let products = [];
-  let sales = [];
-  let customers = [];
-  let payments = [];
-  let cart = []; // { productId, name, price, qty }
-  let activeProductId = null;
-  let activeCustomerId = null;
-  let selectedPaymentType = "nakit";
-  let currentSalesPeriod = "today";
+  <!-- GİRİŞ / KAYIT EKRANI (yalnızca bulut senkronizasyonu ayarlıysa gösterilir) -->
+  <div id="authScreen" class="auth-screen" style="display:none;">
+    <div class="auth-box">
+      <div class="auth-logo">
+        <i class="fa-solid fa-store" aria-hidden="true"></i>
+        <span data-i18n="appName">Bakkal Stok Takip</span>
+      </div>
+      <p class="auth-title" data-i18n="authTitle">Giriş Yap</p>
+      <p id="authError" class="auth-error" style="display:none;"></p>
+      <div class="form-row">
+        <input id="authEmail" type="email" data-i18n-placeholder="authEmailPh" placeholder="E-posta" autocomplete="username" />
+      </div>
+      <div class="form-row">
+        <input id="authPassword" type="password" data-i18n-placeholder="authPasswordPh" placeholder="Şifre" autocomplete="current-password" />
+      </div>
+      <button id="authSubmitBtn" class="btn btn-primary btn-block" data-i18n="authSubmit">Giriş Yap</button>
+      <button id="forgotPasswordBtn" class="link-btn" data-i18n="authForgot">Şifremi unuttum</button>
+      <p class="auth-hint" data-i18n="authHint">Hesabınız yoksa işletme sahibinden/yöneticinizden hesap açmasını isteyin.</p>
+    </div>
+  </div>
 
-  let html5QrCode = null;
-  let scanning = false;
-  let html5QrCodeKasa = null;
-  let scanningKasa = false;
-  let stokScanCooldown = false;
-  let kasaScanCooldown = false;
+  <div id="toastContainer" class="toast-container"></div>
 
-  let db = null;
-  let auth = null;
-  let docRef = null;
-  let cloudEnabled = false;
-  let suppressNextSnapshot = false;
-  let firestoreUnsubscribe = null;
-  let currentUser = null;
+  <main id="app">
 
-  // ---------- Firebase setup ----------
-  function initFirebaseIfConfigured() {
-    try {
-      if (typeof firebaseConfig === "undefined") return false;
-      if (!firebaseConfig.apiKey || firebaseConfig.apiKey.indexOf("BURAYA") === 0) return false;
-      firebase.initializeApp(firebaseConfig);
-      db = firebase.firestore();
-      auth = firebase.auth();
-      cloudEnabled = true;
-      return true;
-    } catch (e) {
-      console.error("Firebase başlatma hatası", e);
-      return false;
-    }
-  }
+    <!-- ÖZET -->
+    <section class="stats-grid">
+      <div class="stat-card">
+        <p class="stat-label" data-i18n="statTotalProducts">Toplam ürün</p>
+        <p class="stat-value" id="statTotal">0</p>
+      </div>
+      <div class="stat-card stat-danger">
+        <p class="stat-label" data-i18n="statOrderNeeded">Sipariş gerekli</p>
+        <p class="stat-value" id="statOrder">0</p>
+      </div>
+    </section>
 
-  function showApp(show) {
-    document.getElementById("app").style.display = show ? "block" : "none";
-    document.querySelector(".bottom-nav").style.display = show ? "flex" : "none";
-  }
+    <!-- SEKME: ÜRÜNLER -->
+    <section id="tab-products" class="tab-panel active">
 
-  function handleAuthChange(user) {
-    if (firestoreUnsubscribe) {
-      firestoreUnsubscribe();
-      firestoreUnsubscribe = null;
-    }
-    if (user) {
-      currentUser = user;
-      document.getElementById("authScreen").style.display = "none";
-      document.getElementById("logoutBtn").style.display = "flex";
-      showApp(true);
-      docRef = db.collection("isletmeler").doc(user.uid);
-      setSyncStatus("connecting");
-      attachFirestoreListener();
-      const importBtn = document.getElementById("importBackupBtn");
-      if (importBtn) importBtn.style.display = hasImportableLocalBackup() ? "flex" : "none";
-    } else {
-      currentUser = null;
-      docRef = null;
-      products = [];
-      sales = [];
-      customers = [];
-      payments = [];
-      cart = [];
-      document.getElementById("authScreen").style.display = "flex";
-      document.getElementById("logoutBtn").style.display = "none";
-      showApp(false);
-      setSyncStatus("local");
-    }
-  }
+      <button id="importBackupBtn" class="btn btn-block import-backup-btn" style="display:none;">
+        <i class="fa-solid fa-arrows-rotateload" aria-hidden="true"></i>
+        <span data-i18n="importBackupBtn">Yerel yedeği içe aktar (eski verileri geri yükle)</span>
+      </button>
 
-  function attachFirestoreListener() {
-    firestoreUnsubscribe = docRef.onSnapshot(
-      (snap) => {
-        if (suppressNextSnapshot) {
-          suppressNextSnapshot = false;
-          return;
-        }
-        if (snap.exists && snap.data().products) {
-          const data = snap.data();
-          products = data.products;
-          sales = data.sales || [];
-          customers = data.customers || [];
-          payments = data.payments || [];
-        } else {
-          const initial = { products: seedData(), sales: [], customers: [], payments: [] };
-          docRef.set(initial);
-          products = initial.products;
-          sales = initial.sales;
-          customers = initial.customers;
-          payments = initial.payments;
-        }
-        setSyncStatus("connected");
-        renderAll();
-      },
-      (err) => {
-        console.error("Firestore hata", err);
-        setSyncStatus("error");
-      }
-    );
-  }
-
-  function setSyncStatus(state) {
-    const icon = document.getElementById("syncIcon");
-    const text = document.getElementById("syncText");
-    if (!icon || !text) return;
-    if (state === "connected") {
-      icon.className = "fa-solid fa-circle-check";
-      text.textContent = t("syncConnected");
-    } else if (state === "connecting") {
-      icon.className = "fa-solid fa-arrows-rotate";
-      text.textContent = t("syncConnecting");
-    } else if (state === "error") {
-      icon.className = "fa-solid fa-triangle-exclamation";
-      text.textContent = t("syncError");
-    } else {
-      icon.className = "fa-solid fa-cloud";
-      text.textContent = t("syncLocal");
-    }
-  }
-
-  // ---------- Giriş / Kayıt ----------
-  function showAuthError(message) {
-    const el = document.getElementById("authError");
-    el.textContent = message;
-    el.style.display = "block";
-  }
-
-  function mapAuthError(code) {
-    const messages = {
-      "auth/invalid-email": t("authErrInvalidEmail"),
-      "auth/user-not-found": t("authErrUserNotFound"),
-      "auth/wrong-password": t("authErrWrongPassword"),
-      "auth/invalid-credential": t("authErrInvalidCredential"),
-      "auth/too-many-requests": t("authErrTooMany")
-    };
-    return messages[code] || t("authErrGeneric");
-  }
-
-  function submitAuth() {
-    const email = document.getElementById("authEmail").value.trim();
-    const password = document.getElementById("authPassword").value;
-    if (!email || !password) {
-      showAuthError(t("authErrRequired"));
-      return;
-    }
-    document.getElementById("authError").style.display = "none";
-    auth.signInWithEmailAndPassword(email, password).catch((e) => showAuthError(mapAuthError(e.code)));
-  }
-
-  function forgotPassword() {
-    const email = document.getElementById("authEmail").value.trim();
-    if (!email) {
-      showAuthError(t("authErrForgotNeedsEmail"));
-      return;
-    }
-    document.getElementById("authError").style.display = "none";
-    auth
-      .sendPasswordResetEmail(email)
-      .then(() => alert(t("authResetSent")))
-      .catch((e) => showAuthError(mapAuthError(e.code)));
-  }
-
-  function logout() {
-    if (confirm(t("confirmLogout"))) {
-      auth.signOut();
-    }
-  }
-
-  // ---------- Persistence ----------
-  function load() {
-    const cloudReady = initFirebaseIfConfigured();
-
-    if (!cloudReady) {
-      // Yerel mod: Firebase ayarlanmamış, tek cihazlık kullanım
-      try {
-        const raw = localStorage.getItem(STORAGE_KEY);
-        const parsed = raw ? JSON.parse(raw) : null;
-        products = (parsed && parsed.products) || seedData();
-        sales = (parsed && parsed.sales) || [];
-        customers = (parsed && parsed.customers) || [];
-        payments = (parsed && parsed.payments) || [];
-      } catch (e) {
-        products = seedData();
-        sales = [];
-        customers = [];
-        payments = [];
-      }
-      if (!Array.isArray(products) || !products.length) products = seedData();
-      if (!Array.isArray(sales)) sales = [];
-      if (!Array.isArray(customers)) customers = [];
-      if (!Array.isArray(payments)) payments = [];
-      renderAll();
-    } else {
-      // Bulut modu: giriş yapılana kadar uygulama gizli
-      showApp(false);
-      auth.onAuthStateChanged(handleAuthChange);
-    }
-
-    // Service worker tamamen kaldırıldı (eski önbellek sorunlarına neden oluyordu).
-    // Varsa önceden kayıtlı service worker'ları ve önbellekleri temizle.
-    if ("serviceWorker" in navigator) {
-      navigator.serviceWorker.getRegistrations().then((regs) => {
-        regs.forEach((reg) => reg.unregister());
-      });
-    }
-    if ("caches" in window) {
-      caches.keys().then((names) => {
-        names.forEach((name) => caches.delete(name));
-      });
-    }
-  }
-
-  function save() {
-    if (cloudEnabled) {
-      if (!docRef) return;
-      suppressNextSnapshot = true;
-      docRef.set({ products, sales, customers, payments }).catch((e) => {
-        console.error("Bulut kaydetme hatası", e);
-        setSyncStatus("error");
-      });
-    } else {
-      try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify({ products, sales, customers, payments }));
-      } catch (e) {
-        console.error("Yerel kaydetme hatası", e);
-      }
-    }
-  }
-
-  function seedData() {
-    return [
-      mkProduct("pepsi 1 lt", "içecekler", 12, 10, 22, "", "adet", 16),
-      mkProduct("pepsi 2.5 lt", "içecekler", 3, 5, 45, "", "adet", 34),
-      mkProduct("cocacola 1 lt", "içecekler", 0, 8, 24, "", "adet", 17),
-      mkProduct("ekmek", "fırın", 15, 10, 8, "", "adet", 5),
-      mkProduct("beyaz peynir", "süt ürünleri", 5, 2, 180, "", "kg", 140)
-    ];
-  }
-
-  function mkProduct(name, category, qty, min, price, barcode, unit, costPrice) {
-    return {
-      id: genId(),
-      name,
-      category,
-      qty: Number(qty) || 0,
-      min: Number(min) || 0,
-      price: Number(price) || 0,
-      costPrice: Number(costPrice) || 0,
-      barcode: (barcode || "").trim(),
-      unit: unit === "kg" ? "kg" : "adet"
-    };
-  }
-
-  function genId() {
-    return "p" + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
-  }
-
-  // ---------- Müşteri (Veresiye) ----------
-  function mkCustomer(name, phone) {
-    return { id: genId(), name, phone: phone || "" };
-  }
-
-  function addCustomer() {
-    const nameInput = document.getElementById("newCustomerName");
-    const phoneInput = document.getElementById("newCustomerPhone");
-    const name = nameInput.value.trim();
-    if (!name) {
-      nameInput.focus();
-      return;
-    }
-    customers.push(mkCustomer(name, phoneInput.value.trim()));
-    nameInput.value = "";
-    phoneInput.value = "";
-    save();
-    renderCustomers();
-  }
-
-  function deleteCustomer(id) {
-    const debt = getCustomerDebt(id);
-    if (debt > 0 && !confirm(`${t("confirmDeleteCustomerWithDebt")} ${formatTL(debt)} ${t("confirmDeleteCustomerWithDebtSuffix")}`)) {
-      return;
-    }
-    customers = customers.filter((c) => c.id !== id);
-    closeCustomerModal();
-    save();
-    renderCustomers();
-  }
-
-  function saveCustomerEdit() {
-    const c = customers.find((x) => x.id === activeCustomerId);
-    if (!c) return;
-    const name = document.getElementById("editCustomerName").value.trim();
-    if (!name) return;
-    c.name = name;
-    c.phone = document.getElementById("editCustomerPhone").value.trim();
-    save();
-    renderCustomers();
-    openCustomerModal(c.id);
-  }
-
-  function getCustomerDebt(customerId) {
-    const debtFromSales = sales
-      .filter((s) => s.paymentType === "veresiye" && s.customerId === customerId)
-      .reduce((sum, s) => sum + s.total, 0);
-    const paid = payments.filter((p) => p.customerId === customerId).reduce((sum, p) => sum + p.amount, 0);
-    return Math.max(0, debtFromSales - paid);
-  }
-
-  function recordPayment() {
-    const c = customers.find((x) => x.id === activeCustomerId);
-    if (!c) return;
-    const input = document.getElementById("paymentAmountInput");
-    const amount = Number(input.value);
-    if (!amount || amount <= 0) {
-      input.focus();
-      return;
-    }
-    payments.push({
-      id: genId(),
-      customerId: c.id,
-      customerName: c.name,
-      amount,
-      timestamp: new Date().toISOString()
-    });
-    input.value = "";
-    save();
-    renderCustomers();
-    openCustomerModal(c.id);
-  }
-
-  function customerRowHtml(c) {
-    const debt = getCustomerDebt(c.id);
-    const debtClass = debt > 0 ? "has-debt" : "no-debt";
-    return `
-      <div class="customer-row" data-id="${c.id}">
-        <div class="customer-info">
-          <p class="customer-name">${escapeHtml(c.name)}</p>
-          <p class="customer-phone">${escapeHtml(c.phone || "—")}</p>
+      <div class="card">
+        <p class="card-title" data-i18n="addProductTitle">Ürün ekle</p>
+        <div class="form-row">
+          <input id="newName" type="text" data-i18n-placeholder="namePh" placeholder="Ürün adı, örn. pepsi 1 lt" />
         </div>
-        <span class="customer-debt ${debtClass}">${formatTL(debt)}</span>
-      </div>`;
-  }
-
-  function renderCustomers() {
-    const list = document.getElementById("customerList");
-    const empty = document.getElementById("customerEmptyState");
-    if (!list) return;
-
-    if (!customers.length) {
-      list.innerHTML = "";
-      empty.style.display = "block";
-    } else {
-      empty.style.display = "none";
-      list.innerHTML = customers.map(customerRowHtml).join("");
-    }
-    list.querySelectorAll(".customer-row").forEach((row) => {
-      row.addEventListener("click", () => openCustomerModal(row.dataset.id));
-    });
-
-    const totalDebt = customers.reduce((sum, c) => sum + getCustomerDebt(c.id), 0);
-    document.getElementById("statTotalDebt").textContent = formatTL(totalDebt);
-    document.getElementById("statCustomerCount").textContent = customers.length;
-
-    populateVeresiyeCustomerSelect();
-  }
-
-  let selectedVeresiyeCustomerId = null;
-
-  function populateVeresiyeCustomerSelect() {
-    // Aktif seçim varsa ama müşteri artık listede yoksa (silinmişse) sıfırla
-    if (selectedVeresiyeCustomerId && !customers.some((c) => c.id === selectedVeresiyeCustomerId)) {
-      clearVeresiyeCustomerSelection();
-    }
-  }
-
-  function renderVeresiyeCustomerResults(query) {
-    const resultsEl = document.getElementById("veresiyeCustomerResults");
-    if (!resultsEl) return;
-    const q = (query || "").toLowerCase().trim();
-    const matches = q ? customers.filter((c) => c.name.toLowerCase().includes(q)) : customers;
-
-    if (!matches.length) {
-      resultsEl.innerHTML = `<p class="searchable-result-empty">${t("noMatchingCustomers")}</p>`;
-    } else {
-      resultsEl.innerHTML = matches
-        .slice(0, 8)
-        .map((c) => `<div class="searchable-result-row" data-id="${c.id}">${escapeHtml(c.name)}</div>`)
-        .join("");
-      resultsEl.querySelectorAll(".searchable-result-row").forEach((row) => {
-        row.addEventListener("click", () => selectVeresiyeCustomer(row.dataset.id));
-      });
-    }
-    resultsEl.classList.add("show");
-  }
-
-  function selectVeresiyeCustomer(id) {
-    const c = customers.find((x) => x.id === id);
-    if (!c) return;
-    selectedVeresiyeCustomerId = id;
-    document.getElementById("veresiyeCustomerSelectedId").value = id;
-    document.getElementById("veresiyeCustomerSearch").value = c.name;
-    document.getElementById("veresiyeCustomerResults").classList.remove("show");
-  }
-
-  function clearVeresiyeCustomerSelection() {
-    selectedVeresiyeCustomerId = null;
-    const idInput = document.getElementById("veresiyeCustomerSelectedId");
-    const searchInput = document.getElementById("veresiyeCustomerSearch");
-    if (idInput) idInput.value = "";
-    if (searchInput) searchInput.value = "";
-  }
-
-  function openCustomerModal(id) {
-    const c = customers.find((x) => x.id === id);
-    if (!c) return;
-    activeCustomerId = id;
-    document.getElementById("customerModalName").textContent = c.name;
-    document.getElementById("customerModalDebt").textContent = formatTL(getCustomerDebt(id));
-    document.getElementById("editCustomerName").value = c.name;
-    document.getElementById("editCustomerPhone").value = c.phone || "";
-    document.getElementById("paymentAmountInput").value = "";
-    renderCustomerHistory(id);
-    document.getElementById("customerModal").style.display = "flex";
-  }
-
-  function closeCustomerModal() {
-    document.getElementById("customerModal").style.display = "none";
-    activeCustomerId = null;
-  }
-
-  function renderCustomerHistory(customerId) {
-    const list = document.getElementById("customerHistoryList");
-    if (!list) return;
-    const debtEntries = sales
-      .filter((s) => s.paymentType === "veresiye" && s.customerId === customerId)
-      .map((s) => ({ type: "debt", timestamp: s.timestamp, amount: s.total, label: s.items.map((i) => `${i.name} x${i.qty}`).join(", ") }));
-    const paymentEntries = payments
-      .filter((p) => p.customerId === customerId)
-      .map((p) => ({ type: "payment", timestamp: p.timestamp, amount: p.amount, label: t("paymentReceivedLabel") }));
-    const combined = [...debtEntries, ...paymentEntries].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-
-    if (!combined.length) {
-      list.innerHTML = `<p class="empty-state" style="display:block;">${t("noTransactionsYet")}</p>`;
-      return;
-    }
-
-    list.innerHTML = combined
-      .map((e) => {
-        const d = new Date(e.timestamp);
-        const timeStr = d.toLocaleString(locale(), { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
-        const amountClass = e.type === "debt" ? "history-amount-debt" : "history-amount-payment";
-        const sign = e.type === "debt" ? "+" : "-";
-        return `
-          <div class="history-row">
-            <span>${timeStr} · ${escapeHtml(e.label)}</span>
-            <span class="${amountClass}">${sign}${formatTL(e.amount)}</span>
-          </div>`;
-      })
-      .join("");
-  }
-
-  // ---------- Status helpers ----------
-  function getStatus(p) {
-    if (p.qty <= 0) return "tukendi";
-    if (p.qty < p.min) return "kritik";
-    return "yeterli";
-  }
-
-  function getStatusLabel(status) {
-    if (status === "tukendi") return t("statusTukendi");
-    if (status === "kritik") return t("statusKritik");
-    return t("statusYeterli");
-  }
-
-  const STATUS_CLASS = { tukendi: "status-tukendi", kritik: "status-kritik", yeterli: "status-yeterli" };
-
-  function escapeHtml(s) {
-    return String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
-  }
-
-  function formatQty(p) {
-    if (p.unit === "kg") {
-      return (Math.round(p.qty * 1000) / 1000).toLocaleString(locale(), { minimumFractionDigits: 0, maximumFractionDigits: 3 }) + " " + t("unitKgShort");
-    }
-    return p.qty + " " + t("unitAdetShort");
-  }
-
-  function formatTL(n) {
-    return (Number(n) || 0).toLocaleString(locale(), { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " ₺";
-  }
-
-  // ---------- CRUD ----------
-  // ---------- Eski (giriş öncesi) yerel yedeği içe aktar ----------
-  function hasImportableLocalBackup() {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (!raw) return false;
-      const parsed = JSON.parse(raw);
-      return Array.isArray(parsed.products) && parsed.products.length > 0;
-    } catch (e) {
-      return false;
-    }
-  }
-
-  function importLocalBackup() {
-    let parsed;
-    try {
-      parsed = JSON.parse(localStorage.getItem(STORAGE_KEY));
-    } catch (e) {
-      alert(t("importParseError"));
-      return;
-    }
-    const localProducts = (parsed && parsed.products) || [];
-    if (!localProducts.length) {
-      alert(t("importNoLocalBackup"));
-      return;
-    }
-    if (!confirm(t("importConfirm").replace("{n}", localProducts.length))) return;
-
-    let addedCount = 0;
-    localProducts.forEach((lp) => {
-      if (!productAlreadyExists(lp.name)) {
-        products.push(lp);
-        addedCount++;
-      }
-    });
-    if (Array.isArray(parsed.sales)) {
-      const existingSaleIds = new Set(sales.map((s) => s.id));
-      parsed.sales.forEach((s) => {
-        if (!existingSaleIds.has(s.id)) sales.push(s);
-      });
-    }
-    if (Array.isArray(parsed.customers)) {
-      const existingCustomerIds = new Set(customers.map((c) => c.id));
-      parsed.customers.forEach((c) => {
-        if (!existingCustomerIds.has(c.id)) customers.push(c);
-      });
-    }
-    if (Array.isArray(parsed.payments)) {
-      const existingPaymentIds = new Set(payments.map((p) => p.id));
-      parsed.payments.forEach((p) => {
-        if (!existingPaymentIds.has(p.id)) payments.push(p);
-      });
-    }
-
-    save();
-    renderAll();
-    document.getElementById("importBackupBtn").style.display = "none";
-    alert(t("importSuccess").replace("{n}", addedCount));
-  }
-
-  function addProduct() {
-    const nameInput = document.getElementById("newName");
-    const catInput = document.getElementById("newCategory");
-    const minInput = document.getElementById("newMin");
-    const qtyInput = document.getElementById("newQty");
-    const priceInput = document.getElementById("newPrice");
-    const costPriceInput = document.getElementById("newCostPrice");
-    const barcodeInput = document.getElementById("newBarcode");
-    const unitInput = document.getElementById("newUnit");
-
-    const name = nameInput.value.trim();
-    if (!name) {
-      nameInput.focus();
-      return;
-    }
-    const category = catInput.value.trim() || t("categoryOtherDefault");
-    const min = Number(minInput.value) || 0;
-    const qty = Number(qtyInput.value) || 0;
-    const price = Number(priceInput.value) || 0;
-    const costPrice = Number(costPriceInput.value) || 0;
-    const barcode = barcodeInput.value.trim();
-    const unit = unitInput.value;
-
-    products.push(mkProduct(name, category, qty, min, price, barcode, unit, costPrice));
-    nameInput.value = "";
-    catInput.value = "";
-    minInput.value = "5";
-    qtyInput.value = "0";
-    priceInput.value = "0";
-    costPriceInput.value = "0";
-    barcodeInput.value = "";
-    unitInput.value = "adet";
-    save();
-    renderAll();
-    nameInput.focus();
-  }
-
-  function deleteProduct(id) {
-    products = products.filter((p) => p.id !== id);
-    save();
-    closeModal();
-    renderAll();
-  }
-
-  function adjustQty(id, delta) {
-    const p = products.find((x) => x.id === id);
-    if (!p) return;
-    p.qty = Math.max(0, Math.round((p.qty + delta) * 1000) / 1000);
-    save();
-    renderAll();
-    if (activeProductId === id) updateModalContent(p);
-  }
-
-  function saveEdit() {
-    const p = products.find((x) => x.id === activeProductId);
-    if (!p) return;
-    const name = document.getElementById("editName").value.trim();
-    if (!name) return;
-    p.name = name;
-    p.category = document.getElementById("editCategory").value.trim() || t("categoryOtherDefault");
-    p.min = Number(document.getElementById("editMin").value) || 0;
-    p.price = Number(document.getElementById("editPrice").value) || 0;
-    p.costPrice = Number(document.getElementById("editCostPrice").value) || 0;
-    p.barcode = document.getElementById("editBarcode").value.trim();
-    p.unit = document.getElementById("editUnit").value;
-    save();
-    renderAll();
-    updateModalContent(p);
-  }
-
-  function resetAll() {
-    products.forEach((p) => {
-      p.qty = Math.max(p.min, 1);
-    });
-    save();
-    renderAll();
-  }
-
-  // ---------- Rendering: Products ----------
-  function productRowHtml(p) {
-    const status = getStatus(p);
-    const priceLabel = p.unit === "kg" ? formatTL(p.price) + t("perKgSuffix") : formatTL(p.price);
-    return `
-      <div class="product-row" data-id="${p.id}">
-        <div class="product-info">
-          <p class="product-name">${escapeHtml(p.name)}</p>
-          <p class="product-meta">${escapeHtml(p.category)} · ${t("stockShortLabel")}: ${formatQty(p)} · ${priceLabel}</p>
+        <div class="form-row two-col">
+          <input id="newCategory" type="text" data-i18n-placeholder="categoryPh" placeholder="Kategori, örn. içecekler" />
+          <input id="newMin" type="number" min="0" step="any" data-i18n-placeholder="minStockPh" placeholder="Min. stok" value="5" />
         </div>
-        <span class="status-badge ${STATUS_CLASS[status]}">${getStatusLabel(status)}</span>
-      </div>`;
-  }
-
-  function renderAll() {
-    const searchEl = document.getElementById("searchBox");
-    const search = (searchEl ? searchEl.value : "").toLowerCase().trim();
-    const list = document.getElementById("productList");
-    const empty = document.getElementById("emptyState");
-
-    const filtered = products.filter((p) => p.name.toLowerCase().includes(search) || p.category.toLowerCase().includes(search));
-
-    if (!filtered.length) {
-      list.innerHTML = "";
-      empty.style.display = "block";
-    } else {
-      empty.style.display = "none";
-      list.innerHTML = filtered.map(productRowHtml).join("");
-    }
-
-    list.querySelectorAll(".product-row").forEach((row) => {
-      row.addEventListener("click", () => openModal(row.dataset.id));
-    });
-
-    // Order list
-    const orderList = document.getElementById("orderList");
-    const orderEmpty = document.getElementById("orderEmptyState");
-    const needsOrder = products
-      .filter((p) => getStatus(p) !== "yeterli")
-      .sort((a, b) => (getStatus(a) === "tukendi" ? 0 : 1) - (getStatus(b) === "tukendi" ? 0 : 1));
-
-    if (!needsOrder.length) {
-      orderList.innerHTML = "";
-      orderEmpty.style.display = "block";
-    } else {
-      orderEmpty.style.display = "none";
-      orderList.innerHTML = needsOrder.map(productRowHtml).join("");
-      orderList.querySelectorAll(".product-row").forEach((row) => {
-        row.addEventListener("click", () => openModal(row.dataset.id));
-      });
-    }
-
-    document.getElementById("statTotal").textContent = products.length;
-    document.getElementById("statOrder").textContent = needsOrder.length;
-
-    renderCart();
-    renderSales();
-    renderCustomers();
-  }
-
-  // ---------- Modal ----------
-  function openModal(id) {
-    const p = products.find((x) => x.id === id);
-    if (!p) return;
-    activeProductId = id;
-    document.getElementById("editName").value = p.name;
-    document.getElementById("editCategory").value = p.category;
-    document.getElementById("editMin").value = p.min;
-    document.getElementById("editPrice").value = p.price;
-    document.getElementById("editCostPrice").value = p.costPrice || 0;
-    document.getElementById("editBarcode").value = p.barcode || "";
-    document.getElementById("editUnit").value = p.unit || "adet";
-    updateModalContent(p);
-    document.getElementById("detailModal").style.display = "flex";
-    renderQrCode(p.id);
-  }
-
-  function updateModalContent(p) {
-    document.getElementById("modalProductName").textContent = p.name;
-    document.getElementById("modalQty").textContent = formatQty(p);
-    const status = getStatus(p);
-    const pill = document.getElementById("modalStatus");
-    pill.textContent = getStatusLabel(status);
-    pill.className = "status-pill " + STATUS_CLASS[status];
-  }
-
-  function closeModal() {
-    document.getElementById("detailModal").style.display = "none";
-    activeProductId = null;
-  }
-
-  function renderQrCode(productId) {
-    const box = document.getElementById("modalQrCode");
-    box.innerHTML = "";
-    if (typeof QRCode !== "undefined") {
-      new QRCode(box, {
-        text: productId,
-        width: 160,
-        height: 160,
-        colorDark: "#1F3864",
-        colorLight: "#ffffff"
-      });
-    } else {
-      box.textContent = t("qrLibError");
-    }
-  }
-
-  function printQr() {
-    const box = document.getElementById("modalQrCode");
-    const p = products.find((x) => x.id === activeProductId);
-    const win = window.open("", "_blank");
-    win.document.write(`
-      <html><head><title>${t("printWindowTitle")}</title></head>
-      <body style="text-align:center;font-family:sans-serif;padding:40px;">
-        <h3>${escapeHtml(p ? p.name : "")}</h3>
-        ${box.innerHTML}
-        <script>window.onload = function(){ window.print(); }<\/script>
-      </body></html>
-    `);
-    win.document.close();
-  }
-
-  function findProductByScan(code) {
-    return products.find((p) => p.id === code || (p.barcode && p.barcode === code));
-  }
-
-  // ---------- QR Scanning: Stok giriş/çıkış ----------
-  function startScan() {
-    const readerEl = document.getElementById("qrReader");
-    document.getElementById("startScanBtn").style.display = "none";
-    document.getElementById("stopScanBtn").style.display = "flex";
-    readerEl.innerHTML = "";
-    html5QrCode = new Html5Qrcode("qrReader");
-    scanning = true;
-
-    html5QrCode
-      .start(
-        { facingMode: "environment" },
-        { fps: 10, qrbox: 220 },
-        (decodedText) => {
-          onScanSuccess(decodedText);
-        },
-        () => {}
-      )
-      .catch((err) => {
-        alert(t("cameraError") + "\n" + err);
-        stopScan();
-      });
-  }
-
-  function stopScan() {
-    document.getElementById("startScanBtn").style.display = "flex";
-    document.getElementById("stopScanBtn").style.display = "none";
-    if (html5QrCode && scanning) {
-      html5QrCode
-        .stop()
-        .then(() => html5QrCode.clear())
-        .catch(() => {});
-    }
-    scanning = false;
-  }
-
-  function onScanSuccess(decodedText) {
-    if (stokScanCooldown) return;
-    const p = findProductByScan(decodedText);
-    if (!p) {
-      alert(t("alertNotRegistered"));
-      return;
-    }
-    stopScan();
-    if (p.unit === "kg") {
-      const action = confirm(`${p.name}\n${t("currentStockLabel")}: ${formatQty(p)}\n\n${t("confirmStockDirection")}`);
-      const input = prompt(t("promptKgAmount"), "");
-      if (input === null) return;
-      const weight = parseFloat(input.replace(",", "."));
-      if (!weight || weight <= 0) {
-        alert(t("alertInvalidWeight"));
-        return;
-      }
-      adjustQty(p.id, action ? weight : -weight);
-    } else {
-      const action = confirm(`${p.name}\n${t("currentStockLabel")}: ${p.qty}\n\n${t("confirmStockDirection")}`);
-      if (action) {
-        adjustQty(p.id, 1);
-      } else {
-        adjustQty(p.id, -1);
-      }
-    }
-  }
-
-  // ---------- QR Scanning: Kasa (satış) ----------
-  function startScanKasa() {
-    const readerEl = document.getElementById("qrReaderKasa");
-    document.getElementById("startKasaScanBtn").style.display = "none";
-    document.getElementById("stopKasaScanBtn").style.display = "flex";
-    readerEl.innerHTML = "";
-    html5QrCodeKasa = new Html5Qrcode("qrReaderKasa");
-    scanningKasa = true;
-
-    html5QrCodeKasa
-      .start(
-        { facingMode: "environment" },
-        { fps: 10, qrbox: 220 },
-        (decodedText) => {
-          onScanSuccessKasa(decodedText);
-        },
-        () => {}
-      )
-      .catch((err) => {
-        alert(t("cameraError") + "\n" + err);
-        stopScanKasa();
-      });
-  }
-
-  function stopScanKasa() {
-    document.getElementById("startKasaScanBtn").style.display = "flex";
-    document.getElementById("stopKasaScanBtn").style.display = "none";
-    if (html5QrCodeKasa && scanningKasa) {
-      html5QrCodeKasa
-        .stop()
-        .then(() => html5QrCodeKasa.clear())
-        .catch(() => {});
-    }
-    scanningKasa = false;
-  }
-
-  function onScanSuccessKasa(decodedText) {
-    if (kasaScanCooldown) return;
-    const p = findProductByScan(decodedText);
-    if (!p) {
-      alert(t("alertNotRegistered"));
-      return;
-    }
-
-    if (p.unit === "kg") {
-      const input = prompt(`${p.name} — ${t("promptKgAmount")}`, "");
-      if (input === null) return;
-      const weight = parseFloat(input.replace(",", "."));
-      if (!weight || weight <= 0) {
-        alert(t("alertInvalidWeight"));
-        return;
-      }
-      addToCart(p, weight);
-      kasaScanCooldown = true;
-      showKasaScanFeedback(`${p.name} (${weight} ${t("unitKgShort")})`);
-      setTimeout(() => {
-        kasaScanCooldown = false;
-      }, 3000);
-    } else {
-      addToCart(p, 1);
-      kasaScanCooldown = true;
-      showKasaScanFeedback(p.name);
-      setTimeout(() => {
-        kasaScanCooldown = false;
-      }, 3000);
-    }
-  }
-
-  function showKasaScanFeedback(name) {
-    const readerEl = document.getElementById("qrReaderKasa");
-    if (!readerEl) return;
-    let badge = document.getElementById("kasaScanFeedback");
-    if (!badge) {
-      badge = document.createElement("div");
-      badge.id = "kasaScanFeedback";
-      badge.className = "scan-feedback";
-      readerEl.parentElement.insertBefore(badge, readerEl.nextSibling);
-    }
-    badge.innerHTML = `<i class="fa-solid fa-check" aria-hidden="true"></i> ${escapeHtml(name)} ${t("addedToCartSuffix")}`;
-    badge.classList.add("show");
-    clearTimeout(badge._hideTimer);
-    badge._hideTimer = setTimeout(() => {
-      badge.classList.remove("show");
-    }, 3000);
-  }
-
-  function manualAddToCart(productId) {
-    const p = products.find((x) => x.id === productId);
-    if (!p) return;
-    let amount;
-    if (p.unit === "kg") {
-      const input = prompt(`${p.name} — ${t("promptKgAmount")}`, "");
-      if (input === null) return;
-      amount = parseFloat(input.replace(",", "."));
-    } else {
-      const input = prompt(`${p.name} — ${t("promptAdetAmount")}`, "1");
-      if (input === null) return;
-      amount = parseFloat(input.replace(",", "."));
-    }
-    if (!amount || amount <= 0) {
-      alert(t("alertInvalidAmount"));
-      return;
-    }
-    addToCart(p, amount);
-    document.getElementById("manualAddSearch").value = "";
-    renderManualAddResults();
-  }
-
-  function renderManualAddResults() {
-    const searchEl = document.getElementById("manualAddSearch");
-    const resultsEl = document.getElementById("manualAddResults");
-    if (!searchEl || !resultsEl) return;
-    const q = (searchEl.value || "").toLowerCase().trim();
-    if (!q) {
-      resultsEl.innerHTML = "";
-      return;
-    }
-    const matches = products
-      .filter((p) => p.name.toLowerCase().includes(q) || p.category.toLowerCase().includes(q))
-      .slice(0, 8);
-
-    if (!matches.length) {
-      resultsEl.innerHTML = `<p class="empty-state" style="display:block;">${t("noMatchingProducts")}</p>`;
-      return;
-    }
-
-    resultsEl.innerHTML = matches
-      .map((p) => {
-        const priceLabel = p.unit === "kg" ? formatTL(p.price) + t("perKgSuffix") : formatTL(p.price);
-        return `
-          <div class="product-row manual-add-row" data-id="${p.id}">
-            <div class="product-info">
-              <p class="product-name">${escapeHtml(p.name)}</p>
-              <p class="product-meta">${escapeHtml(p.category)} · ${t("stockShortLabel")}: ${formatQty(p)} · ${priceLabel}</p>
-            </div>
-            <button class="btn btn-sm manual-add-btn" data-id="${p.id}">${t("addBtnShort")}</button>
-          </div>`;
-      })
-      .join("");
-
-    resultsEl.querySelectorAll(".manual-add-btn").forEach((btn) => {
-      btn.addEventListener("click", () => manualAddToCart(btn.dataset.id));
-    });
-  }
-
-  // ---------- Kasa: Sepet ----------
-  function addToCart(p, amount) {
-    amount = amount || 1;
-    const existing = cart.find((c) => c.productId === p.id);
-    if (existing) {
-      existing.qty = Math.round((existing.qty + amount) * 1000) / 1000;
-    } else {
-      cart.push({ productId: p.id, name: p.name, price: p.price, qty: amount, unit: p.unit || "adet" });
-    }
-    renderCart();
-  }
-
-  function adjustCartQty(productId, delta) {
-    const item = cart.find((c) => c.productId === productId);
-    if (!item) return;
-    item.qty += delta;
-    if (item.qty <= 0) {
-      cart = cart.filter((c) => c.productId !== productId);
-    }
-    renderCart();
-  }
-
-  function editCartWeight(productId) {
-    const item = cart.find((c) => c.productId === productId);
-    if (!item) return;
-    const input = prompt(`${item.name} — ${t("promptNewWeight")}`, item.qty);
-    if (input === null) return;
-    const weight = parseFloat(input.replace(",", "."));
-    if (!weight || weight <= 0) {
-      removeCartItem(productId);
-      return;
-    }
-    item.qty = Math.round(weight * 1000) / 1000;
-    renderCart();
-  }
-
-  function removeCartItem(productId) {
-    cart = cart.filter((c) => c.productId !== productId);
-    renderCart();
-  }
-
-  function clearCart() {
-    cart = [];
-    renderCart();
-  }
-
-  function cartRowHtml(item) {
-    const lineTotal = item.price * item.qty;
-    const isKg = item.unit === "kg";
-    const qtyDisplay = isKg
-      ? (Math.round(item.qty * 1000) / 1000).toLocaleString(locale(), { maximumFractionDigits: 3 }) + " " + t("unitKgShort")
-      : item.qty;
-    const controlsHtml = isKg
-      ? `
-          <button class="cart-edit-weight-btn" data-id="${item.productId}" aria-label="${t('editWeightAria')}"><i class="fa-solid fa-pen" aria-hidden="true"></i></button>
-          <span class="cart-qty-value">${qtyDisplay}</span>`
-      : `
-          <button class="cart-qty-btn cart-minus" data-id="${item.productId}" aria-label="${t('decreaseAria')}"><i class="fa-solid fa-minus" aria-hidden="true"></i></button>
-          <span class="cart-qty-value">${item.qty}</span>
-          <button class="cart-qty-btn cart-plus" data-id="${item.productId}" aria-label="${t('increaseAria')}"><i class="fa-solid fa-plus" aria-hidden="true"></i></button>`;
-    return `
-      <div class="cart-row" data-id="${item.productId}">
-        <div class="cart-info">
-          <p class="cart-name">${escapeHtml(item.name)}</p>
-          <p class="cart-meta">${formatTL(item.price)} / ${isKg ? t("unitKgShort") : t("unitAdetShort")}</p>
+        <div class="form-row two-col">
+          <input id="newQty" type="number" min="0" step="any" data-i18n-placeholder="startStockPh" placeholder="Başlangıç stok" value="0" />
+          <input id="newPrice" type="number" min="0" step="0.01" data-i18n-placeholder="pricePh" placeholder="Fiyat (₺)" value="0" />
         </div>
-        <div class="cart-controls">
-          ${controlsHtml}
-          <span class="cart-line-total">${formatTL(lineTotal)}</span>
-          <button class="cart-remove-btn" data-id="${item.productId}" aria-label="${t('removeAria')}"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button>
+        <div class="form-row">
+          <input id="newCostPrice" type="number" min="0" step="0.01" data-i18n-placeholder="costPricePh" placeholder="Alış fiyatı (₺, opsiyonel)" value="0" />
         </div>
-      </div>`;
-  }
-
-  function renderCart() {
-    const list = document.getElementById("cartList");
-    const empty = document.getElementById("cartEmptyState");
-    if (!list) return;
-
-    if (!cart.length) {
-      list.innerHTML = "";
-      empty.style.display = "block";
-    } else {
-      empty.style.display = "none";
-      list.innerHTML = cart.map(cartRowHtml).join("");
-    }
-
-    list.querySelectorAll(".cart-plus").forEach((btn) => {
-      btn.addEventListener("click", () => adjustCartQty(btn.dataset.id, 1));
-    });
-    list.querySelectorAll(".cart-minus").forEach((btn) => {
-      btn.addEventListener("click", () => adjustCartQty(btn.dataset.id, -1));
-    });
-    list.querySelectorAll(".cart-edit-weight-btn").forEach((btn) => {
-      btn.addEventListener("click", () => editCartWeight(btn.dataset.id));
-    });
-    list.querySelectorAll(".cart-remove-btn").forEach((btn) => {
-      btn.addEventListener("click", () => removeCartItem(btn.dataset.id));
-    });
-
-    const subtotal = cart.reduce((sum, c) => sum + c.price * c.qty, 0);
-    const discountInput = document.getElementById("cartDiscount");
-    const discount = Math.min(Number(discountInput.value) || 0, subtotal);
-    const total = Math.max(0, subtotal - discount);
-
-    document.getElementById("cartSubtotal").textContent = formatTL(subtotal);
-    document.getElementById("cartTotal").textContent = formatTL(total);
-  }
-
-  function setPaymentType(type) {
-    selectedPaymentType = type;
-    document.getElementById("payNakitBtn").classList.toggle("active", type === "nakit");
-    document.getElementById("payVeresiyeBtn").classList.toggle("active", type === "veresiye");
-    document.getElementById("veresiyeCustomerRow").style.display = type === "veresiye" ? "block" : "none";
-  }
-
-  function completeSale() {
-    if (!cart.length) {
-      alert(t("alertEmptyCart"));
-      return;
-    }
-
-    let customerId = null;
-    let customerName = null;
-    if (selectedPaymentType === "veresiye") {
-      if (!customers.length) {
-        alert(t("alertNeedCustomer"));
-        return;
-      }
-      customerId = document.getElementById("veresiyeCustomerSelectedId").value;
-      const c = customers.find((x) => x.id === customerId);
-      if (!c) {
-        alert(t("alertSelectCustomer"));
-        return;
-      }
-      customerName = c.name;
-    }
-
-    const subtotal = cart.reduce((sum, c) => sum + c.price * c.qty, 0);
-    const discountInput = document.getElementById("cartDiscount");
-    const discount = Math.min(Number(discountInput.value) || 0, subtotal);
-    const total = Math.max(0, subtotal - discount);
-
-    let totalCost = 0;
-    const saleItems = cart.map((c) => {
-      const p = products.find((x) => x.id === c.productId);
-      const costPrice = p ? p.costPrice || 0 : 0;
-      totalCost += costPrice * c.qty;
-      return { name: c.name, qty: c.qty, price: c.price, unit: c.unit || "adet", costPrice };
-    });
-    const profit = total - totalCost;
-
-    cart.forEach((item) => {
-      const p = products.find((x) => x.id === item.productId);
-      if (p) p.qty = Math.max(0, p.qty - item.qty);
-    });
-
-    sales.push({
-      id: genId(),
-      timestamp: new Date().toISOString(),
-      items: saleItems,
-      subtotal,
-      discount,
-      total,
-      cost: totalCost,
-      profit,
-      paymentType: selectedPaymentType,
-      customerId,
-      customerName
-    });
-
-    cart = [];
-    discountInput.value = "0";
-    clearVeresiyeCustomerSelection();
-    setPaymentType("nakit");
-    save();
-    renderAll();
-    alert(`${t("alertSaleComplete")} ${formatTL(total)}${customerName ? " (" + t("veresiyeLabel") + ": " + customerName + ")" : ""}`);
-  }
-
-  function cancelSale(saleId) {
-    const sale = sales.find((s) => s.id === saleId);
-    if (!sale) return;
-    if (!confirm(`${t("confirmCancelSale")}\n${formatTL(sale.total)} ${t("confirmCancelSaleDetail")}`)) {
-      return;
-    }
-    sale.items.forEach((item) => {
-      const p = products.find((x) => x.name === item.name);
-      if (p) p.qty += item.qty;
-    });
-    sales = sales.filter((s) => s.id !== saleId);
-    save();
-    renderAll();
-  }
-
-  // ---------- Satışlar (geçmiş + rapor) ----------
-  function isInPeriod(isoString, period) {
-    const d = new Date(isoString);
-    const now = new Date();
-    if (period === "today") {
-      return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth() && d.getDate() === now.getDate();
-    }
-    if (period === "week") {
-      const dayOfWeek = (now.getDay() + 6) % 7; // Pazartesi=0
-      const monday = new Date(now);
-      monday.setHours(0, 0, 0, 0);
-      monday.setDate(now.getDate() - dayOfWeek);
-      return d >= monday;
-    }
-    if (period === "month") {
-      return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
-    }
-    return true; // 'all'
-  }
-
-  function saleRowHtml(sale) {
-    const d = new Date(sale.timestamp);
-    const timeStr = d.toLocaleString(locale(), { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
-    const itemsSummary = sale.items
-      .map((i) => `${escapeHtml(i.name)} x${i.unit === "kg" ? i.qty + t("unitKgShort") : i.qty}`)
-      .join(", ");
-    const paymentBadge = sale.paymentType === "veresiye" ? `<span class="sale-payment-badge">${t("veresiyeLabel")}${sale.customerName ? ": " + escapeHtml(sale.customerName) : ""}</span>` : "";
-    const profitValue = sale.profit != null ? sale.profit : sale.total;
-    return `
-      <div class="sale-row">
-        <div class="sale-row-top">
-          <span class="sale-time">${timeStr}</span>
-          <span class="sale-amount">${formatTL(sale.total)}</span>
+        <div class="form-row">
+          <label class="field-label" data-i18n="unitLabel">Satış birimi</label>
+          <select id="newUnit">
+            <option value="adet" data-i18n="unitAdet">Adet (tam sayı)</option>
+            <option value="kg" data-i18n="unitKg">Kg (tartılı / açık ürün)</option>
+          </select>
         </div>
-        <p class="sale-items">${itemsSummary}</p>
-        <p class="sale-profit">${t("profitLabel")}: ${formatTL(profitValue)}</p>
-        <div class="sale-row-bottom">
-          ${paymentBadge}
-          <button class="sale-cancel-btn" data-id="${sale.id}">
-            <i class="fa-solid fa-rotate-left" aria-hidden="true"></i> ${t("cancelSaleBtn")}
+        <div class="form-row barcode-row">
+          <input id="newBarcode" type="text" data-i18n-placeholder="barcodePh" placeholder="Barkod (opsiyonel)" />
+          <button id="scanNewBarcodeBtn" type="button" class="btn btn-icon-only" data-i18n-aria="scanBarcodeAria" aria-label="Barkod tara">
+            <i class="fa-solid fa-barcode" aria-hidden="true"></i>
           </button>
         </div>
-      </div>`;
-  }
+        <button id="addBtn" class="btn btn-primary btn-block">
+          <i class="fa-solid fa-plus" aria-hidden="true"></i> <span data-i18n="addProductBtn">Ürün ekle</span>
+        </button>
+      </div>
 
-  function topProductRowHtml(item, rank) {
-    return `
-      <div class="product-row">
-        <div class="product-info">
-          <p class="product-name">${rank}. ${escapeHtml(item.name)}</p>
-          <p class="product-meta">${item.qty} ${t("soldQtyLabel")}</p>
+      <div class="card">
+        <p class="card-title" data-i18n="bulkScanTitle">Rafı fotoğrafla (toplu ekle)</p>
+        <p class="card-subtitle" data-i18n="bulkScanSubtitle">Bir raf fotoğrafı çek, yapay zeka ürünleri tanısın, sistemde olmayanları toplu ekle.</p>
+        <input id="shelfPhotoInput" type="file" accept="image/*" multiple style="display:none;" />
+        <button id="shelfPhotoBtn" class="btn btn-primary btn-block">
+          <i class="fa-solid fa-camera" aria-hidden="true"></i> <span data-i18n="bulkScanBtn">Fotoğraf çek / seç</span>
+        </button>
+        <div id="bulkScanLoading" class="bulk-scan-loading" style="display:none;">
+          <i class="fa-solid fa-spinner spin" aria-hidden="true"></i>
+          <span data-i18n="bulkScanAnalyzing">Fotoğraf analiz ediliyor...</span>
         </div>
-        <span class="sale-amount">${formatTL(item.revenue)}</span>
-      </div>`;
-  }
+      </div>
 
-  function renderSales() {
-    const list = document.getElementById("salesList");
-    const empty = document.getElementById("salesEmptyState");
-    const topList = document.getElementById("topProductsList");
-    const topEmpty = document.getElementById("topProductsEmptyState");
-    if (!list) return;
+      <div class="section-header">
+        <p class="card-title" data-i18n="allProductsTitle">Tüm ürünler</p>
+        <input id="searchBox" type="text" class="search-input" data-i18n-placeholder="searchPh" placeholder="Ürün ara..." />
+      </div>
 
-    const periodSales = sales.filter((s) => isInPeriod(s.timestamp, currentSalesPeriod));
-    const sorted = [...periodSales].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+      <div id="productList" class="list"></div>
+      <p id="emptyState" class="empty-state" data-i18n="emptyProducts">Henüz ürün yok. Yukarıdan ekleyerek başla.</p>
+    </section>
 
-    if (!sorted.length) {
-      list.innerHTML = "";
-      empty.style.display = "block";
-    } else {
-      empty.style.display = "none";
-      list.innerHTML = sorted.map(saleRowHtml).join("");
-      list.querySelectorAll(".sale-cancel-btn").forEach((btn) => {
-        btn.addEventListener("click", () => cancelSale(btn.dataset.id));
-      });
-    }
+    <!-- SEKME: QR TARA (STOK GİRİŞ/ÇIKIŞ) -->
+    <section id="tab-scan" class="tab-panel">
+      <div class="card">
+        <p class="card-title" data-i18n="scanTitle">QR kod ile giriş / çıkış</p>
+        <p class="card-subtitle" data-i18n="scanSubtitle">Bir ürünün QR kodunu okutarak stok girişi veya çıkışı yapabilirsin.</p>
+        <button id="startScanBtn" class="btn btn-primary btn-block">
+          <i class="fa-solid fa-camera" aria-hidden="true"></i> <span data-i18n="startCamera">Kamerayı başlat</span>
+        </button>
+        <div id="qrReader" class="qr-reader"></div>
+        <button id="stopScanBtn" class="btn btn-block" style="display:none;">
+          <i class="fa-solid fa-stop" aria-hidden="true"></i> <span data-i18n="stopScan">Taramayı durdur</span>
+        </button>
+      </div>
 
-    // En çok satan ürünler
-    const productTotals = {};
-    periodSales.forEach((s) => {
-      s.items.forEach((i) => {
-        if (!productTotals[i.name]) productTotals[i.name] = { name: i.name, qty: 0, revenue: 0 };
-        productTotals[i.name].qty += i.qty;
-        productTotals[i.name].revenue += i.qty * i.price;
-      });
-    });
-    const topProducts = Object.values(productTotals)
-      .sort((a, b) => b.qty - a.qty)
-      .slice(0, 5);
+      <div class="card">
+        <p class="card-title" data-i18n="printQrTitle">QR kodları yazdır</p>
+        <p class="card-subtitle" data-i18n="printQrSubtitle">Her ürün için bir QR kod oluşturup rafa yapıştırabilirsin. Ürünler listesinden bir ürüne dokun, "QR kodu göster" seçeneğini kullan.</p>
+      </div>
+    </section>
 
-    if (!topProducts.length) {
-      topList.innerHTML = "";
-      topEmpty.style.display = "block";
-    } else {
-      topEmpty.style.display = "none";
-      topList.innerHTML = topProducts.map((item, i) => topProductRowHtml(item, i + 1)).join("");
-    }
+    <!-- SEKME: KASA (SATIŞ) -->
+    <section id="tab-kasa" class="tab-panel">
+      <div class="card">
+        <p class="card-title" data-i18n="kasaTitle">Kasa — QR okutarak satış</p>
+        <p class="card-subtitle" data-i18n="kasaSubtitle">Müşterinin aldığı ürünlerin QR kodunu sırayla okut, sepete otomatik eklensin.</p>
+        <button id="startKasaScanBtn" class="btn btn-primary btn-block">
+          <i class="fa-solid fa-camera" aria-hidden="true"></i> <span data-i18n="startCamera">Kamerayı başlat</span>
+        </button>
+        <div id="qrReaderKasa" class="qr-reader"></div>
+        <button id="stopKasaScanBtn" class="btn btn-block" style="display:none;">
+          <i class="fa-solid fa-stop" aria-hidden="true"></i> <span data-i18n="stopScan">Taramayı durdur</span>
+        </button>
+      </div>
 
-    const periodTotal = periodSales.reduce((sum, s) => sum + s.total, 0);
-    const periodProfit = periodSales.reduce((sum, s) => sum + (s.profit != null ? s.profit : s.total), 0);
-    document.getElementById("statPeriodTotal").textContent = formatTL(periodTotal);
-    document.getElementById("statPeriodCount").textContent = periodSales.length;
-    const profitEl = document.getElementById("statNetProfit");
-    if (profitEl) {
-      profitEl.textContent = formatTL(periodProfit);
-      const profitCard = profitEl.closest(".profit-highlight-card");
-      if (profitCard) profitCard.classList.toggle("negative", periodProfit < 0);
-    }
-  }
+      <div class="card">
+        <p class="card-title" data-i18n="manualAddTitle">Ürün seç ve ekle (QR'sız)</p>
+        <div class="form-row">
+          <input id="manualAddSearch" type="text" data-i18n-placeholder="searchPh" placeholder="Ürün ara..." />
+        </div>
+        <div id="manualAddResults" class="list"></div>
+      </div>
 
-  // ---------- Hızlı barkod tarama (ürün ekle/düzenle formları için) ----------
-  let quickScanCode = null;
-  let quickScanTargetInputId = null;
+      <div class="card">
+        <div class="card-header-row">
+          <p class="card-title" data-i18n="cartTitle">Sepet</p>
+          <button id="clearCartBtn" class="btn btn-sm">
+            <i class="fa-solid fa-trash" aria-hidden="true"></i> <span data-i18n="clearCart">Sepeti boşalt</span>
+          </button>
+        </div>
+        <div id="cartList" class="list"></div>
+        <p id="cartEmptyState" class="empty-state" data-i18n="emptyCart">Sepet boş. Ürün QR kodunu okutarak ekle.</p>
 
-  function openQuickBarcodeScan(targetInputId) {
-    quickScanTargetInputId = targetInputId;
-    document.getElementById("barcodeScanModal").style.display = "flex";
-    const readerEl = document.getElementById("quickScanReader");
-    readerEl.innerHTML = "";
-    quickScanCode = new Html5Qrcode("quickScanReader");
-    quickScanCode
-      .start(
-        { facingMode: "environment" },
-        { fps: 10, qrbox: 220 },
-        (decodedText) => {
-          const input = document.getElementById(quickScanTargetInputId);
-          if (input) input.value = decodedText;
-          closeQuickBarcodeScan();
-          lookupBarcodeAndFill(decodedText, quickScanTargetInputId);
-        },
-        () => {}
-      )
-      .catch((err) => {
-        alert(t("cameraError") + "\n" + err);
-        closeQuickBarcodeScan();
-      });
-  }
+        <div class="form-row">
+          <label class="field-label" data-i18n="discountLabel">İndirim (₺)</label>
+          <input id="cartDiscount" type="number" min="0" step="0.01" value="0" />
+        </div>
 
-  function closeQuickBarcodeScan() {
-    document.getElementById("barcodeScanModal").style.display = "none";
-    if (quickScanCode) {
-      quickScanCode
-        .stop()
-        .then(() => quickScanCode.clear())
-        .catch(() => {});
-      quickScanCode = null;
-    }
-  }
+        <div class="cart-subtotal-row">
+          <span data-i18n="subtotalLabel">Ara toplam</span>
+          <span id="cartSubtotal">0,00 ₺</span>
+        </div>
+        <div class="cart-total-row">
+          <span data-i18n="totalLabel">Toplam</span>
+          <span id="cartTotal">0,00 ₺</span>
+        </div>
 
-  // ---------- Open Food Facts: barkoddan otomatik ürün bilgisi ----------
-  function lookupBarcodeAndFill(barcode, targetInputId) {
-    const isNewForm = targetInputId === "newBarcode";
-    const nameInput = document.getElementById(isNewForm ? "newName" : "editName");
-    const categoryInput = document.getElementById(isNewForm ? "newCategory" : "editCategory");
+        <div class="payment-type-row">
+          <button id="payNakitBtn" class="payment-type-btn active" data-type="nakit">
+            <i class="fa-solid fa-money-bill" aria-hidden="true"></i> <span data-i18n="payNakit">Nakit</span>
+          </button>
+          <button id="payVeresiyeBtn" class="payment-type-btn" data-type="veresiye">
+            <i class="fa-solid fa-book" aria-hidden="true"></i> <span data-i18n="payVeresiye">Veresiye</span>
+          </button>
+        </div>
+        <div id="veresiyeCustomerRow" class="form-row" style="display:none;">
+          <div class="searchable-select">
+            <input id="veresiyeCustomerSearch" type="text" data-i18n-placeholder="searchCustomerPh" placeholder="Müşteri ara..." autocomplete="off" />
+            <input type="hidden" id="veresiyeCustomerSelectedId" />
+            <div id="veresiyeCustomerResults" class="searchable-results"></div>
+          </div>
+        </div>
 
-    fetch(`https://world.openfoodfacts.org/api/v2/product/${encodeURIComponent(barcode)}.json?fields=product_name,brands,categories_tags`)
-      .then((r) => r.json())
-      .then((data) => {
-        if (!data || data.status !== 1 || !data.product) return;
-        const p = data.product;
-        const brand = (p.brands || "").split(",")[0].trim();
-        const productName = p.product_name || "";
-        const fullName = [brand, productName].filter(Boolean).join(" ").trim();
-        if (fullName && !nameInput.value.trim()) {
-          nameInput.value = fullName;
-        }
-        if (p.categories_tags && p.categories_tags.length && !categoryInput.value.trim()) {
-          const rawCat = p.categories_tags[p.categories_tags.length - 1] || "";
-          categoryInput.value = rawCat.replace(/^\w\w:/, "").replace(/-/g, " ");
-        }
-      })
-      .catch(() => {});
-  }
+        <button id="completeSaleBtn" class="btn btn-primary btn-block">
+          <i class="fa-solid fa-check" aria-hidden="true"></i> <span data-i18n="completeSaleBtn">Satışı tamamla</span>
+        </button>
+      </div>
+    </section>
 
-  // ---------- Toplu fotoğraf tarama (Google Gemini ücretsiz API ile raf tanıma) ----------
-  let bulkScanCandidates = [];
+    <!-- SEKME: SATIŞLAR -->
+    <section id="tab-sales" class="tab-panel">
+      <div class="period-filter">
+        <button class="period-btn active" data-period="today" data-i18n="periodToday">Bugün</button>
+        <button class="period-btn" data-period="week" data-i18n="periodWeek">Bu Hafta</button>
+        <button class="period-btn" data-period="month" data-i18n="periodMonth">Bu Ay</button>
+        <button class="period-btn" data-period="all" data-i18n="periodAll">Tümü</button>
+      </div>
 
-  function isBulkScanConfigured() {
-    return typeof bulkScanConfig !== "undefined" && bulkScanConfig.apiKey && bulkScanConfig.apiKey.indexOf("BURAYA") !== 0;
-  }
+      <div class="stats-grid">
+        <div class="stat-card">
+          <p class="stat-label" data-i18n="statPeriodTotal">Toplam ciro</p>
+          <p class="stat-value" id="statPeriodTotal">0,00 ₺</p>
+        </div>
+        <div class="stat-card">
+          <p class="stat-label" data-i18n="statPeriodCount">İşlem sayısı</p>
+          <p class="stat-value" id="statPeriodCount">0</p>
+        </div>
+      </div>
 
-  function fileToBase64(file) {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => {
-        const result = reader.result;
-        resolve(result.split(",")[1]);
-      };
-      reader.onerror = reject;
-      reader.readAsDataURL(file);
-    });
-  }
+      <div class="profit-highlight-card">
+        <p class="stat-label" data-i18n="statNetProfit">Net kâr</p>
+        <p class="stat-value" id="statNetProfit">0,00 ₺</p>
+      </div>
 
-  function productAlreadyExists(name) {
-    const normalized = name.trim().toLowerCase();
-    return products.some((p) => p.name.trim().toLowerCase() === normalized);
-  }
+      <p class="card-title" data-i18n="topProductsTitle">En çok satan ürünler</p>
+      <div id="topProductsList" class="list"></div>
+      <p id="topProductsEmptyState" class="empty-state" data-i18n="emptyTopProducts">Bu dönemde satış yok.</p>
 
-  function analyzeOnePhoto(file) {
-    const prompt = [
-      "Bu bir market/bakkal rafının fotoğrafı.",
-      "Fotoğrafta görünen HER FARKLI ürünü tek tek tespit et.",
-      "Her ürün için şu alanları çıkar:",
-      '- name: ürün adı ve varsa hacmi/boyutu (örn. "Pepsi 1 Lt")',
-      "- brand: marka adı",
-      "- category: genel kategori (örn. içecekler, atıştırmalık, temizlik)",
-      "- price: fiyat etiketinde açıkça görünüyorsa sayı olarak, görünmüyorsa null",
-      "",
-      "SADECE geçerli bir JSON dizisi döndür, başka hiçbir açıklama veya metin ekleme.",
-      'Format: [{"name":"...","brand":"...","category":"...","price":12.5}]',
-      "Aynı üründen birden fazla varsa yalnızca bir kez listele."
-    ].join("\n");
+      <p class="card-title" data-i18n="salesHistoryTitle">Satış geçmişi</p>
+      <div id="salesList" class="list"></div>
+      <p id="salesEmptyState" class="empty-state" data-i18n="emptySales">Bu dönemde satış yapılmadı.</p>
+    </section>
 
-    return fileToBase64(file)
-      .then((base64) =>
-        fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "X-goog-api-key": bulkScanConfig.apiKey
-          },
-          body: JSON.stringify({
-            contents: [
-              {
-                parts: [{ text: prompt }, { inline_data: { mime_type: "image/jpeg", data: base64 } }]
-              }
-            ]
-          })
-        })
-      )
-      .then((r) => r.json())
-      .then((data) => {
-        const rawText = data && data.candidates && data.candidates[0] && data.candidates[0].content.parts[0].text;
-        if (!rawText) {
-          console.error("Gemini yanıtı beklenmedik formatta:", data);
-          return [];
-        }
-        try {
-          const cleaned = rawText.replace(/```json|```/g, "").trim();
-          return JSON.parse(cleaned);
-        } catch (e) {
-          console.error("JSON ayrıştırma hatası:", e, rawText);
-          return [];
-        }
-      })
-      .catch((e) => {
-        console.error(e);
-        return [];
-      });
-  }
+    <!-- SEKME: VERESİYE -->
+    <section id="tab-veresiye" class="tab-panel">
+      <div class="card">
+        <p class="card-title" data-i18n="addCustomerTitle">Müşteri ekle</p>
+        <div class="form-row">
+          <input id="newCustomerName" type="text" data-i18n-placeholder="customerNamePh" placeholder="Müşteri adı" />
+        </div>
+        <div class="form-row">
+          <input id="newCustomerPhone" type="text" data-i18n-placeholder="customerPhonePh" placeholder="Telefon (opsiyonel)" />
+        </div>
+        <button id="addCustomerBtn" class="btn btn-primary btn-block">
+          <i class="fa-solid fa-user-plus" aria-hidden="true"></i> <span data-i18n="addCustomerBtn">Müşteri ekle</span>
+        </button>
+      </div>
 
-  function handleShelfPhotos(files) {
-    if (!isBulkScanConfigured()) {
-      alert(t("bulkScanNotConfigured"));
-      return;
-    }
-    const loadingEl = document.getElementById("bulkScanLoading");
-    const loadingText = loadingEl.querySelector("span");
-    loadingEl.style.display = "flex";
+      <div class="stats-grid">
+        <div class="stat-card stat-danger">
+          <p class="stat-label" data-i18n="statTotalDebt">Toplam alacak</p>
+          <p class="stat-value" id="statTotalDebt">0,00 ₺</p>
+        </div>
+        <div class="stat-card">
+          <p class="stat-label" data-i18n="statCustomerCount">Müşteri sayısı</p>
+          <p class="stat-value" id="statCustomerCount">0</p>
+        </div>
+      </div>
 
-    let allDetected = [];
-    let index = 0;
+      <p class="card-title" data-i18n="customersTitle">Müşteriler</p>
+      <div id="customerList" class="list"></div>
+      <p id="customerEmptyState" class="empty-state" data-i18n="emptyCustomers">Henüz müşteri yok.</p>
+    </section>
 
-    function processNext() {
-      if (index >= files.length) {
-        loadingEl.style.display = "none";
-        if (loadingText) loadingText.textContent = t("bulkScanAnalyzing");
+    <!-- SEKME: SİPARİŞ LİSTESİ -->
+    <section id="tab-orders" class="tab-panel">
+      <div class="card-header-row">
+        <p class="card-title" data-i18n="orderListTitle">Acil sipariş listesi</p>
+        <button id="resetBtn" class="btn btn-sm">
+          <i class="fa-solid fa-arrows-rotate" aria-hidden="true"></i> <span data-i18n="resetAllBtn">Tümünü sıfırla</span>
+        </button>
+      </div>
+      <div id="orderList" class="list"></div>
+      <p id="orderEmptyState" class="empty-state" data-i18n="emptyOrders">Şu anda sipariş edilmesi gereken ürün yok.</p>
+    </section>
 
-        // Aynı isimli ürünleri (farklı fotoğraflarda tekrar görünenleri) tekilleştir
-        const seen = new Set();
-        const deduped = [];
-        allDetected.forEach((p) => {
-          const key = (p.name || "").trim().toLowerCase();
-          if (key && !seen.has(key)) {
-            seen.add(key);
-            deduped.push(p);
-          }
-        });
+  </main>
 
-        bulkScanCandidates = deduped.filter((p) => p.name && !productAlreadyExists(p.name));
+  <!-- ÜRÜN DETAY / QR MODAL -->
+  <div id="detailModal" class="modal-overlay" style="display:none;">
+    <div class="modal">
+      <div class="modal-header">
+        <p id="modalProductName" class="modal-title"></p>
+        <button id="closeModalBtn" class="icon-btn" aria-label="Kapat"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button>
+      </div>
+      <div class="modal-body">
+        <div class="qty-control">
+          <button id="qtyMinusBtn" class="qty-btn" aria-label="Stok azalt"><i class="fa-solid fa-minus" aria-hidden="true"></i></button>
+          <span id="modalQty" class="qty-display">0</span>
+          <button id="qtyPlusBtn" class="qty-btn" aria-label="Stok arttır"><i class="fa-solid fa-plus" aria-hidden="true"></i></button>
+        </div>
+        <p id="modalStatus" class="status-pill"></p>
 
-        if (!bulkScanCandidates.length) {
-          alert(t("bulkScanNoNew"));
-          return;
-        }
-        renderBulkScanModal();
-        return;
-      }
+        <div class="modal-section">
+          <div id="modalQrCode" class="qr-code-box"></div>
+          <button id="printQrBtn" class="btn btn-block">
+            <i class="fa-solid fa-print" aria-hidden="true"></i> <span data-i18n="printQrBtn">QR kodu yazdır</span>
+          </button>
+        </div>
 
-      if (loadingText && files.length > 1) {
-        loadingText.textContent = `${t("bulkScanAnalyzing")} (${index + 1}/${files.length})`;
-      }
-
-      analyzeOnePhoto(files[index]).then((detected) => {
-        if (Array.isArray(detected)) allDetected = allDetected.concat(detected);
-        index++;
-        processNext();
-      });
-    }
-
-    processNext();
-  }
-
-  function renderBulkScanModal() {
-    const titleEl = document.getElementById("bulkScanModalTitle");
-    titleEl.textContent = t("bulkScanFoundTitle").replace("{n}", bulkScanCandidates.length);
-
-    const listEl = document.getElementById("bulkScanResultsList");
-    listEl.innerHTML = bulkScanCandidates
-      .map((p, i) => {
-        const metaParts = [p.brand, p.category].filter(Boolean).join(" · ");
-        const priceStr = p.price ? formatTL(p.price) : "";
-        return `
-          <label class="bulk-result-row">
-            <input type="checkbox" class="bulk-result-check" data-index="${i}" checked />
-            <div class="bulk-result-info">
-              <p class="bulk-result-name">${escapeHtml(p.name)}</p>
-              <p class="bulk-result-meta">${escapeHtml(metaParts)}${priceStr ? " · " + priceStr : ""}</p>
+        <div class="modal-section">
+          <label class="field-label" data-i18n="productNameLabel">Ürün adı</label>
+          <input id="editName" type="text" />
+          <div class="form-row two-col">
+            <div>
+              <label class="field-label" data-i18n="categoryLabel">Kategori</label>
+              <input id="editCategory" type="text" />
             </div>
-          </label>`;
-      })
-      .join("");
+            <div>
+              <label class="field-label" data-i18n="minStockLabel">Min. stok</label>
+              <input id="editMin" type="number" min="0" step="any" />
+            </div>
+          </div>
+          <label class="field-label" data-i18n="priceLabel">Fiyat (₺)</label>
+          <input id="editPrice" type="number" min="0" step="0.01" />
+          <label class="field-label" data-i18n="costPriceLabel">Alış fiyatı (₺, opsiyonel)</label>
+          <input id="editCostPrice" type="number" min="0" step="0.01" />
+          <label class="field-label" data-i18n="unitLabel">Satış birimi</label>
+          <select id="editUnit">
+            <option value="adet" data-i18n="unitAdet">Adet (tam sayı)</option>
+            <option value="kg" data-i18n="unitKg">Kg (tartılı / açık ürün)</option>
+          </select>
+          <label class="field-label" data-i18n="barcodeLabel">Barkod</label>
+          <div class="form-row barcode-row">
+            <input id="editBarcode" type="text" data-i18n-placeholder="barcodePh" placeholder="Barkod (opsiyonel)" />
+            <button id="scanEditBarcodeBtn" type="button" class="btn btn-icon-only" data-i18n-aria="scanBarcodeAria" aria-label="Barkod tara">
+              <i class="fa-solid fa-barcode" aria-hidden="true"></i>
+            </button>
+          </div>
+          <button id="saveEditBtn" class="btn btn-primary btn-block" data-i18n="saveBtn">Kaydet</button>
+          <button id="deleteProductBtn" class="btn btn-danger btn-block">
+            <i class="fa-solid fa-trash" aria-hidden="true"></i> <span data-i18n="deleteProductBtn">Ürünü sil</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
 
-    document.getElementById("bulkScanModal").style.display = "flex";
-  }
+  <!-- HIZLI BARKOD TARAMA MODAL -->
+  <div id="barcodeScanModal" class="modal-overlay" style="display:none;">
+    <div class="modal">
+      <div class="modal-header">
+        <p class="modal-title" data-i18n="quickBarcodeTitle">Barkodu tara</p>
+        <button id="closeBarcodeModalBtn" class="icon-btn" aria-label="Kapat"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button>
+      </div>
+      <div class="modal-body">
+        <p class="card-subtitle" data-i18n="quickBarcodeSubtitle">Ürünün üzerindeki barkodu kameraya göster.</p>
+        <div id="quickScanReader" class="qr-reader"></div>
+      </div>
+    </div>
+  </div>
 
-  function closeBulkScanModal() {
-    document.getElementById("bulkScanModal").style.display = "none";
-    bulkScanCandidates = [];
-  }
+  <!-- TOPLU FOTOĞRAF TARAMA SONUÇ MODAL -->
+  <div id="bulkScanModal" class="modal-overlay" style="display:none;">
+    <div class="modal">
+      <div class="modal-header">
+        <p id="bulkScanModalTitle" class="modal-title"></p>
+        <button id="closeBulkScanModalBtn" class="icon-btn" aria-label="Kapat"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button>
+      </div>
+      <div class="modal-body">
+        <div id="bulkScanResultsList" class="list"></div>
+        <button id="bulkAddAllBtn" class="btn btn-primary btn-block">
+          <span data-i18n="bulkAddAllBtn">Hepsini ekle</span>
+        </button>
+      </div>
+    </div>
+  </div>
 
-  function addAllBulkScanProducts() {
-    const checks = document.querySelectorAll(".bulk-result-check");
-    let addedCount = 0;
-    checks.forEach((chk) => {
-      if (!chk.checked) return;
-      const candidate = bulkScanCandidates[Number(chk.dataset.index)];
-      if (!candidate) return;
-      products.push(
-        mkProduct(
-          candidate.name,
-          candidate.category || t("categoryOtherDefault"),
-          0,
-          5,
-          candidate.price || 0,
-          "",
-          "adet"
-        )
-      );
-      addedCount++;
-    });
-    save();
-    renderAll();
-    closeBulkScanModal();
-    alert(t("bulkAddedAlert").replace("{n}", addedCount));
-  }
+  <!-- MÜŞTERİ DETAY MODAL -->
+  <div id="customerModal" class="modal-overlay" style="display:none;">
+    <div class="modal">
+      <div class="modal-header">
+        <p id="customerModalName" class="modal-title"></p>
+        <button id="closeCustomerModalBtn" class="icon-btn" aria-label="Kapat"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button>
+      </div>
+      <div class="modal-body">
+        <p class="debt-display">
+          <span data-i18n="currentBalance">Güncel bakiye</span>
+          <span id="customerModalDebt" class="debt-amount">0,00 ₺</span>
+        </p>
 
-  // ---------- Tabs ----------
-  function switchTab(tabId) {
-    document.querySelectorAll(".tab-panel").forEach((el) => el.classList.remove("active"));
-    document.getElementById(tabId).classList.add("active");
-    document.querySelectorAll(".nav-btn").forEach((btn) => {
-      btn.classList.toggle("active", btn.dataset.tab === tabId);
-    });
-    if (tabId !== "tab-scan" && scanning) stopScan();
-    if (tabId !== "tab-kasa" && scanningKasa) stopScanKasa();
-  }
+        <div class="modal-section">
+          <label class="field-label" data-i18n="takePayment">Ödeme al</label>
+          <div class="form-row barcode-row">
+            <input id="paymentAmountInput" type="number" min="0" step="0.01" data-i18n-placeholder="amountPh" placeholder="Tutar (₺)" />
+            <button id="recordPaymentBtn" class="btn btn-primary" style="width:auto;padding:0 16px;" data-i18n="saveBtn">Kaydet</button>
+          </div>
+        </div>
 
-  // ---------- Event wiring ----------
-  document.getElementById("addBtn").addEventListener("click", addProduct);
-  document.getElementById("newQty").addEventListener("keydown", (e) => {
-    if (e.key === "Enter") addProduct();
-  });
-  document.getElementById("searchBox").addEventListener("input", renderAll);
-  document.getElementById("resetBtn").addEventListener("click", () => {
-    if (confirm(t("confirmResetAll"))) resetAll();
-  });
+        <div class="modal-section">
+          <label class="field-label" data-i18n="customerNameLabel">Müşteri adı</label>
+          <input id="editCustomerName" type="text" />
+          <label class="field-label" data-i18n="phoneLabel">Telefon</label>
+          <input id="editCustomerPhone" type="text" />
+          <button id="saveCustomerEditBtn" class="btn btn-primary btn-block" data-i18n="saveBtn">Kaydet</button>
+          <button id="deleteCustomerBtn" class="btn btn-danger btn-block">
+            <i class="fa-solid fa-trash" aria-hidden="true"></i> <span data-i18n="deleteCustomerBtn">Müşteriyi sil</span>
+          </button>
+        </div>
 
-  document.getElementById("closeModalBtn").addEventListener("click", closeModal);
-  document.getElementById("detailModal").addEventListener("click", (e) => {
-    if (e.target.id === "detailModal") closeModal();
-  });
-  document.getElementById("qtyPlusBtn").addEventListener("click", () => {
-    const p = products.find((x) => x.id === activeProductId);
-    adjustQty(activeProductId, p && p.unit === "kg" ? 0.1 : 1);
-  });
-  document.getElementById("qtyMinusBtn").addEventListener("click", () => {
-    const p = products.find((x) => x.id === activeProductId);
-    adjustQty(activeProductId, p && p.unit === "kg" ? -0.1 : -1);
-  });
-  document.getElementById("saveEditBtn").addEventListener("click", saveEdit);
-  document.getElementById("deleteProductBtn").addEventListener("click", () => {
-    if (confirm(t("confirmDeleteProduct"))) deleteProduct(activeProductId);
-  });
-  document.getElementById("printQrBtn").addEventListener("click", printQr);
+        <div class="modal-section">
+          <p class="field-label" data-i18n="historyTitle">İşlem geçmişi</p>
+          <div id="customerHistoryList" class="list"></div>
+        </div>
+      </div>
+    </div>
+  </div>
 
-  document.getElementById("scanNewBarcodeBtn").addEventListener("click", () => openQuickBarcodeScan("newBarcode"));
-  document.getElementById("scanEditBarcodeBtn").addEventListener("click", () => openQuickBarcodeScan("editBarcode"));
-  document.getElementById("closeBarcodeModalBtn").addEventListener("click", closeQuickBarcodeScan);
+  <!-- ALT NAVİGASYON -->
+  <nav class="bottom-nav">
+    <button class="nav-btn active" data-tab="tab-products">
+      <i class="fa-solid fa-list" aria-hidden="true"></i>
+      <span data-i18n="navProducts">Ürünler</span>
+    </button>
+    <button class="nav-btn" data-tab="tab-kasa">
+      <i class="fa-solid fa-money-bill-register" aria-hidden="true"></i>
+      <span data-i18n="navKasa">Kasa</span>
+    </button>
+    <button class="nav-btn" data-tab="tab-scan">
+      <i class="fa-solid fa-qrcode" aria-hidden="true"></i>
+      <span data-i18n="navScan">QR Tara</span>
+    </button>
+    <button class="nav-btn" data-tab="tab-sales">
+      <i class="fa-solid fa-receipt" aria-hidden="true"></i>
+      <span data-i18n="navSales">Satışlar</span>
+    </button>
+    <button class="nav-btn" data-tab="tab-veresiye">
+      <i class="fa-solid fa-book" aria-hidden="true"></i>
+      <span data-i18n="navVeresiye">Veresiye</span>
+    </button>
+    <button class="nav-btn" data-tab="tab-orders">
+      <i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>
+      <span data-i18n="navOrders">Sipariş</span>
+    </button>
+  </nav>
 
-  document.getElementById("shelfPhotoBtn").addEventListener("click", () => {
-    document.getElementById("shelfPhotoInput").click();
-  });
-  document.getElementById("shelfPhotoInput").addEventListener("change", (e) => {
-    const files = Array.from(e.target.files || []);
-    if (files.length) handleShelfPhotos(files);
-    e.target.value = "";
-  });
-  document.getElementById("closeBulkScanModalBtn").addEventListener("click", closeBulkScanModal);
-  document.getElementById("bulkScanModal").addEventListener("click", (e) => {
-    if (e.target.id === "bulkScanModal") closeBulkScanModal();
-  });
-  document.getElementById("bulkAddAllBtn").addEventListener("click", addAllBulkScanProducts);
-  document.getElementById("barcodeScanModal").addEventListener("click", (e) => {
-    if (e.target.id === "barcodeScanModal") closeQuickBarcodeScan();
-  });
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 
-  document.getElementById("startScanBtn").addEventListener("click", startScan);
-  document.getElementById("stopScanBtn").addEventListener("click", stopScan);
+  <!-- Firebase (bulut senkronizasyonu) -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <script src="js/firebase-config.js"></script>
+  <script src="js/bulk-scan-config.js"></script>
 
-  document.getElementById("manualAddSearch").addEventListener("input", renderManualAddResults);
-  document.getElementById("startKasaScanBtn").addEventListener("click", startScanKasa);
-  document.getElementById("stopKasaScanBtn").addEventListener("click", stopScanKasa);
-  document.getElementById("clearCartBtn").addEventListener("click", () => {
-    if (!cart.length || confirm(t("confirmClearCart"))) clearCart();
-  });
-  document.getElementById("completeSaleBtn").addEventListener("click", completeSale);
-  document.getElementById("cartDiscount").addEventListener("input", renderCart);
-  document.getElementById("payNakitBtn").addEventListener("click", () => setPaymentType("nakit"));
-  document.getElementById("payVeresiyeBtn").addEventListener("click", () => setPaymentType("veresiye"));
-
-  document.getElementById("veresiyeCustomerSearch").addEventListener("input", (e) => {
-    selectedVeresiyeCustomerId = null;
-    document.getElementById("veresiyeCustomerSelectedId").value = "";
-    renderVeresiyeCustomerResults(e.target.value);
-  });
-  document.getElementById("veresiyeCustomerSearch").addEventListener("focus", (e) => {
-    renderVeresiyeCustomerResults(e.target.value);
-  });
-  document.addEventListener("click", (e) => {
-    const wrapper = document.getElementById("veresiyeCustomerRow");
-    if (wrapper && !wrapper.contains(e.target)) {
-      document.getElementById("veresiyeCustomerResults").classList.remove("show");
-    }
-  });
-
-  document.querySelectorAll(".period-btn").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      currentSalesPeriod = btn.dataset.period;
-      document.querySelectorAll(".period-btn").forEach((b) => b.classList.toggle("active", b === btn));
-      renderSales();
-    });
-  });
-
-  document.getElementById("addCustomerBtn").addEventListener("click", addCustomer);
-  document.getElementById("closeCustomerModalBtn").addEventListener("click", closeCustomerModal);
-  document.getElementById("customerModal").addEventListener("click", (e) => {
-    if (e.target.id === "customerModal") closeCustomerModal();
-  });
-  document.getElementById("recordPaymentBtn").addEventListener("click", recordPayment);
-  document.getElementById("saveCustomerEditBtn").addEventListener("click", saveCustomerEdit);
-  document.getElementById("deleteCustomerBtn").addEventListener("click", () => {
-    if (confirm(t("confirmDeleteCustomer"))) deleteCustomer(activeCustomerId);
-  });
-
-  document.querySelectorAll(".nav-btn").forEach((btn) => {
-    btn.addEventListener("click", () => switchTab(btn.dataset.tab));
-  });
-
-  document.getElementById("authSubmitBtn").addEventListener("click", submitAuth);
-  document.getElementById("authPassword").addEventListener("keydown", (e) => {
-    if (e.key === "Enter") submitAuth();
-  });
-  document.getElementById("forgotPasswordBtn").addEventListener("click", forgotPassword);
-  document.getElementById("logoutBtn").addEventListener("click", logout);
-  document.getElementById("importBackupBtn").addEventListener("click", importLocalBackup);
-
-  document.querySelectorAll(".lang-btn").forEach((btn) => {
-    btn.addEventListener("click", () => window.i18n.setLang(btn.dataset.lang));
-  });
-
-  window.onLangChanged = function () {
-    renderAll();
-  };
-
-  window.i18n.applyLang(window.i18n.getLang());
-
-  load();
-})();
+  <script src="js/i18n.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
