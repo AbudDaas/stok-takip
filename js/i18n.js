@@ -182,7 +182,11 @@
       importConfirm: "Bu cihazda {n} ürün bulundu. Bunları hesabına eklemek istiyor musun?",
       importSuccess: "{n} ürün hesabına eklendi.",
       searchCustomerPh: "Müşteri ara...",
-      noMatchingCustomers: "Eşleşen müşteri yok."
+      noMatchingCustomers: "Eşleşen müşteri yok.",
+      costPricePh: "Alış fiyatı (₺, opsiyonel)",
+      costPriceLabel: "Alış fiyatı (₺, opsiyonel)",
+      statNetProfit: "Net kâr",
+      profitLabel: "Kâr"
     },
 
 
@@ -365,7 +369,11 @@
       importConfirm: "Found {n} products on this device. Add them to your account?",
       importSuccess: "{n} products added to your account.",
       searchCustomerPh: "Search customer...",
-      noMatchingCustomers: "No matching customers."
+      noMatchingCustomers: "No matching customers.",
+      costPricePh: "Cost price (₺, optional)",
+      costPriceLabel: "Cost price (₺, optional)",
+      statNetProfit: "Net profit",
+      profitLabel: "Profit"
     },
 
 
@@ -548,7 +556,11 @@
       importConfirm: "تم العثور على {n} منتج على هذا الجهاز. هل تريد إضافتها إلى حسابك؟",
       importSuccess: "تمت إضافة {n} منتج إلى حسابك.",
       searchCustomerPh: "ابحث عن عميل...",
-      noMatchingCustomers: "لا يوجد عملاء مطابقون."
+      noMatchingCustomers: "لا يوجد عملاء مطابقون.",
+      costPricePh: "سعر الشراء (₺، اختياري)",
+      costPriceLabel: "سعر الشراء (₺، اختياري)",
+      statNetProfit: "صافي الربح",
+      profitLabel: "الربح"
     }
   };
 
