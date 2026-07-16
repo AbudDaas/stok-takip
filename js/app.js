@@ -14,6 +14,7 @@
   let sales = [];
   let customers = [];
   let payments = [];
+  let breadLog = [];
   let cart = []; // { productId, name, price, qty }
   let activeProductId = null;
   let activeCustomerId = null;
@@ -99,6 +100,7 @@
           sales = data.sales || [];
           customers = data.customers || [];
           payments = data.payments || [];
+          breadLog = data.breadLog || [];
         } else {
           const initial = { products: seedData(), sales: [], customers: [], payments: [] };
           docRef.set(initial);
@@ -106,6 +108,7 @@
           sales = initial.sales;
           customers = initial.customers;
           payments = initial.payments;
+          breadLog = [];
         }
         setSyncStatus("connected");
         renderAll();
@@ -232,7 +235,7 @@
     if (cloudEnabled) {
       if (!docRef) return;
       suppressNextSnapshot = true;
-      docRef.set({ products, sales, customers, payments }).catch((e) => {
+      docRef.set({ products, sales, customers, payments }, { merge: true }).catch((e) => {
         console.error("Bulut kaydetme hatası", e);
         setSyncStatus("error");
       });
@@ -357,6 +360,52 @@
         </div>
         <span class="customer-debt ${debtClass}">${formatTL(debt)}</span>
       </div>`;
+  }
+
+  // ---------- Ekmek Durumu ----------
+  function findBreadProduct() {
+    return products.find((p) => p.name.trim().toLowerCase() === "ekmek");
+  }
+
+  function renderBreadStatus() {
+    const qtyEl = document.getElementById("breadCurrentQty");
+    const logListEl = document.getElementById("breadLogList");
+    const logEmptyEl = document.getElementById("breadLogEmptyState");
+    if (!qtyEl) return;
+
+    const bread = findBreadProduct();
+    qtyEl.textContent = bread ? formatQty(bread) : "—";
+
+    const sorted = [...breadLog].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp)).slice(0, 14);
+    if (!sorted.length) {
+      logListEl.innerHTML = "";
+      logEmptyEl.style.display = "block";
+    } else {
+      logEmptyEl.style.display = "none";
+      logListEl.innerHTML = sorted
+        .map((entry) => {
+          const d = new Date(entry.timestamp);
+          const dateStr = d.toLocaleString(locale(), { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
+          return `
+            <div class="bread-log-row">
+              <span class="bread-log-date">${dateStr} · ${escapeHtml(entry.note || "")}</span>
+              <span class="bread-log-qty">${entry.qty} adet</span>
+            </div>`;
+        })
+        .join("");
+    }
+  }
+
+  function sendBreadWhatsApp() {
+    const bread = findBreadProduct();
+    if (!bread) {
+      showToast(t("breadNotFound"), "error");
+      return;
+    }
+    const today = new Date().toLocaleDateString(locale());
+    const message = `🍞 Ekmek Durumu (${today})\nŞu anki stok: ${bread.qty} adet`;
+    const url = `https://wa.me/905319466936?text=${encodeURIComponent(message)}`;
+    window.open(url, "_blank");
   }
 
   function renderCustomers() {
@@ -883,6 +932,7 @@
     renderCart();
     renderSales();
     renderCustomers();
+    renderBreadStatus();
   }
 
   // ---------- Modal ----------
@@ -1927,6 +1977,7 @@
   document.getElementById("resetBtn").addEventListener("click", () => {
     if (confirm(t("confirmResetAll"))) resetAll();
   });
+  document.getElementById("breadWhatsAppBtn").addEventListener("click", sendBreadWhatsApp);
 
   document.getElementById("closeModalBtn").addEventListener("click", closeModal);
   document.getElementById("detailModal").addEventListener("click", (e) => {
