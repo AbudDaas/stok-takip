@@ -186,7 +186,9 @@
       costPricePh: "Alış fiyatı (₺, opsiyonel)",
       costPriceLabel: "Alış fiyatı (₺, opsiyonel)",
       statNetProfit: "Net kâr",
-      profitLabel: "Kâr"
+      profitLabel: "Kâr",
+      promptOkBtn: "Tamam",
+      promptCancelBtn: "İptal"
     },
 
 
@@ -373,7 +375,9 @@
       costPricePh: "Cost price (₺, optional)",
       costPriceLabel: "Cost price (₺, optional)",
       statNetProfit: "Net profit",
-      profitLabel: "Profit"
+      profitLabel: "Profit",
+      promptOkBtn: "OK",
+      promptCancelBtn: "Cancel"
     },
 
 
@@ -560,7 +564,9 @@
       costPricePh: "سعر الشراء (₺، اختياري)",
       costPriceLabel: "سعر الشراء (₺، اختياري)",
       statNetProfit: "صافي الربح",
-      profitLabel: "الربح"
+      profitLabel: "الربح",
+      promptOkBtn: "موافق",
+      promptCancelBtn: "إلغاء"
     }
   };
 
