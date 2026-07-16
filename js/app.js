@@ -1617,6 +1617,191 @@
     showToast(t("bulkAddedAlert").replace("{n}", addedCount), "success");
   }
 
+  // ---------- Fatura ile toplu stok girişi (Google Gemini ücretsiz API ile) ----------
+  let invoiceScanCandidates = [];
+
+  function findExistingProductByName(name) {
+    const normalized = (name || "").trim().toLowerCase();
+    if (!normalized) return null;
+    let match = products.find((p) => p.name.trim().toLowerCase() === normalized);
+    if (match) return match;
+    // Tam eşleşme yoksa, birbirini içeren isimlerle gevşek eşleştirme dene
+    match = products.find(
+      (p) => p.name.trim().toLowerCase().includes(normalized) || normalized.includes(p.name.trim().toLowerCase())
+    );
+    return match || null;
+  }
+
+  function analyzeOneInvoicePhoto(file) {
+    const prompt = [
+      "Bu bir tedarikçi/toptancı faturasının fotoğrafı.",
+      "Faturadaki HER ÜRÜN SATIRINI tek tek çıkar.",
+      "Her satır için şu alanları çıkar:",
+      '- name: ürün adı (faturada yazdığı gibi, örn. "Pepsi 1 Lt")',
+      "- qty: satın alınan miktar (sayı olarak, örn. 24)",
+      "- unitCost: birim alış fiyatı (sayı olarak, örn. 16.50). Sadece toplam tutar varsa qty'ye bölerek hesapla.",
+      "",
+      "SADECE geçerli bir JSON dizisi döndür, başka hiçbir açıklama veya metin ekleme.",
+      'Format: [{"name":"...","qty":24,"unitCost":16.5}]',
+      "Ürün satırı olmayan (toplam, KDV, tarih gibi) satırları dahil etme."
+    ].join("\n");
+
+    return fileToBase64(file)
+      .then((base64) =>
+        fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-goog-api-key": bulkScanConfig.apiKey
+          },
+          body: JSON.stringify({
+            contents: [
+              {
+                parts: [{ text: prompt }, { inline_data: { mime_type: "image/jpeg", data: base64 } }]
+              }
+            ]
+          })
+        })
+      )
+      .then((r) => r.json())
+      .then((data) => {
+        const rawText = data && data.candidates && data.candidates[0] && data.candidates[0].content.parts[0].text;
+        if (!rawText) {
+          console.error("Gemini yanıtı beklenmedik formatta:", data);
+          return [];
+        }
+        try {
+          const cleaned = rawText.replace(/```json|```/g, "").trim();
+          return JSON.parse(cleaned);
+        } catch (e) {
+          console.error("JSON ayrıştırma hatası:", e, rawText);
+          return [];
+        }
+      })
+      .catch((e) => {
+        console.error(e);
+        return [];
+      });
+  }
+
+  function handleInvoicePhotos(files) {
+    if (!isBulkScanConfigured()) {
+      showToast(t("invoiceScanNotConfigured"), "error");
+      return;
+    }
+    const loadingEl = document.getElementById("invoiceScanLoading");
+    const loadingText = loadingEl.querySelector("span");
+    loadingEl.style.display = "flex";
+
+    let allLines = [];
+    let index = 0;
+
+    function processNext() {
+      if (index >= files.length) {
+        loadingEl.style.display = "none";
+        if (loadingText) loadingText.textContent = t("invoiceScanAnalyzing");
+
+        // Aynı isimli satırları birleştir (miktarları topla, son okunan birim fiyatı al)
+        const merged = {};
+        allLines.forEach((line) => {
+          if (!line.name) return;
+          const key = line.name.trim().toLowerCase();
+          if (!merged[key]) {
+            merged[key] = { name: line.name, qty: 0, unitCost: line.unitCost || 0 };
+          }
+          merged[key].qty += Number(line.qty) || 0;
+          if (line.unitCost) merged[key].unitCost = line.unitCost;
+        });
+
+        invoiceScanCandidates = Object.values(merged).map((line) => {
+          const existing = findExistingProductByName(line.name);
+          return {
+            name: line.name,
+            qty: line.qty,
+            unitCost: line.unitCost,
+            matchedProductId: existing ? existing.id : null,
+            matchedProductName: existing ? existing.name : null
+          };
+        });
+
+        if (!invoiceScanCandidates.length) {
+          showToast(t("invoiceScanNoItems"), "info");
+          return;
+        }
+        renderInvoiceScanModal();
+        return;
+      }
+
+      if (loadingText && files.length > 1) {
+        loadingText.textContent = `${t("invoiceScanAnalyzing")} (${index + 1}/${files.length})`;
+      }
+
+      analyzeOneInvoicePhoto(files[index]).then((lines) => {
+        if (Array.isArray(lines)) allLines = allLines.concat(lines);
+        index++;
+        processNext();
+      });
+    }
+
+    processNext();
+  }
+
+  function renderInvoiceScanModal() {
+    const titleEl = document.getElementById("invoiceScanModalTitle");
+    titleEl.textContent = t("invoiceScanFoundTitle").replace("{n}", invoiceScanCandidates.length);
+
+    const listEl = document.getElementById("invoiceScanResultsList");
+    listEl.innerHTML = invoiceScanCandidates
+      .map((item, i) => {
+        const statusHtml = item.matchedProductId
+          ? `<span class="invoice-status-badge invoice-status-existing">${t("invoiceExistingLabel").replace("{qty}", item.qty)}</span>`
+          : `<span class="invoice-status-badge invoice-status-new">${t("invoiceNewLabel")}</span>`;
+        const costStr = item.unitCost ? formatTL(item.unitCost) : "";
+        return `
+          <label class="bulk-result-row">
+            <input type="checkbox" class="invoice-result-check" data-index="${i}" checked />
+            <div class="bulk-result-info">
+              <p class="bulk-result-name">${escapeHtml(item.name)}</p>
+              <p class="bulk-result-meta">${item.qty} adet${costStr ? " · " + costStr + "/adet" : ""}</p>
+              ${statusHtml}
+            </div>
+          </label>`;
+      })
+      .join("");
+
+    document.getElementById("invoiceScanModal").style.display = "flex";
+  }
+
+  function closeInvoiceScanModal() {
+    document.getElementById("invoiceScanModal").style.display = "none";
+    invoiceScanCandidates = [];
+  }
+
+  function applyInvoiceScan() {
+    const checks = document.querySelectorAll(".invoice-result-check");
+    let appliedCount = 0;
+    checks.forEach((chk) => {
+      if (!chk.checked) return;
+      const item = invoiceScanCandidates[Number(chk.dataset.index)];
+      if (!item) return;
+
+      if (item.matchedProductId) {
+        const p = products.find((x) => x.id === item.matchedProductId);
+        if (p) {
+          p.qty = Math.round((p.qty + item.qty) * 1000) / 1000;
+          if (item.unitCost) p.costPrice = item.unitCost;
+        }
+      } else {
+        products.push(mkProduct(item.name, t("categoryOtherDefault"), item.qty, 5, 0, "", "adet", item.unitCost || 0));
+      }
+      appliedCount++;
+    });
+    save();
+    renderAll();
+    closeInvoiceScanModal();
+    showToast(t("invoiceAppliedAlert").replace("{n}", appliedCount), "success");
+  }
+
   // ---------- Tabs ----------
   function switchTab(tabId) {
     document.querySelectorAll(".tab-panel").forEach((el) => el.classList.remove("active"));
@@ -1673,6 +1858,20 @@
     if (e.target.id === "bulkScanModal") closeBulkScanModal();
   });
   document.getElementById("bulkAddAllBtn").addEventListener("click", addAllBulkScanProducts);
+
+  document.getElementById("invoicePhotoBtn").addEventListener("click", () => {
+    document.getElementById("invoicePhotoInput").click();
+  });
+  document.getElementById("invoicePhotoInput").addEventListener("change", (e) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length) handleInvoicePhotos(files);
+    e.target.value = "";
+  });
+  document.getElementById("closeInvoiceScanModalBtn").addEventListener("click", closeInvoiceScanModal);
+  document.getElementById("invoiceScanModal").addEventListener("click", (e) => {
+    if (e.target.id === "invoiceScanModal") closeInvoiceScanModal();
+  });
+  document.getElementById("invoiceApplyBtn").addEventListener("click", applyInvoiceScan);
   document.getElementById("barcodeScanModal").addEventListener("click", (e) => {
     if (e.target.id === "barcodeScanModal") closeQuickBarcodeScan();
   });
