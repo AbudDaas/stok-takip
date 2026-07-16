@@ -203,8 +203,15 @@
       kgModeLabel: "Ağırlık (kg)",
       priceModeLabel: "Tutar (₺)",
       kgPricePreviewKg: "= {value} ₺",
-      kgPricePreviewPrice: "= {value} kg"
+      kgPricePreviewPrice: "= {value} kg",
+      breadStatusTitle: "🍞 Ekmek Durumu",
+      breadCurrentLabel: "Şu anki stok:",
+      breadWhatsAppBtn: "WhatsApp'tan gönder",
+      breadLogTitle: "Geçmiş",
+      breadLogEmpty: "Henüz bir kayıt yok.",
+      breadNotFound: "'ekmek' adında bir ürün bulunamadı."
     },
+
 
 
 
@@ -408,8 +415,15 @@
       kgModeLabel: "Weight (kg)",
       priceModeLabel: "Amount (₺)",
       kgPricePreviewKg: "= {value} ₺",
-      kgPricePreviewPrice: "= {value} kg"
+      kgPricePreviewPrice: "= {value} kg",
+      breadStatusTitle: "🍞 Bread Status",
+      breadCurrentLabel: "Current stock:",
+      breadWhatsAppBtn: "Send via WhatsApp",
+      breadLogTitle: "History",
+      breadLogEmpty: "No records yet.",
+      breadNotFound: "No product named 'ekmek' was found."
     },
+
 
 
 
@@ -613,7 +627,13 @@
       kgModeLabel: "الوزن (كجم)",
       priceModeLabel: "المبلغ (₺)",
       kgPricePreviewKg: "= {value} ₺",
-      kgPricePreviewPrice: "= {value} كجم"
+      kgPricePreviewPrice: "= {value} كجم",
+      breadStatusTitle: "🍞 حالة الخبز",
+      breadCurrentLabel: "المخزون الحالي:",
+      breadWhatsAppBtn: "إرسال عبر واتساب",
+      breadLogTitle: "السجل",
+      breadLogEmpty: "لا توجد سجلات بعد.",
+      breadNotFound: "لم يتم العثور على منتج باسم 'ekmek'."
     }
   };
 
