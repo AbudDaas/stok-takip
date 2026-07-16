@@ -1634,6 +1634,42 @@
     return products.some((p) => p.name.trim().toLowerCase() === normalized);
   }
 
+  function sleep_(ms) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+  }
+
+  function callGeminiWithRetry(base64, prompt, maxRetries) {
+    maxRetries = maxRetries || 3;
+    let attempt = 0;
+
+    function attemptCall() {
+      attempt++;
+      return fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-goog-api-key": bulkScanConfig.apiKey
+        },
+        body: JSON.stringify({
+          contents: [
+            {
+              parts: [{ text: prompt }, { inline_data: { mime_type: "image/jpeg", data: base64 } }]
+            }
+          ]
+        })
+      }).then((r) => {
+        if ((r.status === 503 || r.status === 429) && attempt < maxRetries) {
+          const delay = attempt * 3000;
+          console.log(`Gemini ${r.status}, ${delay}ms sonra tekrar denenecek (deneme ${attempt}/${maxRetries})`);
+          return sleep_(delay).then(attemptCall);
+        }
+        return r.json();
+      });
+    }
+
+    return attemptCall();
+  }
+
   function analyzeOnePhoto(file) {
     const prompt = [
       "Bu bir market/bakkal rafının fotoğrafı.",
@@ -1650,23 +1686,7 @@
     ].join("\n");
 
     return fileToBase64(file)
-      .then((base64) =>
-        fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "X-goog-api-key": bulkScanConfig.apiKey
-          },
-          body: JSON.stringify({
-            contents: [
-              {
-                parts: [{ text: prompt }, { inline_data: { mime_type: "image/jpeg", data: base64 } }]
-              }
-            ]
-          })
-        })
-      )
-      .then((r) => r.json())
+      .then((base64) => callGeminiWithRetry(base64, prompt))
       .then((data) => {
         const rawText = data && data.candidates && data.candidates[0] && data.candidates[0].content.parts[0].text;
         if (!rawText) {
@@ -1823,23 +1843,7 @@
     ].join("\n");
 
     return fileToBase64(file)
-      .then((base64) =>
-        fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "X-goog-api-key": bulkScanConfig.apiKey
-          },
-          body: JSON.stringify({
-            contents: [
-              {
-                parts: [{ text: prompt }, { inline_data: { mime_type: "image/jpeg", data: base64 } }]
-              }
-            ]
-          })
-        })
-      )
-      .then((r) => r.json())
+      .then((base64) => callGeminiWithRetry(base64, prompt))
       .then((data) => {
         const rawText = data && data.candidates && data.candidates[0] && data.candidates[0].content.parts[0].text;
         if (!rawText) {
