@@ -994,3 +994,37 @@ html[dir="rtl"] .lang-switch{
   margin:-6px 0 16px;
   min-height:18px;
 }
+
+/* Ekmek durumu kartı */
+.bread-current-row{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  background:var(--bg);
+  border-radius:8px;
+  padding:12px 14px;
+  margin-bottom:12px;
+  font-size:14px;
+  font-weight:600;
+}
+.bread-current-qty{
+  font-size:20px;
+  font-weight:700;
+  color:var(--navy);
+}
+#breadWhatsAppBtn{
+  background:#25D366;
+  border-color:#25D366;
+}
+.bread-log-row{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:var(--radius);
+  padding:10px 12px;
+  font-size:13px;
+}
+.bread-log-date{color:var(--text-muted);}
+.bread-log-qty{font-weight:700;color:var(--navy);}
