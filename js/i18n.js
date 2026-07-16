@@ -199,7 +199,11 @@
       invoiceExistingLabel: "Mevcut ürün · stok +{qty}",
       invoiceNewLabel: "Yeni ürün eklenecek",
       invoiceApplyBtn: "Onayla ve uygula",
-      invoiceAppliedAlert: "{n} ürün güncellendi/eklendi."
+      invoiceAppliedAlert: "{n} ürün güncellendi/eklendi.",
+      kgModeLabel: "Ağırlık (kg)",
+      priceModeLabel: "Tutar (₺)",
+      kgPricePreviewKg: "= {value} ₺",
+      kgPricePreviewPrice: "= {value} kg"
     },
 
 
@@ -400,7 +404,11 @@
       invoiceExistingLabel: "Existing product · stock +{qty}",
       invoiceNewLabel: "New product will be created",
       invoiceApplyBtn: "Confirm and apply",
-      invoiceAppliedAlert: "{n} products updated/added."
+      invoiceAppliedAlert: "{n} products updated/added.",
+      kgModeLabel: "Weight (kg)",
+      priceModeLabel: "Amount (₺)",
+      kgPricePreviewKg: "= {value} ₺",
+      kgPricePreviewPrice: "= {value} kg"
     },
 
 
@@ -601,7 +609,11 @@
       invoiceExistingLabel: "منتج موجود · المخزون +{qty}",
       invoiceNewLabel: "سيتم إنشاء منتج جديد",
       invoiceApplyBtn: "تأكيد وتطبيق",
-      invoiceAppliedAlert: "تم تحديث/إضافة {n} منتج."
+      invoiceAppliedAlert: "تم تحديث/إضافة {n} منتج.",
+      kgModeLabel: "الوزن (كجم)",
+      priceModeLabel: "المبلغ (₺)",
+      kgPricePreviewKg: "= {value} ₺",
+      kgPricePreviewPrice: "= {value} كجم"
     }
   };
 
