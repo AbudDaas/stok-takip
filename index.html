@@ -387,6 +387,27 @@
     </div>
   </div>
 
+  <!-- KG / TUTAR SEÇEREK MİKTAR GİRME PENCERESİ (tartılı ürünler için) -->
+  <div id="kgPricePromptModal" class="modal-overlay" style="display:none;">
+    <div class="modal prompt-modal">
+      <p id="kgPricePromptTitle" class="modal-title prompt-modal-title"></p>
+      <div class="kg-price-mode-tabs">
+        <button id="kgPriceModeKgBtn" class="kg-price-mode-btn active" data-mode="kg">
+          <i class="fa-solid fa-weight-hanging" aria-hidden="true"></i> <span data-i18n="kgModeLabel">Ağırlık (kg)</span>
+        </button>
+        <button id="kgPriceModePriceBtn" class="kg-price-mode-btn" data-mode="price">
+          <i class="fa-solid fa-turkish-lira-sign" aria-hidden="true"></i> <span data-i18n="priceModeLabel">Tutar (₺)</span>
+        </button>
+      </div>
+      <input id="kgPricePromptInput" type="text" inputmode="decimal" class="prompt-modal-input" />
+      <p id="kgPricePromptPreview" class="kg-price-preview"></p>
+      <div class="prompt-modal-actions">
+        <button id="kgPricePromptCancelBtn" class="btn" data-i18n="promptCancelBtn">İptal</button>
+        <button id="kgPricePromptOkBtn" class="btn btn-primary" data-i18n="promptOkBtn">Tamam</button>
+      </div>
+    </div>
+  </div>
+
   <div id="barcodeScanModal" class="modal-overlay" style="display:none;">
     <div class="modal">
       <div class="modal-header">
