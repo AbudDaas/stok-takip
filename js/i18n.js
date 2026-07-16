@@ -188,8 +188,20 @@
       statNetProfit: "Net kâr",
       profitLabel: "Kâr",
       promptOkBtn: "Tamam",
-      promptCancelBtn: "İptal"
+      promptCancelBtn: "İptal",
+      invoiceScanTitle: "Fatura ile stok girişi (toplu)",
+      invoiceScanSubtitle: "Tedarikçi faturasının fotoğrafını çek, yapay zeka ürünleri okusun — sistemde varsa stoğa eklesin, yoksa yeni ürün olarak oluştursun.",
+      invoiceScanBtn: "Fatura fotoğrafla / seç",
+      invoiceScanAnalyzing: "Fatura analiz ediliyor...",
+      invoiceScanNotConfigured: "Bu özellik henüz kurulmamış. README dosyasındaki kurulum adımlarını takip et.",
+      invoiceScanNoItems: "Faturada okunabilecek bir ürün satırı bulunamadı.",
+      invoiceScanFoundTitle: "Faturada {n} ürün bulundu",
+      invoiceExistingLabel: "Mevcut ürün · stok +{qty}",
+      invoiceNewLabel: "Yeni ürün eklenecek",
+      invoiceApplyBtn: "Onayla ve uygula",
+      invoiceAppliedAlert: "{n} ürün güncellendi/eklendi."
     },
+
 
 
 
@@ -377,8 +389,20 @@
       statNetProfit: "Net profit",
       profitLabel: "Profit",
       promptOkBtn: "OK",
-      promptCancelBtn: "Cancel"
+      promptCancelBtn: "Cancel",
+      invoiceScanTitle: "Stock in via invoice (bulk)",
+      invoiceScanSubtitle: "Take a photo of a supplier invoice, let AI read the products — restock existing ones, create new ones automatically.",
+      invoiceScanBtn: "Photograph / choose invoice",
+      invoiceScanAnalyzing: "Analyzing invoice...",
+      invoiceScanNotConfigured: "This feature isn't set up yet. Follow the setup steps in the README file.",
+      invoiceScanNoItems: "No readable product lines were found on the invoice.",
+      invoiceScanFoundTitle: "{n} items found on invoice",
+      invoiceExistingLabel: "Existing product · stock +{qty}",
+      invoiceNewLabel: "New product will be created",
+      invoiceApplyBtn: "Confirm and apply",
+      invoiceAppliedAlert: "{n} products updated/added."
     },
+
 
 
 
@@ -566,7 +590,18 @@
       statNetProfit: "صافي الربح",
       profitLabel: "الربح",
       promptOkBtn: "موافق",
-      promptCancelBtn: "إلغاء"
+      promptCancelBtn: "إلغاء",
+      invoiceScanTitle: "إدخال مخزون عبر الفاتورة (دفعة واحدة)",
+      invoiceScanSubtitle: "التقط صورة لفاتورة المورد، ودع الذكاء الاصطناعي يقرأ المنتجات — يزيد مخزون الموجود، وينشئ الجديد تلقائيًا.",
+      invoiceScanBtn: "تصوير / اختيار الفاتورة",
+      invoiceScanAnalyzing: "جارٍ تحليل الفاتورة...",
+      invoiceScanNotConfigured: "هذه الميزة غير مُعدّة بعد. اتبع خطوات الإعداد في ملف README.",
+      invoiceScanNoItems: "لم يتم العثور على أي بند منتج قابل للقراءة في الفاتورة.",
+      invoiceScanFoundTitle: "تم العثور على {n} عنصر في الفاتورة",
+      invoiceExistingLabel: "منتج موجود · المخزون +{qty}",
+      invoiceNewLabel: "سيتم إنشاء منتج جديد",
+      invoiceApplyBtn: "تأكيد وتطبيق",
+      invoiceAppliedAlert: "تم تحديث/إضافة {n} منتج."
     }
   };
 
