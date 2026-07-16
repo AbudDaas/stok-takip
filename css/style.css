@@ -918,3 +918,33 @@ html[dir="rtl"] .lang-switch{
 @media (max-width:480px){
   .toast-container{top:10px;padding:0 10px;}
 }
+
+/* Özel miktar/ağırlık sorma penceresi */
+.prompt-modal{
+  max-width:320px;
+  padding:20px;
+}
+.prompt-modal-title{
+  font-size:15px;
+  font-weight:700;
+  margin:0 0 14px;
+  text-align:center;
+}
+.prompt-modal-input{
+  width:100%;
+  height:46px;
+  border:1px solid var(--border);
+  border-radius:8px;
+  padding:0 14px;
+  font-size:18px;
+  text-align:center;
+  font-weight:700;
+  color:var(--navy);
+  margin-bottom:16px;
+}
+.prompt-modal-input:focus{outline:2px solid var(--navy-light);outline-offset:1px;}
+.prompt-modal-actions{
+  display:flex;
+  gap:10px;
+}
+.prompt-modal-actions .btn{flex:1;}
