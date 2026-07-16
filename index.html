@@ -302,6 +302,21 @@
 
     <!-- SEKME: SİPARİŞ LİSTESİ -->
     <section id="tab-orders" class="tab-panel">
+
+      <div class="card">
+        <p class="card-title" data-i18n="breadStatusTitle">🍞 Ekmek Durumu</p>
+        <div class="bread-current-row">
+          <span data-i18n="breadCurrentLabel">Şu anki stok:</span>
+          <span id="breadCurrentQty" class="bread-current-qty">—</span>
+        </div>
+        <button id="breadWhatsAppBtn" class="btn btn-primary btn-block">
+          <i class="fa-brands fa-whatsapp" aria-hidden="true"></i> <span data-i18n="breadWhatsAppBtn">WhatsApp'tan gönder</span>
+        </button>
+        <p class="card-subtitle" data-i18n="breadLogTitle" style="margin-top:14px;">Geçmiş</p>
+        <div id="breadLogList" class="list"></div>
+        <p id="breadLogEmptyState" class="empty-state" data-i18n="breadLogEmpty">Henüz bir kayıt yok.</p>
+      </div>
+
       <div class="card-header-row">
         <p class="card-title" data-i18n="orderListTitle">Acil sipariş listesi</p>
         <button id="resetBtn" class="btn btn-sm">
