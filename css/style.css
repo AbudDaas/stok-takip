@@ -960,3 +960,37 @@ html[dir="rtl"] .lang-switch{
 }
 .invoice-status-existing{background:var(--amber-bg);color:var(--amber-text);}
 .invoice-status-new{background:var(--green-bg);color:var(--green-text);}
+
+/* Kg / Tutar seçimli miktar girme */
+.kg-price-mode-tabs{
+  display:flex;
+  gap:8px;
+  margin-bottom:14px;
+}
+.kg-price-mode-btn{
+  flex:1;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:6px;
+  padding:10px 6px;
+  border:1px solid var(--border);
+  border-radius:8px;
+  background:#fff;
+  font-size:13px;
+  font-weight:600;
+  color:var(--text-secondary);
+  cursor:pointer;
+}
+.kg-price-mode-btn.active{
+  background:var(--navy);
+  border-color:var(--navy);
+  color:#fff;
+}
+.kg-price-preview{
+  text-align:center;
+  font-size:13px;
+  color:var(--text-secondary);
+  margin:-6px 0 16px;
+  min-height:18px;
+}
