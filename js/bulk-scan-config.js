@@ -1,3 +1,3 @@
-const bulkScanConfig = {
-     apiKey: "AIzaSyAEuflSJ2frA6KaxnjlB3YkZzZKc-us5BA"
+   const bulkScanConfig = {
+     apiKey: "AQ.Ab8RN6I0RYX1A5rIAuxDj4HMrVEE-N338hUvbtH9LJQtR-rZyg"
    };
