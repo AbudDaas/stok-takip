@@ -581,6 +581,101 @@
     });
   }
 
+  // ---------- Kg / Tutar seçerek miktar girme (tartılı ürün satışı için) ----------
+  function showKgOrPricePrompt(productName, pricePerKg) {
+    return new Promise((resolve) => {
+      const modal = document.getElementById("kgPricePromptModal");
+      const titleEl = document.getElementById("kgPricePromptTitle");
+      const input = document.getElementById("kgPricePromptInput");
+      const preview = document.getElementById("kgPricePromptPreview");
+      const kgBtn = document.getElementById("kgPriceModeKgBtn");
+      const priceBtn = document.getElementById("kgPriceModePriceBtn");
+      const okBtn = document.getElementById("kgPricePromptOkBtn");
+      const cancelBtn = document.getElementById("kgPricePromptCancelBtn");
+
+      let mode = "kg";
+      titleEl.textContent = `${productName} — ${t("promptKgAmount")}`;
+      input.value = "";
+      setMode("kg");
+
+      function setMode(newMode) {
+        mode = newMode;
+        kgBtn.classList.toggle("active", mode === "kg");
+        priceBtn.classList.toggle("active", mode === "price");
+        updatePreview();
+      }
+
+      function updatePreview() {
+        const value = parseFloat((input.value || "").replace(",", "."));
+        if (!value || value <= 0 || !pricePerKg) {
+          preview.textContent = "";
+          return;
+        }
+        if (mode === "kg") {
+          preview.textContent = t("kgPricePreviewKg").replace("{value}", formatTL(value * pricePerKg));
+        } else {
+          preview.textContent = t("kgPricePreviewPrice").replace(
+            "{value}",
+            (Math.round((value / pricePerKg) * 1000) / 1000).toLocaleString(locale(), { maximumFractionDigits: 3 })
+          );
+        }
+      }
+
+      modal.style.display = "flex";
+      setTimeout(() => input.focus(), 50);
+
+      function cleanup(result) {
+        modal.style.display = "none";
+        okBtn.removeEventListener("click", onOk);
+        cancelBtn.removeEventListener("click", onCancel);
+        input.removeEventListener("input", updatePreview);
+        input.removeEventListener("keydown", onKeydown);
+        kgBtn.removeEventListener("click", onKgBtnClick);
+        priceBtn.removeEventListener("click", onPriceBtnClick);
+        modal.removeEventListener("click", onOverlayClick);
+        resolve(result);
+      }
+
+      function onOk() {
+        const value = parseFloat((input.value || "").replace(",", "."));
+        if (!value || value <= 0) {
+          cleanup(null);
+          return;
+        }
+        const weightInKg = mode === "kg" ? value : value / pricePerKg;
+        cleanup(Math.round(weightInKg * 1000) / 1000);
+      }
+      function onCancel() {
+        cleanup(null);
+      }
+      function onKeydown(e) {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          onOk();
+        } else if (e.key === "Escape") {
+          onCancel();
+        }
+      }
+      function onOverlayClick(e) {
+        if (e.target === modal) onCancel();
+      }
+      function onKgBtnClick() {
+        setMode("kg");
+      }
+      function onPriceBtnClick() {
+        setMode("price");
+      }
+
+      okBtn.addEventListener("click", onOk);
+      cancelBtn.addEventListener("click", onCancel);
+      input.addEventListener("input", updatePreview);
+      input.addEventListener("keydown", onKeydown);
+      kgBtn.addEventListener("click", onKgBtnClick);
+      priceBtn.addEventListener("click", onPriceBtnClick);
+      modal.addEventListener("click", onOverlayClick);
+    });
+  }
+
   function formatQty(p) {
     if (p.unit === "kg") {
       return (Math.round(p.qty * 1000) / 1000).toLocaleString(locale(), { minimumFractionDigits: 0, maximumFractionDigits: 3 }) + " " + t("unitKgShort");
@@ -966,9 +1061,8 @@
     }
 
     if (p.unit === "kg") {
-      showPrompt(`${p.name} — ${t("promptKgAmount")}`, "").then((input) => {
-        if (input === null) return;
-        const weight = parseFloat(input.replace(",", "."));
+      showKgOrPricePrompt(p.name, p.price).then((weight) => {
+        if (weight === null) return;
         if (!weight || weight <= 0) {
           showToast(t("alertInvalidWeight"), "error");
           return;
@@ -1011,10 +1105,22 @@
   function manualAddToCart(productId) {
     const p = products.find((x) => x.id === productId);
     if (!p) return;
-    const title = p.unit === "kg" ? `${p.name} — ${t("promptKgAmount")}` : `${p.name} — ${t("promptAdetAmount")}`;
-    const defaultValue = p.unit === "kg" ? "" : "1";
 
-    showPrompt(title, defaultValue).then((input) => {
+    if (p.unit === "kg") {
+      showKgOrPricePrompt(p.name, p.price).then((weight) => {
+        if (weight === null) return;
+        if (!weight || weight <= 0) {
+          showToast(t("alertInvalidAmount"), "error");
+          return;
+        }
+        addToCart(p, weight);
+        document.getElementById("manualAddSearch").value = "";
+        renderManualAddResults();
+      });
+      return;
+    }
+
+    showPrompt(`${p.name} — ${t("promptAdetAmount")}`, "1").then((input) => {
       if (input === null) return;
       const amount = parseFloat(input.replace(",", "."));
       if (!amount || amount <= 0) {
@@ -1089,9 +1195,8 @@
   function editCartWeight(productId) {
     const item = cart.find((c) => c.productId === productId);
     if (!item) return;
-    showPrompt(`${item.name} — ${t("promptNewWeight")}`, item.qty).then((input) => {
-      if (input === null) return;
-      const weight = parseFloat(input.replace(",", "."));
+    showKgOrPricePrompt(item.name, item.price).then((weight) => {
+      if (weight === null) return;
       if (!weight || weight <= 0) {
         removeCartItem(productId);
         return;
