@@ -362,19 +362,35 @@
       </div>`;
   }
 
-  // ---------- Ekmek Durumu ----------
-  function findBreadProduct() {
-    return products.find((p) => p.name.trim().toLowerCase() === "ekmek");
+  // ---------- Ekmek Durumu (4 tür) ----------
+  const BREAD_TYPE_NAMES = ["ekmek", "kepekli ekmek", "arpa ekmeği", "yulaf ekmeği"];
+  const BREAD_TYPE_LABELS = {
+    ekmek: "Ekmek",
+    "kepekli ekmek": "Kepekli",
+    "arpa ekmeği": "Arpa",
+    "yulaf ekmeği": "Yulaf"
+  };
+
+  function findProductByExactName(name) {
+    const normalized = name.trim().toLowerCase();
+    return products.find((p) => p.name.trim().toLowerCase() === normalized);
   }
 
   function renderBreadStatus() {
-    const qtyEl = document.getElementById("breadCurrentQty");
+    const currentEl = document.getElementById("breadCurrentList");
     const logListEl = document.getElementById("breadLogList");
     const logEmptyEl = document.getElementById("breadLogEmptyState");
-    if (!qtyEl) return;
+    if (!currentEl) return;
 
-    const bread = findBreadProduct();
-    qtyEl.textContent = bread ? formatQty(bread) : "—";
+    currentEl.innerHTML = BREAD_TYPE_NAMES.map((name) => {
+      const p = findProductByExactName(name);
+      const label = BREAD_TYPE_LABELS[name] || name;
+      return `
+        <div class="bread-current-row">
+          <span>${escapeHtml(label)}</span>
+          <span class="bread-current-qty">${p ? formatQty(p) : "—"}</span>
+        </div>`;
+    }).join("");
 
     const sorted = [...breadLog].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp)).slice(0, 14);
     if (!sorted.length) {
@@ -386,10 +402,14 @@
         .map((entry) => {
           const d = new Date(entry.timestamp);
           const dateStr = d.toLocaleString(locale(), { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
+          const items = Array.isArray(entry.items) ? entry.items : [{ name: "ekmek", qty: entry.qty || 0 }];
+          const itemsStr = items
+            .map((it) => `${escapeHtml(BREAD_TYPE_LABELS[it.name] || it.name)}: ${it.qty}`)
+            .join(" · ");
           return `
             <div class="bread-log-row">
               <span class="bread-log-date">${dateStr} · ${escapeHtml(entry.note || "")}</span>
-              <span class="bread-log-qty">${entry.qty} adet</span>
+              <span class="bread-log-qty">${itemsStr}</span>
             </div>`;
         })
         .join("");
@@ -397,16 +417,17 @@
   }
 
   function sendBreadWhatsApp() {
-    const bread = findBreadProduct();
-    if (!bread) {
-      showToast(t("breadNotFound"), "error");
-      return;
-    }
     const today = new Date().toLocaleDateString(locale());
-    const message = `🍞 Ekmek Durumu (${today})\nŞu anki stok: ${bread.qty} adet`;
+    const lines = BREAD_TYPE_NAMES.map((name) => {
+      const p = findProductByExactName(name);
+      const label = BREAD_TYPE_LABELS[name] || name;
+      return `${label}: ${p ? formatQty(p) : "0 adet"}`;
+    });
+    const message = `🍞 Ekmek Durumu (${today})\n${lines.join("\n")}`;
     const url = `https://wa.me/905319466936?text=${encodeURIComponent(message)}`;
     window.open(url, "_blank");
   }
+
 
   function renderCustomers() {
     const list = document.getElementById("customerList");
