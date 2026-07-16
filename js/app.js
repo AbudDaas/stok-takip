@@ -1860,6 +1860,16 @@
       });
   }
 
+  function findBoxMultiplier(name) {
+    // "(4*6)" ya da "(1*27)" gibi bir kutu içeriği belirtilmişse, toplam adedi hesapla
+    const match = (name || "").match(/\((\d+)\s*[x×\*]\s*(\d+)\)/i);
+    if (match) {
+      const total = Number(match[1]) * Number(match[2]);
+      return total > 0 ? total : 1;
+    }
+    return 1;
+  }
+
   function handleInvoicePhotos(files) {
     if (!isBulkScanConfigured()) {
       showToast(t("invoiceScanNotConfigured"), "error");
@@ -1890,11 +1900,14 @@
         });
 
         invoiceScanCandidates = Object.values(merged).map((line) => {
+          const multiplier = findBoxMultiplier(line.name);
+          const totalQty = line.qty * multiplier;
+          const perPieceCost = multiplier > 1 && line.unitCost ? Math.round((line.unitCost / multiplier) * 100) / 100 : line.unitCost;
           const existing = findExistingProductByName(line.name);
           return {
             name: line.name,
-            qty: line.qty,
-            unitCost: line.unitCost,
+            qty: totalQty,
+            unitCost: perPieceCost,
             matchedProductId: existing ? existing.id : null,
             matchedProductName: existing ? existing.name : null
           };
