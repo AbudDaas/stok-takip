@@ -125,6 +125,19 @@
         </div>
       </div>
 
+      <div class="card">
+        <p class="card-title" data-i18n="invoiceScanTitle">Fatura ile stok girişi (toplu)</p>
+        <p class="card-subtitle" data-i18n="invoiceScanSubtitle">Tedarikçi faturasının fotoğrafını çek, yapay zeka ürünleri okusun — sistemde varsa stoğa eklesin, yoksa yeni ürün olarak oluştursun.</p>
+        <input id="invoicePhotoInput" type="file" accept="image/*" multiple style="display:none;" />
+        <button id="invoicePhotoBtn" class="btn btn-primary btn-block">
+          <i class="fa-solid fa-file-invoice" aria-hidden="true"></i> <span data-i18n="invoiceScanBtn">Fatura fotoğrafla / seç</span>
+        </button>
+        <div id="invoiceScanLoading" class="bulk-scan-loading" style="display:none;">
+          <i class="fa-solid fa-spinner spin" aria-hidden="true"></i>
+          <span data-i18n="invoiceScanAnalyzing">Fatura analiz ediliyor...</span>
+        </div>
+      </div>
+
       <div class="section-header">
         <p class="card-title" data-i18n="allProductsTitle">Tüm ürünler</p>
         <input id="searchBox" type="text" class="search-input" data-i18n-placeholder="searchPh" placeholder="Ürün ara..." />
@@ -398,6 +411,22 @@
         <div id="bulkScanResultsList" class="list"></div>
         <button id="bulkAddAllBtn" class="btn btn-primary btn-block">
           <span data-i18n="bulkAddAllBtn">Hepsini ekle</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- FATURA TARAMA SONUÇ MODAL -->
+  <div id="invoiceScanModal" class="modal-overlay" style="display:none;">
+    <div class="modal">
+      <div class="modal-header">
+        <p id="invoiceScanModalTitle" class="modal-title"></p>
+        <button id="closeInvoiceScanModalBtn" class="icon-btn" aria-label="Kapat"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button>
+      </div>
+      <div class="modal-body">
+        <div id="invoiceScanResultsList" class="list"></div>
+        <button id="invoiceApplyBtn" class="btn btn-primary btn-block">
+          <span data-i18n="invoiceApplyBtn">Onayla ve uygula</span>
         </button>
       </div>
     </div>
