@@ -1862,11 +1862,44 @@
   }
 
   function findBoxMultiplier(name) {
-    // "(4*6)" ya da "(1*27)" gibi bir kutu içeriği belirtilmişse, toplam adedi hesapla
-    const match = (name || "").match(/\((\d+)\s*[x×\*]\s*(\d+)\)/i);
-    if (match) {
-      const total = Number(match[1]) * Number(match[2]);
+    const str = (name || "").trim();
+    const starIndex = str.indexOf("*");
+
+    if (starIndex === -1) {
+      // "(4 x 6)" gibi parantezli ama "*" yerine "x"/"×" kullanan nadir biçim
+      const parenMatch = str.match(/\((\d+)\s*[x×]\s*(\d+)\)/i);
+      if (parenMatch) {
+        const total = Number(parenMatch[1]) * Number(parenMatch[2]);
+        return total > 0 ? total : 1;
+      }
+      return 1;
+    }
+
+    const before = str.slice(0, starIndex);
+    const after = str.slice(starIndex + 1);
+
+    // "*" sonrasındaki ilk sayı (örn. "*12" -> 12)
+    const afterMatch = after.match(/^\s*(\d+)/);
+    const afterNum = afterMatch ? Number(afterMatch[1]) : null;
+
+    // "*" öncesindeki son sayı — ama hemen önünde "/" varsa (örn. "1/2 *12"
+    // içindeki "2" gibi bir ölçü/oran ifadesiyse) bunu kutu çarpanı sayma
+    const beforeMatch = before.match(/(\d+)\s*$/);
+    let beforeNum = null;
+    if (beforeMatch) {
+      const idx = before.lastIndexOf(beforeMatch[1]);
+      const charBeforeNumber = before.slice(0, idx).trim().slice(-1);
+      if (charBeforeNumber !== "/") {
+        beforeNum = Number(beforeMatch[1]);
+      }
+    }
+
+    if (afterNum && beforeNum) {
+      const total = beforeNum * afterNum;
       return total > 0 ? total : 1;
+    }
+    if (afterNum) {
+      return afterNum > 0 ? afterNum : 1;
     }
     return 1;
   }
