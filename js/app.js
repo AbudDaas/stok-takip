@@ -1947,12 +1947,13 @@
           ? `<span class="invoice-status-badge invoice-status-existing">${t("invoiceExistingLabel").replace("{qty}", item.qty)}</span>`
           : `<span class="invoice-status-badge invoice-status-new">${t("invoiceNewLabel")}</span>`;
         const costStr = item.unitCost ? formatTL(item.unitCost) : "";
+        const priceStr = item.unitCost ? formatTL(calcSellingPrice(item.unitCost)) : "";
         return `
           <label class="bulk-result-row">
             <input type="checkbox" class="invoice-result-check" data-index="${i}" checked />
             <div class="bulk-result-info">
               <p class="bulk-result-name">${escapeHtml(item.name)}</p>
-              <p class="bulk-result-meta">${item.qty} adet${costStr ? " · " + costStr + "/adet" : ""}</p>
+              <p class="bulk-result-meta">${item.qty} adet${costStr ? " · Geliş: " + costStr : ""}${priceStr ? " · Satış: " + priceStr : ""}</p>
               ${statusHtml}
             </div>
           </label>`;
@@ -1967,6 +1968,12 @@
     invoiceScanCandidates = [];
   }
 
+  const INVOICE_MARKUP_MULTIPLIER = 1.25; // geliş fiyatına otomatik eklenen kâr oranı (%25)
+
+  function calcSellingPrice(costPrice) {
+    return Math.round(costPrice * INVOICE_MARKUP_MULTIPLIER * 100) / 100;
+  }
+
   function applyInvoiceScan() {
     const checks = document.querySelectorAll(".invoice-result-check");
     let appliedCount = 0;
@@ -1979,10 +1986,15 @@
         const p = products.find((x) => x.id === item.matchedProductId);
         if (p) {
           p.qty = Math.round((p.qty + item.qty) * 1000) / 1000;
-          if (item.unitCost) p.costPrice = item.unitCost;
+          if (item.unitCost) {
+            p.costPrice = item.unitCost;
+            p.price = calcSellingPrice(item.unitCost);
+          }
         }
       } else {
-        products.push(mkProduct(item.name, t("categoryOtherDefault"), item.qty, 5, 0, "", "adet", item.unitCost || 0));
+        const costPrice = item.unitCost || 0;
+        const price = costPrice ? calcSellingPrice(costPrice) : 0;
+        products.push(mkProduct(item.name, t("categoryOtherDefault"), item.qty, 5, price, "", "adet", costPrice));
       }
       appliedCount++;
     });
