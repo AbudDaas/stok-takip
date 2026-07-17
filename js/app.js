@@ -2001,10 +2001,15 @@
     invoiceScanCandidates = [];
   }
 
-  const INVOICE_MARKUP_MULTIPLIER = 1.25; // geliş fiyatına otomatik eklenen kâr oranı (%25)
+  function getInvoiceMarkupPercent() {
+    const input = document.getElementById("invoiceMarkupPercent");
+    const value = input ? Number(input.value) : 20;
+    return isNaN(value) || value < 0 ? 20 : value;
+  }
 
   function calcSellingPrice(costPrice) {
-    return Math.round(costPrice * INVOICE_MARKUP_MULTIPLIER * 100) / 100;
+    const percent = getInvoiceMarkupPercent();
+    return Math.round(costPrice * (1 + percent / 100) * 100) / 100;
   }
 
   function applyInvoiceScan() {
@@ -2108,6 +2113,15 @@
     if (e.target.id === "invoiceScanModal") closeInvoiceScanModal();
   });
   document.getElementById("invoiceApplyBtn").addEventListener("click", applyInvoiceScan);
+  document.getElementById("invoiceMarkupPercent").addEventListener("input", () => {
+    if (!invoiceScanCandidates.length) return;
+    const checks = document.querySelectorAll(".invoice-result-check");
+    const checkedStates = Array.from(checks).map((c) => c.checked);
+    renderInvoiceScanModal();
+    document.querySelectorAll(".invoice-result-check").forEach((c, i) => {
+      c.checked = checkedStates[i];
+    });
+  });
   document.getElementById("barcodeScanModal").addEventListener("click", (e) => {
     if (e.target.id === "barcodeScanModal") closeQuickBarcodeScan();
   });
