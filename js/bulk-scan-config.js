@@ -1,3 +1,3 @@
-   const bulkScanConfig = {
-     apiKey: "AQ.Ab8RN6Juz9B3oEfLapj9jbIB_cdl1aPE0XJ0nUZ47EDTFgTFHQ"
+const bulkScanConfig = {
+     workerUrl: "https://sparkling-resonance-931c.abdulrazakdaas0.workers.dev/"
    };
