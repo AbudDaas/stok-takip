@@ -1079,11 +1079,15 @@
       });
     } else {
       const action = confirm(`${p.name}\n${t("currentStockLabel")}: ${p.qty}\n\n${t("confirmStockDirection")}`);
-      if (action) {
-        adjustQty(p.id, 1);
-      } else {
-        adjustQty(p.id, -1);
-      }
+      showPrompt(t("promptAdetAmount"), "1").then((input) => {
+        if (input === null) return;
+        const amount = parseFloat(input.replace(",", "."));
+        if (!amount || amount <= 0) {
+          showToast(t("alertInvalidAmount"), "error");
+          return;
+        }
+        adjustQty(p.id, action ? amount : -amount);
+      });
     }
   }
 
