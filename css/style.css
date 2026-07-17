@@ -1028,3 +1028,26 @@ html[dir="rtl"] .lang-switch{
 }
 .bread-log-date{color:var(--text-muted);}
 .bread-log-qty{font-weight:700;color:var(--navy);}
+
+/* Fatura tarama - kâr oranı girişi */
+.invoice-markup-row{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  background:var(--bg);
+  border-radius:8px;
+  padding:10px 12px;
+  margin-bottom:12px;
+  font-size:14px;
+  font-weight:600;
+}
+.invoice-markup-row input{
+  width:80px;
+  height:36px;
+  text-align:center;
+  font-weight:700;
+  color:var(--navy);
+  border:1px solid var(--border);
+  border-radius:8px;
+}
