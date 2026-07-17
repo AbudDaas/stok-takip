@@ -1943,7 +1943,8 @@
             qty: totalQty,
             unitCost: perPieceCost,
             matchedProductId: existing ? existing.id : null,
-            matchedProductName: existing ? existing.name : null
+            matchedProductName: existing ? existing.name : null,
+            markupPercent: 20
           };
         });
 
@@ -1980,18 +1981,40 @@
           ? `<span class="invoice-status-badge invoice-status-existing">${t("invoiceExistingLabel").replace("{qty}", item.qty)}</span>`
           : `<span class="invoice-status-badge invoice-status-new">${t("invoiceNewLabel")}</span>`;
         const costStr = item.unitCost ? formatTL(item.unitCost) : "";
-        const priceStr = item.unitCost ? formatTL(calcSellingPrice(item.unitCost)) : "";
+        const priceStr = item.unitCost ? formatTL(calcSellingPrice(item.unitCost, item.markupPercent)) : "";
+        const markupHtml = item.unitCost
+          ? `
+            <div class="invoice-markup-inline">
+              <label data-i18n="invoiceMarkupLabel">Kâr oranı (%)</label>
+              <input type="number" min="0" step="1" class="invoice-markup-input" data-index="${i}" value="${item.markupPercent}" />
+            </div>`
+          : "";
         return `
           <label class="bulk-result-row">
             <input type="checkbox" class="invoice-result-check" data-index="${i}" checked />
             <div class="bulk-result-info">
               <p class="bulk-result-name">${escapeHtml(item.name)}</p>
-              <p class="bulk-result-meta">${item.qty} adet${costStr ? " · Geliş: " + costStr : ""}${priceStr ? " · Satış: " + priceStr : ""}</p>
+              <p class="bulk-result-meta">${item.qty} adet${costStr ? " · Geliş: " + costStr : ""}${priceStr ? " · Satış: <span class=\"invoice-price-preview\" data-index=\"" + i + "\">" + priceStr + "</span>" : ""}</p>
+              ${markupHtml}
               ${statusHtml}
             </div>
           </label>`;
       })
       .join("");
+
+    listEl.querySelectorAll(".invoice-markup-input").forEach((input) => {
+      input.addEventListener("input", (e) => {
+        e.stopPropagation();
+        const index = Number(input.dataset.index);
+        const item = invoiceScanCandidates[index];
+        if (!item) return;
+        const percent = Number(input.value);
+        item.markupPercent = isNaN(percent) || percent < 0 ? 0 : percent;
+        const priceEl = listEl.querySelector(`.invoice-price-preview[data-index="${index}"]`);
+        if (priceEl) priceEl.textContent = formatTL(calcSellingPrice(item.unitCost, item.markupPercent));
+      });
+      input.addEventListener("click", (e) => e.stopPropagation());
+    });
 
     document.getElementById("invoiceScanModal").style.display = "flex";
   }
@@ -2001,15 +2024,9 @@
     invoiceScanCandidates = [];
   }
 
-  function getInvoiceMarkupPercent() {
-    const input = document.getElementById("invoiceMarkupPercent");
-    const value = input ? Number(input.value) : 20;
-    return isNaN(value) || value < 0 ? 20 : value;
-  }
-
-  function calcSellingPrice(costPrice) {
-    const percent = getInvoiceMarkupPercent();
-    return Math.round(costPrice * (1 + percent / 100) * 100) / 100;
+  function calcSellingPrice(costPrice, percent) {
+    const p = percent != null ? percent : 20;
+    return Math.round(costPrice * (1 + p / 100) * 100) / 100;
   }
 
   function applyInvoiceScan() {
@@ -2026,12 +2043,12 @@
           p.qty = Math.round((p.qty + item.qty) * 1000) / 1000;
           if (item.unitCost) {
             p.costPrice = item.unitCost;
-            p.price = calcSellingPrice(item.unitCost);
+            p.price = calcSellingPrice(item.unitCost, item.markupPercent);
           }
         }
       } else {
         const costPrice = item.unitCost || 0;
-        const price = costPrice ? calcSellingPrice(costPrice) : 0;
+        const price = costPrice ? calcSellingPrice(costPrice, item.markupPercent) : 0;
         products.push(mkProduct(item.name, t("categoryOtherDefault"), item.qty, 5, price, "", "adet", costPrice));
       }
       appliedCount++;
@@ -2113,15 +2130,6 @@
     if (e.target.id === "invoiceScanModal") closeInvoiceScanModal();
   });
   document.getElementById("invoiceApplyBtn").addEventListener("click", applyInvoiceScan);
-  document.getElementById("invoiceMarkupPercent").addEventListener("input", () => {
-    if (!invoiceScanCandidates.length) return;
-    const checks = document.querySelectorAll(".invoice-result-check");
-    const checkedStates = Array.from(checks).map((c) => c.checked);
-    renderInvoiceScanModal();
-    document.querySelectorAll(".invoice-result-check").forEach((c, i) => {
-      c.checked = checkedStates[i];
-    });
-  });
   document.getElementById("barcodeScanModal").addEventListener("click", (e) => {
     if (e.target.id === "barcodeScanModal") closeQuickBarcodeScan();
   });
