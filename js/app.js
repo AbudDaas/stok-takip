@@ -1614,7 +1614,7 @@
   let bulkScanCandidates = [];
 
   function isBulkScanConfigured() {
-    return typeof bulkScanConfig !== "undefined" && bulkScanConfig.apiKey && bulkScanConfig.apiKey.indexOf("BURAYA") !== 0;
+    return typeof bulkScanConfig !== "undefined" && bulkScanConfig.workerUrl && bulkScanConfig.workerUrl.indexOf("BURAYA") !== 0;
   }
 
   function fileToBase64(file) {
@@ -1644,19 +1644,12 @@
 
     function attemptCall() {
       attempt++;
-      return fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent`, {
+      return fetch(bulkScanConfig.workerUrl, {
         method: "POST",
         headers: {
-          "Content-Type": "application/json",
-          "X-goog-api-key": bulkScanConfig.apiKey
+          "Content-Type": "application/json"
         },
-        body: JSON.stringify({
-          contents: [
-            {
-              parts: [{ text: prompt }, { inline_data: { mime_type: "image/jpeg", data: base64 } }]
-            }
-          ]
-        })
+        body: JSON.stringify({ prompt, image: base64 })
       }).then((r) => {
         if ((r.status === 503 || r.status === 429) && attempt < maxRetries) {
           const delay = attempt * 3000;
