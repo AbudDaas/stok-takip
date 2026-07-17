@@ -1029,25 +1029,26 @@ html[dir="rtl"] .lang-switch{
 .bread-log-date{color:var(--text-muted);}
 .bread-log-qty{font-weight:700;color:var(--navy);}
 
-/* Fatura tarama - kâr oranı girişi */
-.invoice-markup-row{
+/* Fatura tarama - her ürüne özel kâr oranı girişi (yeşil) */
+.invoice-markup-inline{
   display:flex;
   align-items:center;
-  justify-content:space-between;
-  gap:10px;
-  background:var(--bg);
-  border-radius:8px;
-  padding:10px 12px;
-  margin-bottom:12px;
-  font-size:14px;
-  font-weight:600;
+  gap:6px;
+  margin-top:6px;
 }
-.invoice-markup-row input{
-  width:80px;
-  height:36px;
+.invoice-markup-inline label{
+  font-size:12px;
+  font-weight:600;
+  color:var(--green-text);
+}
+.invoice-markup-inline input{
+  width:56px;
+  height:30px;
   text-align:center;
   font-weight:700;
-  color:var(--navy);
-  border:1px solid var(--border);
+  font-size:13px;
+  color:var(--green-text);
+  background:var(--green-bg);
+  border:1px solid var(--green-text);
   border-radius:8px;
 }
