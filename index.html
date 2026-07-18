@@ -343,6 +343,9 @@
         <button id="breadWhatsAppBtn" class="btn btn-primary btn-block">
           <i class="fa-brands fa-whatsapp" aria-hidden="true"></i> <span data-i18n="breadWhatsAppBtn">WhatsApp'tan gönder</span>
         </button>
+        <button id="notifEnableBtn" class="btn btn-block" style="margin-top:8px;">
+          <i class="fa-solid fa-bell" aria-hidden="true"></i> <span data-i18n="notifEnableBtn">Bildirimleri aç</span>
+        </button>
         <p class="card-subtitle" data-i18n="breadLogTitle" style="margin-top:14px;">Geçmiş</p>
         <div id="breadLogList" class="list"></div>
         <p id="breadLogEmptyState" class="empty-state" data-i18n="breadLogEmpty">Henüz bir kayıt yok.</p>
@@ -611,9 +614,11 @@
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-messaging-compat.js"></script>
   <script src="js/firebase-config.js"></script>
   <script src="js/bulk-scan-config.js"></script>
   <script src="js/admin-config.js"></script>
+  <script src="js/push-config.js"></script>
 
   <script src="js/i18n.js"></script>
   <script src="js/app.js"></script>
