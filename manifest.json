@@ -156,9 +156,10 @@
       "name": "Stok Özeti",
       "description": "Toplam ürün ve sipariş durumunu gösterir",
       "tag": "stok-widget",
-      "template": "widgets/stok-widget-template.json",
+      "template": "stok-widget-template",
+      "ms_ac_template": "widgets/stok-widget-template.json",
       "data": "widgets/stok-widget-data.json",
-      "type": "application/adaptivecard+json",
+      "type": "application/json",
       "icons": [
         {
           "src": "icons/icon-192.png",
@@ -166,5 +167,8 @@
         }
       ]
     }
-  ]
+  ],
+  "note_taking": {
+    "new_note_url": "./index.html?newnote=1"
+  }
 }
