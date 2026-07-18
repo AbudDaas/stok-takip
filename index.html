@@ -80,8 +80,15 @@
 
       <div class="card">
         <p class="card-title" data-i18n="addProductTitle">Ürün ekle</p>
-        <div class="form-row">
+        <div class="form-row voice-name-row">
           <input id="newName" type="text" data-i18n-placeholder="namePh" placeholder="Ürün adı, örn. pepsi 1 lt" />
+          <button id="voiceNewNameBtn" type="button" class="btn btn-icon-only voice-mic-btn" data-target="newName" aria-label="Sesle ürün adı gir">
+            <i class="fa-solid fa-microphone" aria-hidden="true"></i>
+          </button>
+        </div>
+        <div class="voice-lang-toggle" data-for="newName">
+          <button type="button" class="voice-lang-btn active" data-lang="tr-TR">TR</button>
+          <button type="button" class="voice-lang-btn" data-lang="ar-SA">AR</button>
         </div>
         <div class="form-row two-col">
           <input id="newCategory" type="text" data-i18n-placeholder="categoryPh" placeholder="Kategori, örn. içecekler" />
@@ -350,7 +357,16 @@
 
         <div class="modal-section">
           <label class="field-label" data-i18n="productNameLabel">Ürün adı</label>
-          <input id="editName" type="text" />
+          <div class="voice-name-row">
+            <input id="editName" type="text" />
+            <button id="voiceEditNameBtn" type="button" class="btn btn-icon-only voice-mic-btn" data-target="editName" aria-label="Sesle ürün adı gir">
+              <i class="fa-solid fa-microphone" aria-hidden="true"></i>
+            </button>
+          </div>
+          <div class="voice-lang-toggle" data-for="editName">
+            <button type="button" class="voice-lang-btn active" data-lang="tr-TR">TR</button>
+            <button type="button" class="voice-lang-btn" data-lang="ar-SA">AR</button>
+          </div>
           <div class="form-row two-col">
             <div>
               <label class="field-label" data-i18n="categoryLabel">Kategori</label>
