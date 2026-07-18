@@ -251,6 +251,7 @@
       docRef.set({ products, sales, customers, payments, dailyResetConfig, breadWhatsAppNumber }, { merge: true }).catch((e) => {
         console.error("Bulut kaydetme hatası", e);
         setSyncStatus("error");
+        registerBackgroundSync();
       });
     } else {
       try {
@@ -259,6 +260,36 @@
         console.error("Yerel kaydetme hatası", e);
       }
     }
+  }
+
+  function registerBackgroundSync() {
+    if (!("serviceWorker" in navigator) || !("SyncManager" in window)) return;
+    navigator.serviceWorker.ready
+      .then((reg) => reg.sync.register("bakkal-sync"))
+      .catch(() => {});
+  }
+
+  function registerPeriodicSync() {
+    if (!("serviceWorker" in navigator) || !("permissions" in navigator)) return;
+    navigator.permissions
+      .query({ name: "periodic-background-sync" })
+      .then((status) => {
+        if (status.state !== "granted") return;
+        navigator.serviceWorker.ready.then((reg) => {
+          if ("periodicSync" in reg) {
+            reg.periodicSync.register("bakkal-refresh", { minInterval: 12 * 60 * 60 * 1000 }).catch(() => {});
+          }
+        });
+      })
+      .catch(() => {});
+  }
+
+  if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.addEventListener("message", (event) => {
+      if (event.data && event.data.type === "BAKKAL_SYNC_RECONNECTED") {
+        showToast(t("syncReconnected"), "success");
+      }
+    });
   }
 
   function seedData() {
@@ -2032,6 +2063,73 @@
       });
   }
 
+  // ---------- Dosya İşleyici (File Handling API) - CSV toplu ürün içe aktarma ----------
+  function checkForLaunchedFile() {
+    if (!("launchQueue" in window)) return;
+    window.launchQueue.setConsumer((launchParams) => {
+      if (!launchParams.files || !launchParams.files.length) return;
+      launchParams.files[0].getFile().then((file) => {
+        file.text().then((text) => importProductsFromCsv(text));
+      });
+    });
+  }
+
+  function importProductsFromCsv(text) {
+    const lines = text.split(/\r?\n/).filter((l) => l.trim());
+    if (!lines.length) return;
+
+    // Başlık satırını atla (name,category,qty,price gibi ise)
+    const firstCells = lines[0].split(",").map((c) => c.trim().toLowerCase());
+    const hasHeader = firstCells.includes("name") || firstCells.includes("ürün adı") || firstCells.includes("urun adi");
+    const dataLines = hasHeader ? lines.slice(1) : lines;
+
+    let addedCount = 0;
+    dataLines.forEach((line) => {
+      const cols = line.split(",").map((c) => c.trim());
+      const name = cols[0];
+      if (!name) return;
+      const category = cols[1] || t("categoryOtherDefault");
+      const qty = Number(cols[2]) || 0;
+      const price = Number(cols[3]) || 0;
+      if (productAlreadyExists(name)) return;
+      products.push(mkProduct(name, category, qty, 5, price, "", "adet", 0));
+      addedCount++;
+    });
+
+    if (addedCount > 0) {
+      save();
+      renderAll();
+      showToast(t("bulkAddedAlert").replace("{n}", addedCount), "success");
+    } else {
+      showToast(t("invoiceScanNoItems"), "info");
+    }
+  }
+
+  // ---------- Protokol İşleyici (web+bakkal://) ----------
+  function checkForProtocolLaunch() {
+    const params = new URLSearchParams(window.location.search);
+    const weblink = params.get("weblink");
+    if (!weblink) return;
+    window.history.replaceState({}, "", window.location.pathname);
+
+    try {
+      const decoded = decodeURIComponent(weblink);
+      const afterScheme = decoded.split("://")[1] || "";
+      const tabMap = {
+        kasa: "tab-kasa",
+        urunler: "tab-products",
+        satislar: "tab-sales",
+        veresiye: "tab-veresiye",
+        siparis: "tab-orders",
+        tara: "tab-scan"
+      };
+      const targetTab = tabMap[afterScheme.toLowerCase()];
+      if (targetTab) switchTab(targetTab);
+    } catch (e) {
+      // yoksay
+    }
+  }
+
   // ---------- Paylaşılan fotoğrafı işleme (Share Target) ----------
   function checkForSharedPhoto() {
     const params = new URLSearchParams(window.location.search);
@@ -2586,6 +2684,9 @@
   }
 
   checkForSharedPhoto();
+  checkForLaunchedFile();
+  checkForProtocolLaunch();
+  registerPeriodicSync();
 
   load();
 })();
