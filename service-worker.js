@@ -89,3 +89,23 @@ if (typeof firebaseConfig !== "undefined" && firebaseConfig.apiKey && firebaseCo
     self.registration.showNotification(title, options);
   });
 }
+
+// ---- Background Sync: bağlantı geri gelince açık sekmelere haber ver ----
+self.addEventListener("sync", (event) => {
+  if (event.tag === "bakkal-sync") {
+    event.waitUntil(
+      self.clients.matchAll().then((clients) => {
+        clients.forEach((client) => client.postMessage({ type: "BAKKAL_SYNC_RECONNECTED" }));
+      })
+    );
+  }
+});
+
+// ---- Periodic Background Sync: uygulama kapalıyken bile temel dosyaları tazele ----
+self.addEventListener("periodicsync", (event) => {
+  if (event.tag === "bakkal-refresh") {
+    event.waitUntil(
+      caches.open(CACHE_NAME).then((cache) => cache.addAll(CORE_ASSETS)).catch(() => {})
+    );
+  }
+});
