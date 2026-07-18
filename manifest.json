@@ -1,4 +1,5 @@
 {
+  "id": "./index.html",
   "name": "Bakkal Stok Takip",
   "short_name": "Stok Takip",
   "description": "Ürün stok takibi, giriş-çıkış ve QR kod ile sayım",
@@ -8,6 +9,8 @@
   "background_color": "#F2F5FA",
   "theme_color": "#1F3864",
   "orientation": "portrait",
+  "lang": "tr",
+  "dir": "ltr",
   "icons": [
     {
       "src": "icons/icon-192.png",
