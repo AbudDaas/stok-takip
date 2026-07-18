@@ -15,6 +15,8 @@
   let customers = [];
   let payments = [];
   let breadLog = [];
+  let dailyResetConfig = [];
+  let breadWhatsAppNumber = "";
   let cart = []; // { productId, name, price, qty }
   let activeProductId = null;
   let activeCustomerId = null;
@@ -111,6 +113,8 @@
           customers = data.customers || [];
           payments = data.payments || [];
           breadLog = data.breadLog || [];
+          dailyResetConfig = data.dailyResetConfig || [];
+          breadWhatsAppNumber = data.breadWhatsAppNumber || "";
         } else {
           const initial = { products: seedData(), sales: [], customers: [], payments: [] };
           docRef.set(initial);
@@ -119,6 +123,8 @@
           customers = initial.customers;
           payments = initial.payments;
           breadLog = [];
+          dailyResetConfig = [];
+          breadWhatsAppNumber = "";
         }
         setSyncStatus("connected");
         renderAll();
@@ -210,11 +216,15 @@
         sales = (parsed && parsed.sales) || [];
         customers = (parsed && parsed.customers) || [];
         payments = (parsed && parsed.payments) || [];
+        dailyResetConfig = (parsed && parsed.dailyResetConfig) || [];
+        breadWhatsAppNumber = (parsed && parsed.breadWhatsAppNumber) || "";
       } catch (e) {
         products = seedData();
         sales = [];
         customers = [];
         payments = [];
+        dailyResetConfig = [];
+        breadWhatsAppNumber = "";
       }
       if (!Array.isArray(products) || !products.length) products = seedData();
       if (!Array.isArray(sales)) sales = [];
@@ -245,13 +255,13 @@
     if (cloudEnabled) {
       if (!docRef) return;
       suppressNextSnapshot = true;
-      docRef.set({ products, sales, customers, payments }, { merge: true }).catch((e) => {
+      docRef.set({ products, sales, customers, payments, dailyResetConfig, breadWhatsAppNumber }, { merge: true }).catch((e) => {
         console.error("Bulut kaydetme hatası", e);
         setSyncStatus("error");
       });
     } else {
       try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify({ products, sales, customers, payments }));
+        localStorage.setItem(STORAGE_KEY, JSON.stringify({ products, sales, customers, payments, dailyResetConfig, breadWhatsAppNumber }));
       } catch (e) {
         console.error("Yerel kaydetme hatası", e);
       }
@@ -372,16 +382,146 @@
       </div>`;
   }
 
-  // ---------- Ekmek Durumu (4 tür) ----------
-  const BREAD_TYPE_NAMES = ["ekmek", "kepekli ekmek", "arpa ekmeği", "yulaf ekmeği"];
-  const BREAD_TYPE_LABELS = {
-    ekmek: "Ekmek",
-    "kepekli ekmek": "Kepekli",
-    "arpa ekmeği": "Arpa",
-    "yulaf ekmeği": "Yulaf"
-  };
+  // ---------- Günlük Ürün Takibi (her işletme kendi ayarlayabilir) ----------
 
-  // ---------- Yönetim paneli (sadece yönetici hesabı) ----------
+  function findProductByExactName(name) {
+    const normalized = name.trim().toLowerCase();
+    return products.find((p) => p.name.trim().toLowerCase() === normalized);
+  }
+
+  function addBreadConfig() {
+    const nameInput = document.getElementById("breadConfigName");
+    const qtyInput = document.getElementById("breadConfigQty");
+    const staleInput = document.getElementById("breadConfigStaleName");
+    const autoResetInput = document.getElementById("breadConfigAutoReset");
+
+    const productName = nameInput.value.trim();
+    if (!productName) {
+      showToast(t("breadConfigNameRequired"), "error");
+      return;
+    }
+
+    dailyResetConfig.push({
+      productName,
+      dailyQty: Number(qtyInput.value) || 0,
+      autoReset: autoResetInput.checked,
+      staleProductName: staleInput.value.trim()
+    });
+
+    nameInput.value = "";
+    qtyInput.value = "";
+    staleInput.value = "";
+    autoResetInput.checked = true;
+
+    save();
+    renderBreadStatus();
+    showToast(t("breadConfigAdded"), "success");
+  }
+
+  function removeBreadConfig(index) {
+    dailyResetConfig.splice(index, 1);
+    save();
+    renderBreadStatus();
+    showToast(t("breadConfigRemoved"), "success");
+  }
+
+  function renderBreadConfigList() {
+    const listEl = document.getElementById("breadConfigList");
+    if (!listEl) return;
+
+    if (!dailyResetConfig.length) {
+      listEl.innerHTML = `<p class="empty-state" style="display:block;">${t("breadConfigEmpty")}</p>`;
+      return;
+    }
+
+    listEl.innerHTML = dailyResetConfig
+      .map((cfg, i) => {
+        const autoResetLabel = cfg.autoReset ? t("breadAutoResetYes") : t("breadAutoResetNo");
+        const staleStr = cfg.staleProductName ? ` · ${escapeHtml(cfg.staleProductName)}` : "";
+        return `
+          <div class="bread-config-row">
+            <div class="bread-config-info">
+              <p class="bread-config-name">${escapeHtml(cfg.productName)}</p>
+              <p class="bread-config-meta">${cfg.dailyQty} adet · ${autoResetLabel}${staleStr}</p>
+            </div>
+            <button class="bread-config-remove-btn" data-index="${i}" aria-label="Kaldır"><i class="fa-solid fa-trash" aria-hidden="true"></i></button>
+          </div>`;
+      })
+      .join("");
+
+    listEl.querySelectorAll(".bread-config-remove-btn").forEach((btn) => {
+      btn.addEventListener("click", () => removeBreadConfig(Number(btn.dataset.index)));
+    });
+  }
+
+  function renderBreadStatus() {
+    const currentEl = document.getElementById("breadCurrentList");
+    const logListEl = document.getElementById("breadLogList");
+    const logEmptyEl = document.getElementById("breadLogEmptyState");
+    const numberInput = document.getElementById("breadWhatsAppNumber");
+    if (!currentEl) return;
+
+    if (numberInput && document.activeElement !== numberInput) {
+      numberInput.value = breadWhatsAppNumber || "";
+    }
+
+    renderBreadConfigList();
+
+    if (!dailyResetConfig.length) {
+      currentEl.innerHTML = `<p class="empty-state" style="display:block;">${t("breadConfigEmpty")}</p>`;
+    } else {
+      currentEl.innerHTML = dailyResetConfig
+        .map((cfg) => {
+          const p = findProductByExactName(cfg.productName);
+          return `
+            <div class="bread-current-row">
+              <span>${escapeHtml(cfg.productName)}</span>
+              <span class="bread-current-qty">${p ? formatQty(p) : "—"}</span>
+            </div>`;
+        })
+        .join("");
+    }
+
+    const sorted = [...breadLog].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp)).slice(0, 14);
+    if (!sorted.length) {
+      logListEl.innerHTML = "";
+      logEmptyEl.style.display = "block";
+    } else {
+      logEmptyEl.style.display = "none";
+      logListEl.innerHTML = sorted
+        .map((entry) => {
+          const d = new Date(entry.timestamp);
+          const dateStr = d.toLocaleString(locale(), { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
+          const items = Array.isArray(entry.items) ? entry.items : [];
+          const itemsStr = items.map((it) => `${escapeHtml(it.name)}: ${it.qty}`).join(" · ");
+          return `
+            <div class="bread-log-row">
+              <span class="bread-log-date">${dateStr} · ${escapeHtml(entry.note || "")}</span>
+              <span class="bread-log-qty">${itemsStr}</span>
+            </div>`;
+        })
+        .join("");
+    }
+  }
+
+  function sendBreadWhatsApp() {
+    const number = (document.getElementById("breadWhatsAppNumber").value || "").trim();
+    if (!number) {
+      showToast(t("breadNoWhatsAppNumber"), "error");
+      return;
+    }
+    breadWhatsAppNumber = number;
+    save();
+
+    const today = new Date().toLocaleDateString(locale());
+    const lines = dailyResetConfig.map((cfg) => {
+      const p = findProductByExactName(cfg.productName);
+      return `${cfg.productName}: ${p ? formatQty(p) : "0 adet"}`;
+    });
+    const message = `🍞 ${t("breadStatusTitle").replace("🍞 ", "")} (${today})\n${lines.join("\n")}`;
+    const url = `https://wa.me/${number}?text=${encodeURIComponent(message)}`;
+    window.open(url, "_blank");
+  }
   function isAdminConfigured() {
     return typeof adminConfig !== "undefined" && adminConfig.workerUrl && adminConfig.workerUrl.indexOf("BURAYA") !== 0;
   }
@@ -504,62 +644,6 @@
       });
   }
 
-  function findProductByExactName(name) {
-    const normalized = name.trim().toLowerCase();
-    return products.find((p) => p.name.trim().toLowerCase() === normalized);
-  }
-
-  function renderBreadStatus() {
-    const currentEl = document.getElementById("breadCurrentList");
-    const logListEl = document.getElementById("breadLogList");
-    const logEmptyEl = document.getElementById("breadLogEmptyState");
-    if (!currentEl) return;
-
-    currentEl.innerHTML = BREAD_TYPE_NAMES.map((name) => {
-      const p = findProductByExactName(name);
-      const label = BREAD_TYPE_LABELS[name] || name;
-      return `
-        <div class="bread-current-row">
-          <span>${escapeHtml(label)}</span>
-          <span class="bread-current-qty">${p ? formatQty(p) : "—"}</span>
-        </div>`;
-    }).join("");
-
-    const sorted = [...breadLog].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp)).slice(0, 14);
-    if (!sorted.length) {
-      logListEl.innerHTML = "";
-      logEmptyEl.style.display = "block";
-    } else {
-      logEmptyEl.style.display = "none";
-      logListEl.innerHTML = sorted
-        .map((entry) => {
-          const d = new Date(entry.timestamp);
-          const dateStr = d.toLocaleString(locale(), { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
-          const items = Array.isArray(entry.items) ? entry.items : [{ name: "ekmek", qty: entry.qty || 0 }];
-          const itemsStr = items
-            .map((it) => `${escapeHtml(BREAD_TYPE_LABELS[it.name] || it.name)}: ${it.qty}`)
-            .join(" · ");
-          return `
-            <div class="bread-log-row">
-              <span class="bread-log-date">${dateStr} · ${escapeHtml(entry.note || "")}</span>
-              <span class="bread-log-qty">${itemsStr}</span>
-            </div>`;
-        })
-        .join("");
-    }
-  }
-
-  function sendBreadWhatsApp() {
-    const today = new Date().toLocaleDateString(locale());
-    const lines = BREAD_TYPE_NAMES.map((name) => {
-      const p = findProductByExactName(name);
-      const label = BREAD_TYPE_LABELS[name] || name;
-      return `${label}: ${p ? formatQty(p) : "0 adet"}`;
-    });
-    const message = `🍞 Ekmek Durumu (${today})\n${lines.join("\n")}`;
-    const url = `https://wa.me/905319466936?text=${encodeURIComponent(message)}`;
-    window.open(url, "_blank");
-  }
 
 
   function renderCustomers() {
@@ -2285,6 +2369,11 @@
     if (confirm(t("confirmResetAll"))) resetAll();
   });
   document.getElementById("breadWhatsAppBtn").addEventListener("click", sendBreadWhatsApp);
+  document.getElementById("breadConfigAddBtn").addEventListener("click", addBreadConfig);
+  document.getElementById("breadWhatsAppNumber").addEventListener("change", (e) => {
+    breadWhatsAppNumber = e.target.value.trim();
+    save();
+  });
 
   document.getElementById("closeModalBtn").addEventListener("click", closeModal);
   document.getElementById("detailModal").addEventListener("click", (e) => {
