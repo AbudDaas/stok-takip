@@ -64,5 +64,58 @@
       "form_factor": "narrow",
       "label": "Kasa ekranı (mobil görünüm)"
     }
-  ]
+  ],
+  "shortcuts": [
+    {
+      "name": "Kasa",
+      "short_name": "Kasa",
+      "description": "Hızlıca kasa ekranını aç",
+      "url": "./index.html?tab=tab-kasa",
+      "icons": [
+        {
+          "src": "icons/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "Ürün Ekle",
+      "short_name": "Ürün Ekle",
+      "description": "Hızlıca yeni ürün ekleme ekranını aç",
+      "url": "./index.html?tab=tab-products",
+      "icons": [
+        {
+          "src": "icons/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "QR Tara",
+      "short_name": "QR Tara",
+      "description": "Hızlıca QR/barkod tarama ekranını aç",
+      "url": "./index.html?tab=tab-scan",
+      "icons": [
+        {
+          "src": "icons/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    }
+  ],
+  "share_target": {
+    "action": "./index.html",
+    "method": "POST",
+    "enctype": "multipart/form-data",
+    "params": {
+      "files": [
+        {
+          "name": "photos",
+          "accept": [
+            "image/*"
+          ]
+        }
+      ]
+    }
+  }
 }
