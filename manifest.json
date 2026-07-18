@@ -160,12 +160,21 @@
       "ms_ac_template": "widgets/stok-widget-template.json",
       "data": "widgets/stok-widget-data.json",
       "type": "application/json",
+      "screenshots": [
+        {
+          "src": "screenshots/screenshot-narrow.png",
+          "sizes": "720x1037",
+          "label": "Stok özeti widget'ı"
+        }
+      ],
       "icons": [
         {
           "src": "icons/icon-192.png",
           "sizes": "192x192"
         }
-      ]
+      ],
+      "auth": false,
+      "update": 86400
     }
   ],
   "note_taking": {
