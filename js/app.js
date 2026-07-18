@@ -746,6 +746,69 @@
     });
   }
 
+  // ---------- Sesle ürün adı girme (Web Speech API, TR/AR) ----------
+  let activeRecognition = null;
+
+  function getSpeechRecognitionClass() {
+    return window.SpeechRecognition || window.webkitSpeechRecognition || null;
+  }
+
+  function getVoiceLangForTarget(targetInputId) {
+    const container = document.querySelector(`.voice-lang-toggle[data-for="${targetInputId}"]`);
+    const activeBtn = container ? container.querySelector(".voice-lang-btn.active") : null;
+    return activeBtn ? activeBtn.dataset.lang : "tr-TR";
+  }
+
+  function startVoiceInput(targetInputId, micBtn) {
+    const SpeechRecognitionClass = getSpeechRecognitionClass();
+    if (!SpeechRecognitionClass) {
+      showToast(t("voiceNotSupported"), "error");
+      return;
+    }
+
+    if (activeRecognition) {
+      activeRecognition.stop();
+      return;
+    }
+
+    const recognition = new SpeechRecognitionClass();
+    recognition.lang = getVoiceLangForTarget(targetInputId);
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 1;
+
+    micBtn.classList.add("listening");
+    activeRecognition = recognition;
+
+    recognition.onresult = (event) => {
+      const transcript = event.results[0][0].transcript;
+      const input = document.getElementById(targetInputId);
+      if (input) input.value = transcript.trim();
+    };
+
+    recognition.onerror = (event) => {
+      if (event.error === "no-speech") {
+        showToast(t("voiceNoSpeech"), "info");
+      } else if (event.error === "not-allowed" || event.error === "permission-denied") {
+        showToast(t("voiceNoPermission"), "error");
+      } else {
+        showToast(t("voiceError"), "error");
+      }
+    };
+
+    recognition.onend = () => {
+      micBtn.classList.remove("listening");
+      activeRecognition = null;
+    };
+
+    recognition.start();
+  }
+
+  function setVoiceLang(container, lang) {
+    container.querySelectorAll(".voice-lang-btn").forEach((btn) => {
+      btn.classList.toggle("active", btn.dataset.lang === lang);
+    });
+  }
+
   function formatQty(p) {
     if (p.unit === "kg") {
       return (Math.round(p.qty * 1000) / 1000).toLocaleString(locale(), { minimumFractionDigits: 0, maximumFractionDigits: 3 }) + " " + t("unitKgShort");
@@ -2072,6 +2135,15 @@
 
   // ---------- Event wiring ----------
   document.getElementById("addBtn").addEventListener("click", addProduct);
+
+  document.querySelectorAll(".voice-mic-btn").forEach((btn) => {
+    btn.addEventListener("click", () => startVoiceInput(btn.dataset.target, btn));
+  });
+  document.querySelectorAll(".voice-lang-toggle").forEach((container) => {
+    container.querySelectorAll(".voice-lang-btn").forEach((btn) => {
+      btn.addEventListener("click", () => setVoiceLang(container, btn.dataset.lang));
+    });
+  });
   document.getElementById("newQty").addEventListener("keydown", (e) => {
     if (e.key === "Enter") addProduct();
   });
