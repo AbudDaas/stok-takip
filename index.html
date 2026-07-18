@@ -331,6 +331,29 @@
       <p id="orderEmptyState" class="empty-state" data-i18n="emptyOrders">Şu anda sipariş edilmesi gereken ürün yok.</p>
     </section>
 
+    <!-- SEKME: YÖNETİM (sadece yönetici hesabıyla görünür) -->
+    <section id="tab-admin" class="tab-panel">
+      <div class="card">
+        <p class="card-title" data-i18n="adminAddTitle">Yeni işletme ekle</p>
+        <div class="form-row">
+          <input id="adminBusinessName" type="text" data-i18n-placeholder="adminBusinessNamePh" placeholder="İşletme adı" />
+        </div>
+        <div class="form-row">
+          <input id="adminBusinessEmail" type="email" data-i18n-placeholder="adminEmailPh" placeholder="E-posta" />
+        </div>
+        <div class="form-row">
+          <input id="adminBusinessPassword" type="text" data-i18n-placeholder="adminPasswordPh" placeholder="Şifre" />
+        </div>
+        <button id="adminCreateBtn" class="btn btn-primary btn-block">
+          <i class="fa-solid fa-plus" aria-hidden="true"></i> <span data-i18n="adminCreateBtn">İşletme oluştur</span>
+        </button>
+      </div>
+
+      <p class="card-title" data-i18n="adminListTitle">İşletmeler</p>
+      <div id="adminBusinessList" class="list"></div>
+      <p id="adminEmptyState" class="empty-state" data-i18n="adminEmptyState">Henüz işletme eklenmedi.</p>
+    </section>
+
   </main>
 
   <!-- ÜRÜN DETAY / QR MODAL -->
@@ -547,6 +570,10 @@
       <i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>
       <span data-i18n="navOrders">Sipariş</span>
     </button>
+    <button class="nav-btn" id="adminNavBtn" data-tab="tab-admin" style="display:none;">
+      <i class="fa-solid fa-user-shield" aria-hidden="true"></i>
+      <span data-i18n="navAdmin">Yönetim</span>
+    </button>
   </nav>
 
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
@@ -559,6 +586,7 @@
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
   <script src="js/firebase-config.js"></script>
   <script src="js/bulk-scan-config.js"></script>
+  <script src="js/admin-config.js"></script>
 
   <script src="js/i18n.js"></script>
   <script src="js/app.js"></script>
