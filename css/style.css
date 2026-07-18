@@ -1052,3 +1052,44 @@ html[dir="rtl"] .lang-switch{
   border:1px solid var(--green-text);
   border-radius:8px;
 }
+
+/* Sesle ürün adı girme */
+.voice-name-row{
+  display:flex;
+  gap:8px;
+  align-items:center;
+}
+.voice-name-row input{flex:1;}
+.voice-mic-btn{
+  color:var(--navy);
+  flex-shrink:0;
+}
+.voice-mic-btn.listening{
+  background:var(--red-bg);
+  color:var(--red-text);
+  animation: mic-pulse 1s ease-in-out infinite;
+}
+@keyframes mic-pulse{
+  0%, 100%{opacity:1;}
+  50%{opacity:0.5;}
+}
+.voice-lang-toggle{
+  display:flex;
+  gap:6px;
+  margin:6px 0 10px;
+}
+.voice-lang-btn{
+  padding:4px 12px;
+  border-radius:999px;
+  border:1px solid var(--border);
+  background:#fff;
+  font-size:12px;
+  font-weight:700;
+  color:var(--text-secondary);
+  cursor:pointer;
+}
+.voice-lang-btn.active{
+  background:var(--navy);
+  border-color:var(--navy);
+  color:#fff;
+}
