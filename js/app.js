@@ -459,6 +459,7 @@
     }
 
     renderBreadConfigList();
+    updateNotifButtonState();
 
     if (!dailyResetConfig.length) {
       currentEl.innerHTML = `<p class="empty-state" style="display:block;">${t("breadConfigEmpty")}</p>`;
@@ -514,6 +515,60 @@
     const message = `🍞 ${t("breadStatusTitle").replace("🍞 ", "")} (${today})\n${lines.join("\n")}`;
     const url = `https://wa.me/${number}?text=${encodeURIComponent(message)}`;
     window.open(url, "_blank");
+  }
+
+  // ---------- Bildirimler (Firebase Cloud Messaging) ----------
+  function isPushConfigured() {
+    return typeof pushConfig !== "undefined" && pushConfig.vapidKey && pushConfig.vapidKey.indexOf("BURAYA") !== 0;
+  }
+
+  function updateNotifButtonState() {
+    const btn = document.getElementById("notifEnableBtn");
+    if (!btn) return;
+    const span = btn.querySelector("span");
+    if (typeof Notification !== "undefined" && Notification.permission === "granted") {
+      span.textContent = t("notifDisableBtn");
+      btn.disabled = true;
+    } else {
+      span.textContent = t("notifEnableBtn");
+      btn.disabled = false;
+    }
+  }
+
+  function enableNotifications() {
+    if (!isPushConfigured()) {
+      showToast(t("notifError"), "error");
+      return;
+    }
+    if (!("Notification" in window) || !("serviceWorker" in navigator) || !cloudEnabled || !currentUser) {
+      showToast(t("notifError"), "error");
+      return;
+    }
+
+    Notification.requestPermission()
+      .then((permission) => {
+        if (permission !== "granted") {
+          showToast(t("notifPermissionDenied"), "error");
+          return;
+        }
+        const messaging = firebase.messaging();
+        return messaging.getToken({ vapidKey: pushConfig.vapidKey }).then((fcmToken) => {
+          if (!fcmToken) {
+            showToast(t("notifError"), "error");
+            return;
+          }
+          return docRef
+            .set({ fcmTokens: firebase.firestore.FieldValue.arrayUnion(fcmToken) }, { merge: true })
+            .then(() => {
+              showToast(t("notifEnabled"), "success");
+              updateNotifButtonState();
+            });
+        });
+      })
+      .catch((e) => {
+        console.error(e);
+        showToast(t("notifError"), "error");
+      });
   }
   function isAdminConfigured() {
     return typeof adminConfig !== "undefined" && adminConfig.workerUrl && adminConfig.workerUrl.indexOf("BURAYA") !== 0;
@@ -1977,6 +2032,37 @@
       });
   }
 
+  // ---------- Paylaşılan fotoğrafı işleme (Share Target) ----------
+  function checkForSharedPhoto() {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("shared") !== "1") return;
+
+    // URL'yi temizle, tekrar tekrar tetiklenmesin
+    window.history.replaceState({}, "", window.location.pathname);
+
+    if (!("caches" in window)) return;
+    caches
+      .open("shared-photo-cache")
+      .then((cache) => cache.match("/shared-photo"))
+      .then((response) => {
+        if (!response) return;
+        return response.blob().then((blob) => {
+          const file = new File([blob], "paylasilan-fotograf.jpg", { type: blob.type || "image/jpeg" });
+          caches.open("shared-photo-cache").then((cache) => cache.delete("/shared-photo"));
+          askSharedPhotoDestination(file);
+        });
+      })
+      .catch(() => {});
+  }
+
+  function askSharedPhotoDestination(file) {
+    if (confirm(t("sharedPhotoPrompt"))) {
+      handleShelfPhotos([file]);
+    } else {
+      handleInvoicePhotos([file]);
+    }
+  }
+
   function handleShelfPhotos(files) {
     if (!isBulkScanConfigured()) {
       showToast(t("bulkScanNotConfigured"), "error");
@@ -2362,6 +2448,7 @@
     if (confirm(t("confirmResetAll"))) resetAll();
   });
   document.getElementById("breadWhatsAppBtn").addEventListener("click", sendBreadWhatsApp);
+  document.getElementById("notifEnableBtn").addEventListener("click", enableNotifications);
   document.getElementById("breadConfigAddBtn").addEventListener("click", addBreadConfig);
   document.getElementById("breadWhatsAppNumber").addEventListener("change", (e) => {
     breadWhatsAppNumber = e.target.value.trim();
@@ -2491,6 +2578,14 @@
   };
 
   window.i18n.applyLang(window.i18n.getLang());
+
+  // Ana ekran kısayollarından (manifest.json "shortcuts") gelen ?tab= parametresini işle
+  const requestedTab = new URLSearchParams(window.location.search).get("tab");
+  if (requestedTab && document.getElementById(requestedTab)) {
+    switchTab(requestedTab);
+  }
+
+  checkForSharedPhoto();
 
   load();
 })();
