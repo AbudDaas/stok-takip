@@ -1126,3 +1126,37 @@ html[dir="rtl"] .lang-switch{
   cursor:pointer;
   flex-shrink:0;
 }
+
+/* Günlük ürün takibi ayar listesi */
+.checkbox-row{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  font-size:13px;
+  color:var(--text-secondary);
+}
+.checkbox-row input[type=checkbox]{
+  width:18px;height:18px;
+  flex-shrink:0;
+}
+.bread-config-row{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:var(--radius);
+  padding:10px 12px;
+}
+.bread-config-info{min-width:0;}
+.bread-config-name{margin:0;font-size:14px;font-weight:600;}
+.bread-config-meta{margin:2px 0 0;font-size:12px;color:var(--text-muted);}
+.bread-config-remove-btn{
+  background:none;
+  border:none;
+  color:var(--red-text);
+  font-size:16px;
+  cursor:pointer;
+  flex-shrink:0;
+}
