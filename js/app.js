@@ -237,16 +237,12 @@
       auth.onAuthStateChanged(handleAuthChange);
     }
 
-    // Service worker tamamen kaldırıldı (eski önbellek sorunlarına neden oluyordu).
-    // Varsa önceden kayıtlı service worker'ları ve önbellekleri temizle.
+    // Service worker: "network-first" stratejisiyle güvenli şekilde kayıtlı.
+    // Her zaman önce internetten taze veri çeker, sadece çevrimdışıyken
+    // önbelleğe döner — bu yüzden site güncellemeleri her zaman anında yansır.
     if ("serviceWorker" in navigator) {
-      navigator.serviceWorker.getRegistrations().then((regs) => {
-        regs.forEach((reg) => reg.unregister());
-      });
-    }
-    if ("caches" in window) {
-      caches.keys().then((names) => {
-        names.forEach((name) => caches.delete(name));
+      window.addEventListener("load", () => {
+        navigator.serviceWorker.register("service-worker.js").catch(() => {});
       });
     }
   }
