@@ -2005,25 +2005,31 @@
     maxRetries = maxRetries || 3;
     let attempt = 0;
 
-    function attemptCall() {
-      attempt++;
-      return fetch(bulkScanConfig.workerUrl, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({ prompt, image: base64 })
-      }).then((r) => {
-        if ((r.status === 503 || r.status === 429) && attempt < maxRetries) {
-          const delay = attempt * 3000;
-          console.log(`Gemini ${r.status}, ${delay}ms sonra tekrar denenecek (deneme ${attempt}/${maxRetries})`);
-          return sleep_(delay).then(attemptCall);
-        }
-        return r.json();
-      });
+    if (!currentUser) {
+      return Promise.resolve({ error: { message: "Giriş yapmadan bu özellik kullanılamaz." } });
     }
 
-    return attemptCall();
+    return currentUser.getIdToken().then((idToken) => {
+      function attemptCall() {
+        attempt++;
+        return fetch(bulkScanConfig.workerUrl, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({ prompt, image: base64, idToken })
+        }).then((r) => {
+          if ((r.status === 503 || r.status === 429) && attempt < maxRetries) {
+            const delay = attempt * 3000;
+            console.log(`Gemini ${r.status}, ${delay}ms sonra tekrar denenecek (deneme ${attempt}/${maxRetries})`);
+            return sleep_(delay).then(attemptCall);
+          }
+          return r.json();
+        });
+      }
+
+      return attemptCall();
+    });
   }
 
   function analyzeOnePhoto(file) {
