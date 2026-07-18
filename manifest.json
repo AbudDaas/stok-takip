@@ -11,6 +11,14 @@
   "orientation": "portrait",
   "lang": "tr",
   "dir": "ltr",
+  "categories": ["business", "productivity", "shopping"],
+  "prefer_related_applications": false,
+  "related_applications": [
+    {
+      "platform": "play",
+      "id": "com.abuddaas.stoktakip"
+    }
+  ],
   "icons": [
     {
       "src": "icons/icon-192.png",
@@ -39,6 +47,13 @@
       "type": "image/png",
       "form_factor": "wide",
       "label": "Ürün ekleme ekranı"
+    },
+    {
+      "src": "screenshots/screenshot-narrow.png",
+      "sizes": "720x1037",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Kasa ekranı (mobil görünüm)"
     }
   ]
 }
