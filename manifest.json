@@ -27,7 +27,7 @@
   "related_applications": [
     {
       "platform": "play",
-      "id": "com.abuddaas.stoktakip"
+      "id": "io.github.abuddaas.twa"
     }
   ],
   "icons": [
