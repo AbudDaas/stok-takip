@@ -24,5 +24,21 @@
       "type": "image/png",
       "purpose": "any maskable"
     }
+  ],
+  "screenshots": [
+    {
+      "src": "screenshots/screenshot-kasa.png",
+      "sizes": "1280x862",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "Kasa - QR okutarak satış"
+    },
+    {
+      "src": "screenshots/screenshot-urunler.png",
+      "sizes": "1280x884",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "Ürün ekleme ekranı"
+    }
   ]
 }
