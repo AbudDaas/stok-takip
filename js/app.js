@@ -57,6 +57,8 @@
     document.querySelector(".bottom-nav").style.display = show ? "flex" : "none";
   }
 
+  const ADMIN_UID = "NaVl26qq6kXas90Qm9e2kCZDaIp2";
+
   function handleAuthChange(user) {
     if (firestoreUnsubscribe) {
       firestoreUnsubscribe();
@@ -72,6 +74,12 @@
       attachFirestoreListener();
       const importBtn = document.getElementById("importBackupBtn");
       if (importBtn) importBtn.style.display = hasImportableLocalBackup() ? "flex" : "none";
+
+      const adminNavBtn = document.getElementById("adminNavBtn");
+      if (adminNavBtn) {
+        adminNavBtn.style.display = user.uid === ADMIN_UID ? "flex" : "none";
+        if (user.uid === ADMIN_UID) loadAdminBusinessList();
+      }
     } else {
       currentUser = null;
       docRef = null;
@@ -84,6 +92,8 @@
       document.getElementById("logoutBtn").style.display = "none";
       showApp(false);
       setSyncStatus("local");
+      const adminNavBtn = document.getElementById("adminNavBtn");
+      if (adminNavBtn) adminNavBtn.style.display = "none";
     }
   }
 
@@ -370,6 +380,129 @@
     "arpa ekmeği": "Arpa",
     "yulaf ekmeği": "Yulaf"
   };
+
+  // ---------- Yönetim paneli (sadece yönetici hesabı) ----------
+  function isAdminConfigured() {
+    return typeof adminConfig !== "undefined" && adminConfig.workerUrl && adminConfig.workerUrl.indexOf("BURAYA") !== 0;
+  }
+
+  function loadAdminBusinessList() {
+    if (!currentUser || currentUser.uid !== ADMIN_UID) return;
+    db.collection("admin")
+      .doc("businesses")
+      .get()
+      .then((snap) => {
+        const list = snap.exists && snap.data().list ? snap.data().list : [];
+        renderAdminBusinessList(list);
+      })
+      .catch((e) => {
+        console.error("Yönetim listesi okunamadı", e);
+        renderAdminBusinessList([]);
+      });
+  }
+
+  function renderAdminBusinessList(list) {
+    const listEl = document.getElementById("adminBusinessList");
+    const emptyEl = document.getElementById("adminEmptyState");
+    if (!listEl) return;
+
+    if (!list.length) {
+      listEl.innerHTML = "";
+      emptyEl.style.display = "block";
+      return;
+    }
+    emptyEl.style.display = "none";
+
+    listEl.innerHTML = list
+      .map((b) => {
+        const statusClass = b.active ? "admin-status-active" : "admin-status-inactive";
+        const statusLabel = b.active ? t("adminActiveLabel") : t("adminInactiveLabel");
+        const toggleLabel = b.active ? t("adminInactiveLabel") : t("adminActiveLabel");
+        const dateStr = new Date(b.createdAt).toLocaleDateString(locale());
+        return `
+          <div class="admin-business-row">
+            <div class="admin-business-info">
+              <p class="admin-business-name">${escapeHtml(b.businessName)}</p>
+              <p class="admin-business-meta">${escapeHtml(b.email)} · ${dateStr}</p>
+              <span class="admin-status-badge ${statusClass}">${statusLabel}</span>
+            </div>
+            <button class="admin-toggle-btn" data-uid="${b.uid}" data-active="${b.active}">${toggleLabel}</button>
+          </div>`;
+      })
+      .join("");
+
+    listEl.querySelectorAll(".admin-toggle-btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const currentlyActive = btn.dataset.active === "true";
+        toggleAdminBusiness(btn.dataset.uid, !currentlyActive);
+      });
+    });
+  }
+
+  function createAdminBusiness() {
+    if (!isAdminConfigured()) {
+      showToast(t("adminNotConfigured"), "error");
+      return;
+    }
+    const businessName = document.getElementById("adminBusinessName").value.trim();
+    const email = document.getElementById("adminBusinessEmail").value.trim();
+    const password = document.getElementById("adminBusinessPassword").value;
+
+    if (!businessName || !email || !password) {
+      showToast(t("adminFieldsRequired"), "error");
+      return;
+    }
+
+    currentUser
+      .getIdToken()
+      .then((idToken) =>
+        fetch(`${adminConfig.workerUrl}/create-business`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ idToken, businessName, email, password })
+        })
+      )
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.error) {
+          showToast(data.error, "error");
+          return;
+        }
+        showToast(t("adminCreateSuccess"), "success");
+        document.getElementById("adminBusinessName").value = "";
+        document.getElementById("adminBusinessEmail").value = "";
+        document.getElementById("adminBusinessPassword").value = "";
+        loadAdminBusinessList();
+      })
+      .catch((e) => {
+        console.error(e);
+        showToast(t("adminCreateError"), "error");
+      });
+  }
+
+  function toggleAdminBusiness(targetUid, active) {
+    currentUser
+      .getIdToken()
+      .then((idToken) =>
+        fetch(`${adminConfig.workerUrl}/toggle-business`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ idToken, targetUid, active })
+        })
+      )
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.error) {
+          showToast(data.error, "error");
+          return;
+        }
+        loadAdminBusinessList();
+      })
+      .catch((e) => {
+        console.error(e);
+        showToast(t("adminToggleError"), "error");
+      });
+  }
 
   function findProductByExactName(name) {
     const normalized = name.trim().toLowerCase();
@@ -2264,6 +2397,7 @@
   });
   document.getElementById("forgotPasswordBtn").addEventListener("click", forgotPassword);
   document.getElementById("logoutBtn").addEventListener("click", logout);
+  document.getElementById("adminCreateBtn").addEventListener("click", createAdminBusiness);
   document.getElementById("importBackupBtn").addEventListener("click", importLocalBackup);
 
   document.querySelectorAll(".lang-btn").forEach((btn) => {
