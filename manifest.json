@@ -9,9 +9,18 @@
   "background_color": "#F2F5FA",
   "theme_color": "#1F3864",
   "orientation": "portrait",
+  "display_override": [
+    "standalone",
+    "minimal-ui",
+    "browser"
+  ],
   "lang": "tr",
   "dir": "ltr",
-  "categories": ["business", "productivity", "shopping"],
+  "categories": [
+    "business",
+    "productivity",
+    "shopping"
+  ],
   "prefer_related_applications": false,
   "related_applications": [
     {
