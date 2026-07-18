@@ -1,6 +1,12 @@
 (function () {
   "use strict";
 
+  // Service worker'ı mümkün olduğunca ERKEN kaydet (sayfa tam yüklenmeyi
+  // beklemeden) — bazı PWA analiz araçları kaydı geç fark edebiliyor.
+  if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.register("service-worker.js").catch(() => {});
+  }
+
   const t = (key) => window.i18n.t(key);
   function locale() {
     const lang = window.i18n.getLang();
@@ -235,15 +241,6 @@
       // Bulut modu: giriş yapılana kadar uygulama gizli
       showApp(false);
       auth.onAuthStateChanged(handleAuthChange);
-    }
-
-    // Service worker: "network-first" stratejisiyle güvenli şekilde kayıtlı.
-    // Her zaman önce internetten taze veri çeker, sadece çevrimdışıyken
-    // önbelleğe döner — bu yüzden site güncellemeleri her zaman anında yansır.
-    if ("serviceWorker" in navigator) {
-      window.addEventListener("load", () => {
-        navigator.serviceWorker.register("service-worker.js").catch(() => {});
-      });
     }
   }
 
