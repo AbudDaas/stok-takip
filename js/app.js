@@ -2105,6 +2105,18 @@
     }
   }
 
+  // ---------- Not Alma (Note Taking capability) - hızlı ürün ekleme formuna yönlendir ----------
+  function checkForNoteTakingLaunch() {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("newnote") !== "1") return;
+    window.history.replaceState({}, "", window.location.pathname);
+    switchTab("tab-products");
+    setTimeout(() => {
+      const input = document.getElementById("newName");
+      if (input) input.focus();
+    }, 200);
+  }
+
   // ---------- Protokol İşleyici (web+bakkal://) ----------
   function checkForProtocolLaunch() {
     const params = new URLSearchParams(window.location.search);
@@ -2686,6 +2698,7 @@
   checkForSharedPhoto();
   checkForLaunchedFile();
   checkForProtocolLaunch();
+  checkForNoteTakingLaunch();
   registerPeriodicSync();
 
   load();
