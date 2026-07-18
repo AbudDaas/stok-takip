@@ -311,7 +311,34 @@
     <section id="tab-orders" class="tab-panel">
 
       <div class="card">
-        <p class="card-title" data-i18n="breadStatusTitle">🍞 Ekmek Durumu</p>
+        <p class="card-title" data-i18n="breadStatusTitle">🍞 Günlük Ürün Takibi</p>
+        <p class="card-subtitle" data-i18n="breadSetupSubtitle">Her gün otomatik sıfırlanacak/takip edilecek ürünlerini burada ayarla.</p>
+
+        <div class="form-row">
+          <input id="breadWhatsAppNumber" type="text" data-i18n-placeholder="breadWhatsAppNumberPh" placeholder="WhatsApp numarası (905XXXXXXXXX)" />
+        </div>
+
+        <div class="form-row">
+          <input id="breadConfigName" type="text" data-i18n-placeholder="breadConfigNamePh" placeholder="Ürün adı (örn. ekmek)" />
+        </div>
+        <div class="form-row two-col">
+          <input id="breadConfigQty" type="number" min="0" data-i18n-placeholder="breadConfigQtyPh" placeholder="Günlük başlangıç adedi" />
+          <input id="breadConfigStaleName" type="text" data-i18n-placeholder="breadConfigStaleNamePh" placeholder="Bayat ürün adı (opsiyonel)" />
+        </div>
+        <div class="form-row">
+          <label class="checkbox-row">
+            <input id="breadConfigAutoReset" type="checkbox" checked />
+            <span data-i18n="breadConfigAutoResetLabel">Her sabah otomatik sıfırla ve bayata aktar</span>
+          </label>
+        </div>
+        <button id="breadConfigAddBtn" class="btn btn-block">
+          <i class="fa-solid fa-plus" aria-hidden="true"></i> <span data-i18n="breadConfigAddBtn">Takibe ekle</span>
+        </button>
+
+        <p class="card-subtitle" data-i18n="breadConfigListTitle" style="margin-top:14px;">Takip edilen ürünler</p>
+        <div id="breadConfigList" class="list"></div>
+
+        <p class="card-subtitle" data-i18n="breadCurrentTitle" style="margin-top:14px;">Şu anki durum</p>
         <div id="breadCurrentList"></div>
         <button id="breadWhatsAppBtn" class="btn btn-primary btn-block">
           <i class="fa-brands fa-whatsapp" aria-hidden="true"></i> <span data-i18n="breadWhatsAppBtn">WhatsApp'tan gönder</span>
