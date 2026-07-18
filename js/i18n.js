@@ -214,7 +214,22 @@
       breadWhatsAppBtn: "WhatsApp'tan gönder",
       breadLogTitle: "Geçmiş",
       breadLogEmpty: "Henüz bir kayıt yok.",
-      breadNotFound: "'ekmek' adında bir ürün bulunamadı."
+      breadNotFound: "'ekmek' adında bir ürün bulunamadı.",
+      navAdmin: "Yönetim",
+      adminAddTitle: "Yeni işletme ekle",
+      adminBusinessNamePh: "İşletme adı",
+      adminEmailPh: "E-posta",
+      adminPasswordPh: "Şifre",
+      adminCreateBtn: "İşletme oluştur",
+      adminListTitle: "İşletmeler",
+      adminEmptyState: "Henüz işletme eklenmedi.",
+      adminNotConfigured: "Yönetim paneli henüz kurulmamış.",
+      adminCreateSuccess: "İşletme oluşturuldu.",
+      adminCreateError: "İşletme oluşturulamadı.",
+      adminFieldsRequired: "Tüm alanları doldur.",
+      adminToggleError: "İşlem başarısız oldu.",
+      adminActiveLabel: "Aktif",
+      adminInactiveLabel: "Pasif"
     },
 
 
@@ -431,7 +446,22 @@
       breadWhatsAppBtn: "Send via WhatsApp",
       breadLogTitle: "History",
       breadLogEmpty: "No records yet.",
-      breadNotFound: "No product named 'ekmek' was found."
+      breadNotFound: "No product named 'ekmek' was found.",
+      navAdmin: "Admin",
+      adminAddTitle: "Add new business",
+      adminBusinessNamePh: "Business name",
+      adminEmailPh: "Email",
+      adminPasswordPh: "Password",
+      adminCreateBtn: "Create business",
+      adminListTitle: "Businesses",
+      adminEmptyState: "No businesses added yet.",
+      adminNotConfigured: "The admin panel isn't set up yet.",
+      adminCreateSuccess: "Business created.",
+      adminCreateError: "Couldn't create the business.",
+      adminFieldsRequired: "Fill in all fields.",
+      adminToggleError: "The action failed.",
+      adminActiveLabel: "Active",
+      adminInactiveLabel: "Inactive"
     },
 
 
@@ -648,7 +678,22 @@
       breadWhatsAppBtn: "إرسال عبر واتساب",
       breadLogTitle: "السجل",
       breadLogEmpty: "لا توجد سجلات بعد.",
-      breadNotFound: "لم يتم العثور على منتج باسم 'ekmek'."
+      breadNotFound: "لم يتم العثور على منتج باسم 'ekmek'.",
+      navAdmin: "الإدارة",
+      adminAddTitle: "إضافة عمل جديد",
+      adminBusinessNamePh: "اسم العمل",
+      adminEmailPh: "البريد الإلكتروني",
+      adminPasswordPh: "كلمة المرور",
+      adminCreateBtn: "إنشاء عمل",
+      adminListTitle: "الأعمال",
+      adminEmptyState: "لم تتم إضافة أي عمل بعد.",
+      adminNotConfigured: "لوحة الإدارة غير مُعدّة بعد.",
+      adminCreateSuccess: "تم إنشاء العمل.",
+      adminCreateError: "تعذر إنشاء العمل.",
+      adminFieldsRequired: "املأ جميع الحقول.",
+      adminToggleError: "فشلت العملية.",
+      adminActiveLabel: "نشط",
+      adminInactiveLabel: "غير نشط"
     }
   };
 
