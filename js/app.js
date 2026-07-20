@@ -582,18 +582,20 @@
           showToast(t("notifPermissionDenied"), "error");
           return;
         }
-        const messaging = firebase.messaging();
-        return messaging.getToken({ vapidKey: pushConfig.vapidKey }).then((fcmToken) => {
-          if (!fcmToken) {
-            showToast(t("notifError"), "error");
-            return;
-          }
-          return docRef
-            .set({ fcmTokens: firebase.firestore.FieldValue.arrayUnion(fcmToken) }, { merge: true })
-            .then(() => {
-              showToast(t("notifEnabled"), "success");
-              updateNotifButtonState();
-            });
+        return navigator.serviceWorker.ready.then((registration) => {
+          const messaging = firebase.messaging();
+          return messaging.getToken({ vapidKey: pushConfig.vapidKey, serviceWorkerRegistration: registration }).then((fcmToken) => {
+            if (!fcmToken) {
+              showToast(t("notifError"), "error");
+              return;
+            }
+            return docRef
+              .set({ fcmTokens: firebase.firestore.FieldValue.arrayUnion(fcmToken) }, { merge: true })
+              .then(() => {
+                showToast(t("notifEnabled"), "success");
+                updateNotifButtonState();
+              });
+          });
         });
       })
       .catch((e) => {
