@@ -3043,15 +3043,53 @@
     } catch (e) {}
   }
 
+  function applyFontSize(size) {
+    document.body.classList.toggle("font-large", size === "large");
+    const normalBtn = document.getElementById("fontNormalBtn");
+    const largeBtn = document.getElementById("fontLargeBtn");
+    if (normalBtn) normalBtn.classList.toggle("active", size === "normal");
+    if (largeBtn) largeBtn.classList.toggle("active", size === "large");
+    try {
+      localStorage.setItem("bakkal_font_size", size);
+    } catch (e) {}
+  }
+
+  function downloadBackup() {
+    const backup = {
+      exportedAt: new Date().toISOString(),
+      products,
+      sales,
+      customers,
+      payments,
+      dailyResetConfig,
+      breadLog,
+      priceChangeLog
+    };
+    const blob = new Blob([JSON.stringify(backup, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    const dateStr = new Date().toISOString().slice(0, 10);
+    a.href = url;
+    a.download = `bakkal-yedek-${dateStr}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    showToast(t("settingsBackupSuccess"), "success");
+  }
+
   function initSettings() {
     let theme = "light";
     let navPosition = "bottom";
+    let fontSize = "normal";
     try {
       theme = localStorage.getItem("bakkal_theme") || "light";
       navPosition = localStorage.getItem("bakkal_nav_position") || "bottom";
+      fontSize = localStorage.getItem("bakkal_font_size") || "normal";
     } catch (e) {}
     applyTheme(theme);
     applyNavPosition(navPosition);
+    applyFontSize(fontSize);
   }
 
   window.onLangChanged = function () {
@@ -3065,6 +3103,9 @@
   document.getElementById("themeDarkBtn").addEventListener("click", () => applyTheme("dark"));
   document.getElementById("navBottomBtn").addEventListener("click", () => applyNavPosition("bottom"));
   document.getElementById("navSideBtn").addEventListener("click", () => applyNavPosition("side"));
+  document.getElementById("fontNormalBtn").addEventListener("click", () => applyFontSize("normal"));
+  document.getElementById("fontLargeBtn").addEventListener("click", () => applyFontSize("large"));
+  document.getElementById("downloadBackupBtn").addEventListener("click", downloadBackup);
   initSettings();
 
   // Ana ekran kısayollarından (manifest.json "shortcuts") gelen ?tab= parametresini işle
