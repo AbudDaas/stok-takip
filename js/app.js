@@ -1271,13 +1271,71 @@
   }
 
   // ---------- Rendering: Products ----------
+  // ---------- Ürün adlarını seçili dile çevirme ----------
+  function getDisplayName(p) {
+    const lang = window.i18n.getLang();
+    if ((lang === "en" || lang === "ar") && p.nameTranslations && p.nameTranslations[lang]) {
+      return p.nameTranslations[lang];
+    }
+    return p.name;
+  }
+
+  let translationInFlight = false;
+
+  function translateMissingProductNames() {
+    const lang = window.i18n.getLang();
+    if (lang !== "en" && lang !== "ar") return;
+    if (translationInFlight) return;
+
+    const missing = products.filter((p) => !p.nameTranslations || !p.nameTranslations[lang]).slice(0, 60);
+    if (!missing.length) return;
+
+    translationInFlight = true;
+
+    const langLabel = lang === "en" ? "İngilizce" : "Arapça";
+    const prompt = [
+      `Aşağıdaki market/bakkal ürün adlarının her birini ${langLabel}'ye çevir.`,
+      "Ürün adındaki marka isimlerini olduğu gibi bırak, sadece genel kelimeleri çevir (örn. 'kepekli ekmek' -> 'whole wheat bread').",
+      "SADECE geçerli bir JSON nesnesi döndür, başka hiçbir açıklama ekleme.",
+      'Format: {"orijinal ad 1":"çeviri 1","orijinal ad 2":"çeviri 2"}',
+      "",
+      "Ürün adları:",
+      JSON.stringify(missing.map((p) => p.name))
+    ].join("\n");
+
+    callGeminiWithRetry(null, prompt)
+      .then((data) => {
+        const rawText = data && data.candidates && data.candidates[0] && data.candidates[0].content.parts[0].text;
+        if (!rawText) return;
+        const cleaned = rawText.replace(/```json|```/g, "").trim();
+        const translations = JSON.parse(cleaned);
+        let changed = false;
+        missing.forEach((p) => {
+          const translated = translations[p.name];
+          if (translated) {
+            p.nameTranslations = p.nameTranslations || {};
+            p.nameTranslations[lang] = translated;
+            changed = true;
+          }
+        });
+        if (changed) {
+          save();
+          renderAll();
+        }
+      })
+      .catch((e) => console.error("Ürün adı çevirisi başarısız:", e))
+      .finally(() => {
+        translationInFlight = false;
+      });
+  }
+
   function productRowHtml(p) {
     const status = getStatus(p);
     const priceLabel = p.unit === "kg" ? formatTL(p.price) + t("perKgSuffix") : formatTL(p.price);
     return `
       <div class="product-row" data-id="${p.id}">
         <div class="product-info">
-          <p class="product-name">${escapeHtml(p.name)}</p>
+          <p class="product-name">${escapeHtml(getDisplayName(p))}</p>
           <p class="product-meta">${escapeHtml(p.category)} · ${t("stockShortLabel")}: ${formatQty(p)} · ${priceLabel}</p>
         </div>
         <span class="status-badge ${STATUS_CLASS[status]}">${getStatusLabel(status)}</span>
@@ -1329,6 +1387,7 @@
     renderSales();
     renderCustomers();
     renderBreadStatus();
+    translateMissingProductNames();
   }
 
   // ---------- Modal ----------
@@ -1636,7 +1695,7 @@
         return `
           <div class="product-row manual-add-row" data-id="${p.id}">
             <div class="product-info">
-              <p class="product-name">${escapeHtml(p.name)}</p>
+              <p class="product-name">${escapeHtml(getDisplayName(p))}</p>
               <p class="product-meta">${escapeHtml(p.category)} · ${t("stockShortLabel")}: ${formatQty(p)} · ${priceLabel}</p>
             </div>
             <button class="btn btn-sm manual-add-btn" data-id="${p.id}">${t("addBtnShort")}</button>
@@ -1709,10 +1768,12 @@
           <button class="cart-qty-btn cart-minus" data-id="${item.productId}" aria-label="${t('decreaseAria')}"><i class="fa-solid fa-minus" aria-hidden="true"></i></button>
           <span class="cart-qty-value">${item.qty}</span>
           <button class="cart-qty-btn cart-plus" data-id="${item.productId}" aria-label="${t('increaseAria')}"><i class="fa-solid fa-plus" aria-hidden="true"></i></button>`;
+    const p = products.find((x) => x.id === item.productId);
+    const displayName = p ? getDisplayName(p) : item.name;
     return `
       <div class="cart-row" data-id="${item.productId}">
         <div class="cart-info">
-          <p class="cart-name">${escapeHtml(item.name)}</p>
+          <p class="cart-name">${escapeHtml(displayName)}</p>
           <p class="cart-meta">${formatTL(item.price)} / ${isKg ? t("unitKgShort") : t("unitAdetShort")}</p>
         </div>
         <div class="cart-controls">
@@ -2785,6 +2846,7 @@
 
   window.onLangChanged = function () {
     renderAll();
+    translateMissingProductNames();
   };
 
   window.i18n.applyLang(window.i18n.getLang());
