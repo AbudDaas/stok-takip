@@ -1455,6 +1455,117 @@
     win.document.close();
   }
 
+  function printAllQrCodes() {
+    if (!products.length) {
+      showToast(t("emptyProducts"), "info");
+      return;
+    }
+
+    // Her ürün için geçici, ekranda görünmeyen bir QR kodu üret
+    const tempContainer = document.createElement("div");
+    tempContainer.style.display = "none";
+    document.body.appendChild(tempContainer);
+
+    const blocksHtml = products
+      .map((p) => {
+        const box = document.createElement("div");
+        tempContainer.appendChild(box);
+        new QRCode(box, {
+          text: p.id,
+          width: 56,
+          height: 56,
+          colorDark: "#1F3864",
+          colorLight: "#ffffff"
+        });
+
+        const priceValue = Number(p.price) || 0;
+        const [wholePart, decimalPart] = priceValue.toFixed(2).split(".");
+        const unitSuffix = p.unit === "kg" ? `<span class="price-tag-unit">/${t("unitKgShort")}</span>` : "";
+
+        return `
+          <div class="price-tag">
+            <p class="price-tag-header">${escapeHtml(t("appName"))}</p>
+            <p class="price-tag-name">${escapeHtml(p.name)}</p>
+            <div class="price-tag-price">
+              <span class="price-tag-currency">₺</span><span class="price-tag-amount">${wholePart}</span><span class="price-tag-decimals">,${decimalPart}</span>${unitSuffix}
+            </div>
+            <div class="price-tag-qr">${box.innerHTML}</div>
+          </div>`;
+      })
+      .join("");
+
+    document.body.removeChild(tempContainer);
+
+    const win = window.open("", "_blank");
+    win.document.write(`
+      <html>
+        <head>
+          <title>${t("printAllQrBtn")}</title>
+          <style>
+            @page { margin: 12mm; }
+            body{font-family:'Segoe UI',Arial,sans-serif;padding:16px;background:#fff;}
+            .price-tag-grid{display:flex;flex-wrap:wrap;gap:14px;}
+            .price-tag{
+              width:190px;
+              text-align:center;
+              border:1.5px solid #1F3864;
+              border-radius:12px;
+              padding:12px 10px 10px;
+              page-break-inside:avoid;
+              position:relative;
+              background:#fff;
+            }
+            .price-tag-header{
+              font-size:8px;
+              letter-spacing:1.5px;
+              text-transform:uppercase;
+              color:#8B96A8;
+              font-weight:700;
+              margin:0 0 8px;
+            }
+            .price-tag-name{
+              font-size:14px;
+              font-weight:700;
+              color:#1F3864;
+              margin:0 0 10px;
+              min-height:36px;
+              line-height:1.25;
+              display:flex;
+              align-items:center;
+              justify-content:center;
+              word-break:break-word;
+            }
+            .price-tag-price{
+              display:flex;
+              align-items:baseline;
+              justify-content:center;
+              gap:1px;
+              margin-bottom:6px;
+            }
+            .price-tag-currency{font-size:20px;font-weight:700;color:#C0872E;}
+            .price-tag-amount{font-size:36px;font-weight:800;color:#C0872E;line-height:1;}
+            .price-tag-decimals{font-size:17px;font-weight:700;color:#C0872E;}
+            .price-tag-unit{font-size:12px;font-weight:600;color:#8B96A8;margin-left:3px;}
+            .price-tag-qr{
+              position:absolute;
+              bottom:8px;
+              right:8px;
+              width:42px;
+              height:42px;
+              opacity:0.9;
+            }
+            .price-tag-qr img,.price-tag-qr canvas,.price-tag-qr table{width:100% !important;height:100% !important;}
+          </style>
+        </head>
+        <body>
+          <div class="price-tag-grid">${blocksHtml}</div>
+          <script>window.onload = function(){ window.print(); }<\/script>
+        </body>
+      </html>
+    `);
+    win.document.close();
+  }
+
   function findProductByScan(code) {
     return products.find((p) => p.id === code || (p.barcode && p.barcode === code));
   }
@@ -2735,6 +2846,7 @@
     if (confirm(t("confirmDeleteProduct"))) deleteProduct(activeProductId);
   });
   document.getElementById("printQrBtn").addEventListener("click", printQr);
+  document.getElementById("printAllQrBtn").addEventListener("click", printAllQrCodes);
 
   document.getElementById("scanNewBarcodeBtn").addEventListener("click", () => openQuickBarcodeScan("newBarcode"));
   document.getElementById("scanEditBarcodeBtn").addEventListener("click", () => openQuickBarcodeScan("editBarcode"));
