@@ -385,6 +385,35 @@
       <p id="priceChangesEmptyState" class="empty-state" data-i18n="priceChangesEmpty">Son 2 günde fiyatı değişen ürün yok.</p>
     </section>
 
+    <!-- SEKME: AYARLAR -->
+    <section id="tab-settings" class="tab-panel">
+      <div class="card">
+        <p class="card-title" data-i18n="settingsThemeTitle">Görünüm</p>
+        <p class="card-subtitle" data-i18n="settingsThemeSubtitle">Uygulamanın açık ya da koyu temada görünmesini seç.</p>
+        <div class="settings-toggle-row">
+          <button class="settings-toggle-btn" id="themeLightBtn" data-value="light">
+            <i class="fa-solid fa-sun" aria-hidden="true"></i> <span data-i18n="settingsThemeLight">Açık</span>
+          </button>
+          <button class="settings-toggle-btn" id="themeDarkBtn" data-value="dark">
+            <i class="fa-solid fa-moon" aria-hidden="true"></i> <span data-i18n="settingsThemeDark">Koyu</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="card">
+        <p class="card-title" data-i18n="settingsNavTitle">Menü Konumu</p>
+        <p class="card-subtitle" data-i18n="settingsNavSubtitle">Alt menüyü ekranın altında ya da (YouTube gibi) yan tarafta göster.</p>
+        <div class="settings-toggle-row">
+          <button class="settings-toggle-btn" id="navBottomBtn" data-value="bottom">
+            <i class="fa-solid fa-table-columns" aria-hidden="true"></i> <span data-i18n="settingsNavBottom">Alttan</span>
+          </button>
+          <button class="settings-toggle-btn" id="navSideBtn" data-value="side">
+            <i class="fa-solid fa-table-cells" aria-hidden="true"></i> <span data-i18n="settingsNavSide">Yandan</span>
+          </button>
+        </div>
+      </div>
+    </section>
+
     <section id="tab-admin" class="tab-panel">
       <div class="card">
         <p class="card-title" data-i18n="adminAddTitle">Yeni işletme ekle</p>
@@ -626,6 +655,10 @@
     <button class="nav-btn" data-tab="tab-pricechanges">
       <i class="fa-solid fa-arrow-right-arrow-left" aria-hidden="true"></i>
       <span data-i18n="navPriceChanges">Fiyat Değişimi</span>
+    </button>
+    <button class="nav-btn" data-tab="tab-settings">
+      <i class="fa-solid fa-gear" aria-hidden="true"></i>
+      <span data-i18n="navSettings">Ayarlar</span>
     </button>
     <button class="nav-btn" id="adminNavBtn" data-tab="tab-admin" style="display:none;">
       <i class="fa-solid fa-user-shield" aria-hidden="true"></i>
