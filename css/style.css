@@ -1308,3 +1308,14 @@ html[dir="rtl"] .lang-switch{
   background:var(--navy);
   color:#fff;
 }
+
+.settings-about-row{
+  font-size:13px;
+  color:var(--text-secondary);
+  margin:0 0 6px;
+}
+.settings-about-row:last-child{margin-bottom:0;}
+.settings-about-row span:first-child{font-weight:600;color:var(--text-primary);}
+
+/* Büyük yazı modu */
+body.font-large{zoom:1.18;}
