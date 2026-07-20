@@ -1503,6 +1503,30 @@
     scanningKasa = false;
   }
 
+  // ---------- Barkod okuma "düüt" sesi ----------
+  let beepAudioCtx = null;
+
+  function playBeepSound() {
+    try {
+      if (!beepAudioCtx) {
+        beepAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      }
+      const ctx = beepAudioCtx;
+      const oscillator = ctx.createOscillator();
+      const gainNode = ctx.createGain();
+      oscillator.connect(gainNode);
+      gainNode.connect(ctx.destination);
+      oscillator.type = "square";
+      oscillator.frequency.value = 1500;
+      gainNode.gain.setValueAtTime(0.15, ctx.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.12);
+      oscillator.start(ctx.currentTime);
+      oscillator.stop(ctx.currentTime + 0.12);
+    } catch (e) {
+      // ses çalınamazsa sessizce devam et
+    }
+  }
+
   function onScanSuccessKasa(decodedText) {
     if (kasaScanCooldown) return;
     const p = findProductByScan(decodedText);
@@ -1518,6 +1542,7 @@
           showToast(t("alertInvalidWeight"), "error");
           return;
         }
+        playBeepSound();
         addToCart(p, weight);
         kasaScanCooldown = true;
         showKasaScanFeedback(`${p.name} (${weight} ${t("unitKgShort")})`);
@@ -1526,6 +1551,7 @@
         }, 3000);
       });
     } else {
+      playBeepSound();
       addToCart(p, 1);
       kasaScanCooldown = true;
       showKasaScanFeedback(p.name);
