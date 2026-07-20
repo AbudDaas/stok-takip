@@ -106,7 +106,7 @@ body{
 .form-row{margin-bottom:8px;}
 .form-row.two-col{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
 
-input[type=text],input[type=number]{
+input[type=text],input[type=number],input[type=email],input[type=password],input[type=tel],input[type=search],input:not([type]){
   width:100%;
   height:40px;
   border:1px solid var(--border);
@@ -115,8 +115,29 @@ input[type=text],input[type=number]{
   font-size:14px;
   background:#fff;
   color:var(--text-primary);
+  font-family:inherit;
 }
 input:focus{outline:2px solid var(--navy-light);outline-offset:1px;}
+
+select{
+  width:100%;
+  height:40px;
+  border:1px solid var(--border);
+  border-radius:8px;
+  padding:0 12px;
+  font-size:14px;
+  background:#fff;
+  color:var(--text-primary);
+  font-family:inherit;
+  appearance:none;
+  -webkit-appearance:none;
+  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'><path d='M1 1l5 5 5-5' stroke='%23667' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+  background-repeat:no-repeat;
+  background-position:right 12px center;
+  padding-right:32px;
+  cursor:pointer;
+}
+select:focus{outline:2px solid var(--navy-light);outline-offset:1px;}
 
 .search-input{height:34px;max-width:150px;font-size:13px;}
 
@@ -613,7 +634,7 @@ input:focus{outline:2px solid var(--navy-light);outline-offset:1px;}
 .auth-screen{
   position:fixed;
   inset:0;
-  background:var(--bg);
+  background:linear-gradient(160deg, var(--navy) 0%, var(--navy) 35%, var(--bg) 35%, var(--bg) 100%);
   z-index:200;
   display:flex;
   align-items:center;
@@ -624,9 +645,10 @@ input:focus{outline:2px solid var(--navy-light);outline-offset:1px;}
   background:var(--surface);
   border:1px solid var(--border);
   border-radius:16px;
-  padding:28px 24px;
+  padding:32px 26px;
   width:100%;
   max-width:360px;
+  box-shadow:0 20px 45px rgba(31,56,100,0.22);
 }
 .auth-logo{
   display:flex;
