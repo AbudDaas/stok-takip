@@ -1173,3 +1173,20 @@ html[dir="rtl"] .lang-switch{
     -webkit-app-region: no-drag;
   }
 }
+
+/* Miktar kutusunu elle yazılabilir input olarak stille */
+.qty-input{
+  border:1px solid var(--border);
+  border-radius:8px;
+  background:#fff;
+  color:var(--navy);
+  height:44px;
+}
+.qty-input:focus{outline:2px solid var(--navy-light);outline-offset:1px;}
+
+.invoice-uncertainty-note{
+  margin:4px 0 0;
+  font-size:12px;
+  color:var(--amber-text);
+  font-weight:600;
+}
