@@ -3020,12 +3020,52 @@
     btn.addEventListener("click", () => window.i18n.setLang(btn.dataset.lang));
   });
 
+  // ---------- Ayarlar: Tema (açık/koyu) ve Menü Konumu ----------
+  function applyTheme(theme) {
+    document.documentElement.setAttribute("data-theme", theme);
+    const lightBtn = document.getElementById("themeLightBtn");
+    const darkBtn = document.getElementById("themeDarkBtn");
+    if (lightBtn) lightBtn.classList.toggle("active", theme === "light");
+    if (darkBtn) darkBtn.classList.toggle("active", theme === "dark");
+    try {
+      localStorage.setItem("bakkal_theme", theme);
+    } catch (e) {}
+  }
+
+  function applyNavPosition(position) {
+    document.body.classList.toggle("nav-side", position === "side");
+    const bottomBtn = document.getElementById("navBottomBtn");
+    const sideBtn = document.getElementById("navSideBtn");
+    if (bottomBtn) bottomBtn.classList.toggle("active", position === "bottom");
+    if (sideBtn) sideBtn.classList.toggle("active", position === "side");
+    try {
+      localStorage.setItem("bakkal_nav_position", position);
+    } catch (e) {}
+  }
+
+  function initSettings() {
+    let theme = "light";
+    let navPosition = "bottom";
+    try {
+      theme = localStorage.getItem("bakkal_theme") || "light";
+      navPosition = localStorage.getItem("bakkal_nav_position") || "bottom";
+    } catch (e) {}
+    applyTheme(theme);
+    applyNavPosition(navPosition);
+  }
+
   window.onLangChanged = function () {
     renderAll();
     translateMissingProductNames();
   };
 
   window.i18n.applyLang(window.i18n.getLang());
+
+  document.getElementById("themeLightBtn").addEventListener("click", () => applyTheme("light"));
+  document.getElementById("themeDarkBtn").addEventListener("click", () => applyTheme("dark"));
+  document.getElementById("navBottomBtn").addEventListener("click", () => applyNavPosition("bottom"));
+  document.getElementById("navSideBtn").addEventListener("click", () => applyNavPosition("side"));
+  initSettings();
 
   // Ana ekran kısayollarından (manifest.json "shortcuts") gelen ?tab= parametresini işle
   const requestedTab = new URLSearchParams(window.location.search).get("tab");
