@@ -1212,3 +1212,29 @@ html[dir="rtl"] .lang-switch{
   color:var(--amber-text);
   font-weight:600;
 }
+
+/* Fiyat değişimi sekmesi */
+.price-change-row{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:var(--radius);
+  padding:12px 14px;
+}
+.price-change-info{min-width:0;}
+.price-change-name{margin:0;font-size:14px;font-weight:600;}
+.price-change-date{margin:2px 0 0;font-size:12px;color:var(--text-muted);}
+.price-change-values{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  font-size:14px;
+  font-weight:700;
+  flex-shrink:0;
+}
+.price-change-old{color:var(--text-muted);text-decoration:line-through;font-weight:600;font-size:13px;}
+.price-change-up{color:var(--red-text);}
+.price-change-down{color:var(--green-text);}
