@@ -133,6 +133,15 @@
       </div>
 
       <div class="card">
+        <p class="card-title" data-i18n="csvImportTitle">Başka sistemden geçiş (toplu içe aktar)</p>
+        <p class="card-subtitle" data-i18n="csvImportSubtitle">Excel/CSV dosyandaki ürünleri tek seferde aktar. Sütun sırası: Ürün adı, Kategori, Stok adedi, Fiyat.</p>
+        <input id="csvImportInput" type="file" accept=".csv,.xlsx,.xls" style="display:none;" />
+        <button id="csvImportBtn" class="btn btn-block">
+          <i class="fa-solid fa-file-arrow-up" aria-hidden="true"></i> <span data-i18n="csvImportBtn">Excel/CSV dosyası seç</span>
+        </button>
+      </div>
+
+      <div class="card">
         <p class="card-title" data-i18n="invoiceScanTitle">Fatura ile stok girişi (toplu)</p>
         <p class="card-subtitle" data-i18n="invoiceScanSubtitle">Tedarikçi faturasının fotoğrafını çek, yapay zeka ürünleri okusun — sistemde varsa stoğa eklesin, yoksa yeni ürün olarak oluştursun.</p>
         <input id="invoicePhotoInput" type="file" accept="image/*" multiple style="display:none;" />
@@ -396,7 +405,7 @@
       <div class="modal-body">
         <div class="qty-control">
           <button id="qtyMinusBtn" class="qty-btn" aria-label="Stok azalt"><i class="fa-solid fa-minus" aria-hidden="true"></i></button>
-          <span id="modalQty" class="qty-display">0</span>
+          <input id="modalQtyInput" class="qty-display qty-input" type="text" inputmode="decimal" />
           <button id="qtyPlusBtn" class="qty-btn" aria-label="Stok arttır"><i class="fa-solid fa-plus" aria-hidden="true"></i></button>
         </div>
         <p id="modalStatus" class="status-pill"></p>
@@ -581,7 +590,7 @@
       <span data-i18n="navProducts">Ürünler</span>
     </button>
     <button class="nav-btn" data-tab="tab-kasa">
-      <i class="fa-solid fa-money-bill-1-wave" aria-hidden="true"></i>
+      <i class="fa-solid fa-money-bill-register" aria-hidden="true"></i>
       <span data-i18n="navKasa">Kasa</span>
     </button>
     <button class="nav-btn" data-tab="tab-scan">
@@ -609,6 +618,7 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
   <!-- Firebase (bulut senkronizasyonu) -->
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
