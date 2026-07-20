@@ -23,6 +23,7 @@
   let breadLog = [];
   let dailyResetConfig = [];
   let breadWhatsAppNumber = "";
+  let priceChangeLog = [];
   let cart = []; // { productId, name, price, qty }
   let activeProductId = null;
   let activeCustomerId = null;
@@ -121,6 +122,7 @@
           breadLog = data.breadLog || [];
           dailyResetConfig = data.dailyResetConfig || [];
           breadWhatsAppNumber = data.breadWhatsAppNumber || "";
+          priceChangeLog = data.priceChangeLog || [];
         } else {
           const initial = { products: seedData(), sales: [], customers: [], payments: [] };
           docRef.set(initial);
@@ -131,6 +133,7 @@
           breadLog = [];
           dailyResetConfig = [];
           breadWhatsAppNumber = "";
+          priceChangeLog = [];
         }
         setSyncStatus("connected");
         renderAll();
@@ -224,6 +227,7 @@
         payments = (parsed && parsed.payments) || [];
         dailyResetConfig = (parsed && parsed.dailyResetConfig) || [];
         breadWhatsAppNumber = (parsed && parsed.breadWhatsAppNumber) || "";
+        priceChangeLog = (parsed && parsed.priceChangeLog) || [];
       } catch (e) {
         products = seedData();
         sales = [];
@@ -231,6 +235,7 @@
         payments = [];
         dailyResetConfig = [];
         breadWhatsAppNumber = "";
+        priceChangeLog = [];
       }
       if (!Array.isArray(products) || !products.length) products = seedData();
       if (!Array.isArray(sales)) sales = [];
@@ -248,14 +253,14 @@
     if (cloudEnabled) {
       if (!docRef) return;
       suppressNextSnapshot = true;
-      docRef.set({ products, sales, customers, payments, dailyResetConfig, breadWhatsAppNumber }, { merge: true }).catch((e) => {
+      docRef.set({ products, sales, customers, payments, dailyResetConfig, breadWhatsAppNumber, priceChangeLog }, { merge: true }).catch((e) => {
         console.error("Bulut kaydetme hatası", e);
         setSyncStatus("error");
         registerBackgroundSync();
       });
     } else {
       try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify({ products, sales, customers, payments, dailyResetConfig, breadWhatsAppNumber }));
+        localStorage.setItem(STORAGE_KEY, JSON.stringify({ products, sales, customers, payments, dailyResetConfig, breadWhatsAppNumber, priceChangeLog }));
       } catch (e) {
         console.error("Yerel kaydetme hatası", e);
       }
@@ -1387,6 +1392,7 @@
     renderSales();
     renderCustomers();
     renderBreadStatus();
+    renderPriceChanges();
     translateMissingProductNames();
   }
 
@@ -2758,6 +2764,52 @@
     return Math.round(costPrice * (1 + p / 100) * 100) / 100;
   }
 
+  // ---------- Fiyat Değişimi takibi (2 gün sonra otomatik silinir) ----------
+  function cleanOldPriceChanges() {
+    const twoDaysMs = 2 * 24 * 60 * 60 * 1000;
+    const cutoff = Date.now() - twoDaysMs;
+    priceChangeLog = priceChangeLog.filter((entry) => new Date(entry.timestamp).getTime() >= cutoff);
+  }
+
+  function renderPriceChanges() {
+    const listEl = document.getElementById("priceChangesList");
+    const emptyEl = document.getElementById("priceChangesEmptyState");
+    if (!listEl) return;
+
+    cleanOldPriceChanges();
+
+    const sorted = [...priceChangeLog].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+    if (!sorted.length) {
+      listEl.innerHTML = "";
+      emptyEl.style.display = "block";
+      return;
+    }
+    emptyEl.style.display = "none";
+
+    listEl.innerHTML = sorted
+      .map((entry) => {
+        const d = new Date(entry.timestamp);
+        const dateStr = d.toLocaleString(locale(), { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
+        const directionClass = entry.direction === "up" ? "price-change-up" : "price-change-down";
+        const directionIcon = entry.direction === "up" ? "fa-arrow-up" : "fa-arrow-down";
+        const directionLabel = entry.direction === "up" ? t("priceIncreasedLabel") : t("priceDecreasedLabel");
+        return `
+          <div class="price-change-row">
+            <div class="price-change-info">
+              <p class="price-change-name">${escapeHtml(entry.productName)}</p>
+              <p class="price-change-date">${dateStr} · ${directionLabel}</p>
+            </div>
+            <div class="price-change-values">
+              <span class="price-change-old">${formatTL(entry.oldPrice)}</span>
+              <i class="fa-solid ${directionIcon} ${directionClass}" aria-hidden="true"></i>
+              <span class="${directionClass}">${formatTL(entry.newPrice)}</span>
+            </div>
+          </div>`;
+      })
+      .join("");
+  }
+
   function applyInvoiceScan() {
     const checks = document.querySelectorAll(".invoice-result-check");
     let appliedCount = 0;
@@ -2771,8 +2823,19 @@
         if (p) {
           p.qty = Math.round((p.qty + item.qty) * 1000) / 1000;
           if (item.unitCost) {
+            const oldPrice = p.price;
+            const newPrice = calcSellingPrice(item.unitCost, item.markupPercent);
+            if (oldPrice && Math.abs(newPrice - oldPrice) >= 0.01) {
+              priceChangeLog.push({
+                productName: p.name,
+                oldPrice,
+                newPrice,
+                direction: newPrice > oldPrice ? "up" : "down",
+                timestamp: new Date().toISOString()
+              });
+            }
             p.costPrice = item.unitCost;
-            p.price = calcSellingPrice(item.unitCost, item.markupPercent);
+            p.price = newPrice;
           }
         }
       } else {
@@ -2782,6 +2845,7 @@
       }
       appliedCount++;
     });
+    cleanOldPriceChanges();
     save();
     renderAll();
     closeInvoiceScanModal();
