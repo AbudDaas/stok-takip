@@ -375,6 +375,16 @@
     </section>
 
     <!-- SEKME: YÖNETİM (sadece yönetici hesabıyla görünür) -->
+    <!-- SEKME: FİYAT DEĞİŞİMİ -->
+    <section id="tab-pricechanges" class="tab-panel">
+      <div class="card-header-row">
+        <p class="card-title" data-i18n="priceChangesTitle">Fiyatı Değişen Ürünler</p>
+      </div>
+      <p class="card-subtitle" data-i18n="priceChangesSubtitle">Fatura ile stok girişi yaptığında, fiyatı önceye göre değişen ürünler burada 2 gün boyunca listelenir.</p>
+      <div id="priceChangesList" class="list"></div>
+      <p id="priceChangesEmptyState" class="empty-state" data-i18n="priceChangesEmpty">Son 2 günde fiyatı değişen ürün yok.</p>
+    </section>
+
     <section id="tab-admin" class="tab-panel">
       <div class="card">
         <p class="card-title" data-i18n="adminAddTitle">Yeni işletme ekle</p>
@@ -612,6 +622,10 @@
     <button class="nav-btn" data-tab="tab-orders">
       <i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>
       <span data-i18n="navOrders">Sipariş</span>
+    </button>
+    <button class="nav-btn" data-tab="tab-pricechanges">
+      <i class="fa-solid fa-arrow-right-arrow-left" aria-hidden="true"></i>
+      <span data-i18n="navPriceChanges">Fiyat Değişimi</span>
     </button>
     <button class="nav-btn" id="adminNavBtn" data-tab="tab-admin" style="display:none;">
       <i class="fa-solid fa-user-shield" aria-hidden="true"></i>
