@@ -757,6 +757,158 @@
 
   let selectedVeresiyeCustomerId = null;
 
+  // ---------- Şubelerim (zincir marketler) ----------
+  let originalDocRef = null;
+  let viewingBranchUid = null;
+
+  function isChainConfigured() {
+    return typeof chainConfig !== "undefined" && chainConfig.workerUrl && chainConfig.workerUrl.indexOf("BURAYA") !== 0;
+  }
+
+  function calcTodaySalesTotal(salesArr) {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return (salesArr || []).filter((s) => new Date(s.timestamp) >= today).reduce((sum, s) => sum + s.total, 0);
+  }
+
+  function loadBranches() {
+    if (!currentUser || !cloudEnabled) return;
+    db.collection("isletmeler")
+      .where("chainOwnerUid", "==", currentUser.uid)
+      .get()
+      .then((snap) => {
+        const branches = [];
+        snap.forEach((doc) => {
+          const data = doc.data();
+          branches.push({
+            uid: doc.id,
+            branchName: data.branchName || doc.id,
+            products: data.products || [],
+            sales: data.sales || []
+          });
+        });
+        renderBranchList(branches);
+        renderBranchSummary(branches);
+      })
+      .catch((e) => {
+        console.error("Şube listesi okunamadı", e);
+        renderBranchList([]);
+      });
+  }
+
+  function renderBranchList(branches) {
+    const listEl = document.getElementById("branchList");
+    const emptyEl = document.getElementById("branchEmptyState");
+    if (!listEl) return;
+
+    if (!branches.length) {
+      listEl.innerHTML = "";
+      emptyEl.style.display = "block";
+      return;
+    }
+    emptyEl.style.display = "none";
+
+    listEl.innerHTML = branches
+      .map((b) => {
+        const todaySales = calcTodaySalesTotal(b.sales);
+        return `
+          <div class="branch-row">
+            <div class="branch-info">
+              <p class="branch-name">${escapeHtml(b.branchName)}</p>
+              <p class="branch-meta">${b.products.length} ürün · Bugün: ${formatTL(todaySales)}</p>
+            </div>
+            <button class="branch-view-btn" data-uid="${b.uid}" data-name="${escapeHtml(b.branchName)}">${t("branchViewBtn")}</button>
+          </div>`;
+      })
+      .join("");
+
+    listEl.querySelectorAll(".branch-view-btn").forEach((btn) => {
+      btn.addEventListener("click", () => viewBranch(btn.dataset.uid, btn.dataset.name));
+    });
+  }
+
+  function renderBranchSummary(branches) {
+    let totalSales = calcTodaySalesTotal(sales);
+    let totalLowStock = products.filter((p) => p.qty <= p.min).length;
+
+    branches.forEach((b) => {
+      totalSales += calcTodaySalesTotal(b.sales);
+      totalLowStock += b.products.filter((p) => p.qty <= p.min).length;
+    });
+
+    const salesEl = document.getElementById("branchSummarySales");
+    const ordersEl = document.getElementById("branchSummaryOrders");
+    if (salesEl) salesEl.textContent = formatTL(totalSales);
+    if (ordersEl) ordersEl.textContent = totalLowStock;
+  }
+
+  function createBranch() {
+    if (!isChainConfigured()) {
+      showToast(t("branchNotConfigured"), "error");
+      return;
+    }
+    const branchName = document.getElementById("branchName").value.trim();
+    const email = document.getElementById("branchEmail").value.trim();
+    const password = document.getElementById("branchPassword").value;
+
+    if (!branchName || !email || !password) {
+      showToast(t("branchFieldsRequired"), "error");
+      return;
+    }
+
+    currentUser
+      .getIdToken()
+      .then((idToken) =>
+        fetch(`${chainConfig.workerUrl}/create-branch`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ idToken, branchName, email, password })
+        })
+      )
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.error) {
+          showToast(data.error, "error");
+          return;
+        }
+        showToast(t("branchCreateSuccess"), "success");
+        document.getElementById("branchName").value = "";
+        document.getElementById("branchEmail").value = "";
+        document.getElementById("branchPassword").value = "";
+        loadBranches();
+      })
+      .catch((e) => {
+        console.error(e);
+        showToast(t("branchCreateError"), "error");
+      });
+  }
+
+  function viewBranch(uid, name) {
+    if (!originalDocRef) {
+      originalDocRef = docRef;
+    }
+    viewingBranchUid = uid;
+    docRef = db.collection("isletmeler").doc(uid);
+    if (firestoreUnsubscribe) firestoreUnsubscribe();
+    attachFirestoreListener();
+
+    document.getElementById("branchViewingBanner").style.display = "flex";
+    document.getElementById("branchViewingText").textContent = `${t("branchViewingPrefix")} ${name}`;
+    switchTab("tab-products");
+  }
+
+  function exitBranchView() {
+    if (!originalDocRef) return;
+    docRef = originalDocRef;
+    originalDocRef = null;
+    viewingBranchUid = null;
+    if (firestoreUnsubscribe) firestoreUnsubscribe();
+    attachFirestoreListener();
+    document.getElementById("branchViewingBanner").style.display = "none";
+    switchTab("tab-branches");
+  }
+
+
   function populateVeresiyeCustomerSelect() {
     // Aktif seçim varsa ama müşteri artık listede yoksa (silinmişse) sıfırla
     if (selectedVeresiyeCustomerId && !customers.some((c) => c.id === selectedVeresiyeCustomerId)) {
@@ -2861,6 +3013,7 @@
     });
     if (tabId !== "tab-scan" && scanning) stopScan();
     if (tabId !== "tab-kasa" && scanningKasa) stopScanKasa();
+    if (tabId === "tab-branches" && !viewingBranchUid) loadBranches();
   }
 
   // ---------- Event wiring ----------
@@ -3106,6 +3259,8 @@
   document.getElementById("fontNormalBtn").addEventListener("click", () => applyFontSize("normal"));
   document.getElementById("fontLargeBtn").addEventListener("click", () => applyFontSize("large"));
   document.getElementById("downloadBackupBtn").addEventListener("click", downloadBackup);
+  document.getElementById("branchCreateBtn").addEventListener("click", createBranch);
+  document.getElementById("exitBranchViewBtn").addEventListener("click", exitBranchView);
   initSettings();
 
   // Ana ekran kısayollarından (manifest.json "shortcuts") gelen ?tab= parametresini işle
