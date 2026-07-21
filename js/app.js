@@ -24,7 +24,7 @@
   let dailyResetConfig = [];
   let breadWhatsAppNumber = "";
   let priceChangeLog = [];
-  let patronMode = false;
+  let accountType = "standalone";
   let cart = []; // { productId, name, price, qty }
   let activeProductId = null;
   let activeCustomerId = null;
@@ -124,7 +124,7 @@
           dailyResetConfig = data.dailyResetConfig || [];
           breadWhatsAppNumber = data.breadWhatsAppNumber || "";
           priceChangeLog = data.priceChangeLog || [];
-          if (!viewingBranchUid) patronMode = data.patronMode || false;
+          accountType = data.accountType || "standalone";
         } else {
           const initial = { products: seedData(), sales: [], customers: [], payments: [] };
           docRef.set(initial);
@@ -137,7 +137,7 @@
           breadWhatsAppNumber = "";
           priceChangeLog = [];
         }
-        applyPatronModeUI();
+        applyAccountTypeUI();
         setSyncStatus("connected");
         renderAll();
       },
@@ -252,25 +252,50 @@
     }
   }
 
-  function applyPatronModeUI() {
-    const hideTabs = patronMode && !viewingBranchUid;
+  function applyAccountTypeUI() {
+    const isAdminUser = currentUser && currentUser.uid === ADMIN_UID;
+    const isPatron = accountType === "patron";
     const operationalTabs = ["tab-products", "tab-kasa", "tab-scan", "tab-sales", "tab-veresiye", "tab-orders", "tab-pricechanges"];
+
+    // Yönetici (sen) her zaman her şeyi görür.
+    if (isAdminUser) {
+      operationalTabs.forEach((tabId) => {
+        const btn = document.querySelector(`.nav-btn[data-tab="${tabId}"]`);
+        if (btn) btn.style.display = "flex";
+      });
+      const branchesBtn = document.getElementById("branchesNavBtn");
+      if (branchesBtn) branchesBtn.style.display = "flex";
+      return;
+    }
+
+    // Bir şubeyi görüntülerken, o şubenin tam ekranını göster (kısıtlama uygulama).
+    if (viewingBranchUid) {
+      operationalTabs.forEach((tabId) => {
+        const btn = document.querySelector(`.nav-btn[data-tab="${tabId}"]`);
+        if (btn) btn.style.display = "flex";
+      });
+      return;
+    }
+
+    // Patron hesabı: sadece Ayarlar + Şubelerim görünür.
+    if (isPatron) {
+      operationalTabs.forEach((tabId) => {
+        const btn = document.querySelector(`.nav-btn[data-tab="${tabId}"]`);
+        if (btn) btn.style.display = "none";
+      });
+      const branchesBtn = document.getElementById("branchesNavBtn");
+      if (branchesBtn) branchesBtn.style.display = "flex";
+      switchTab("tab-branches");
+      return;
+    }
+
+    // Şube ya da tekil bakkal/market hesabı: normal sekmeler görünür, Şubelerim gizli.
     operationalTabs.forEach((tabId) => {
       const btn = document.querySelector(`.nav-btn[data-tab="${tabId}"]`);
-      if (btn) btn.style.display = hideTabs ? "none" : "flex";
+      if (btn) btn.style.display = "flex";
     });
-    const toggle = document.getElementById("patronModeToggle");
-    if (toggle) toggle.checked = patronMode;
-    if (hideTabs) switchTab("tab-branches");
-  }
-
-  function savePatronMode(value) {
-    patronMode = value;
-    const targetRef = originalDocRef || docRef;
-    if (targetRef) {
-      targetRef.set({ patronMode: value }, { merge: true }).catch((e) => console.error("Patron modu kaydedilemedi", e));
-    }
-    applyPatronModeUI();
+    const branchesBtn = document.getElementById("branchesNavBtn");
+    if (branchesBtn) branchesBtn.style.display = "none";
   }
 
   function save() {
@@ -714,6 +739,7 @@
     const businessName = document.getElementById("adminBusinessName").value.trim();
     const email = document.getElementById("adminBusinessEmail").value.trim();
     const password = document.getElementById("adminBusinessPassword").value;
+    const accountType = document.getElementById("adminAccountType").value;
 
     if (!businessName || !email || !password) {
       showToast(t("adminFieldsRequired"), "error");
@@ -726,7 +752,7 @@
         fetch(`${adminConfig.workerUrl}/create-business`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ idToken, businessName, email, password })
+          body: JSON.stringify({ idToken, businessName, email, password, accountType })
         })
       )
       .then((r) => r.json())
@@ -958,7 +984,7 @@
 
     document.getElementById("branchViewingBanner").style.display = "flex";
     document.getElementById("branchViewingText").textContent = `${t("branchViewingPrefix")} ${name}`;
-    applyPatronModeUI();
+    applyAccountTypeUI();
     switchTab("tab-products");
   }
 
@@ -970,7 +996,7 @@
     if (firestoreUnsubscribe) firestoreUnsubscribe();
     attachFirestoreListener();
     document.getElementById("branchViewingBanner").style.display = "none";
-    applyPatronModeUI();
+    applyAccountTypeUI();
     switchTab("tab-branches");
   }
 
@@ -3327,7 +3353,6 @@
   document.getElementById("downloadBackupBtn").addEventListener("click", downloadBackup);
   document.getElementById("branchCreateBtn").addEventListener("click", createBranch);
   document.getElementById("exitBranchViewBtn").addEventListener("click", exitBranchView);
-  document.getElementById("patronModeToggle").addEventListener("change", (e) => savePatronMode(e.target.checked));
   initSettings();
 
   // Ana ekran kısayollarından (manifest.json "shortcuts") gelen ?tab= parametresini işle
