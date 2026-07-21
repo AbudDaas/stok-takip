@@ -907,13 +907,23 @@
               <p class="branch-name">${escapeHtml(b.branchName)}</p>
               <p class="branch-meta">${b.products.length} ürün · Bugün: ${formatTL(todaySales)}</p>
             </div>
-            <button class="branch-view-btn" data-uid="${b.uid}" data-name="${escapeHtml(b.branchName)}">${t("branchViewBtn")}</button>
+            <div class="branch-row-actions">
+              <button class="branch-view-btn" data-uid="${b.uid}" data-name="${escapeHtml(b.branchName)}">${t("branchViewBtn")}</button>
+              <button class="branch-edit-btn" data-uid="${b.uid}" data-name="${escapeHtml(b.branchName)}" aria-label="Düzenle"><i class="fa-solid fa-pen" aria-hidden="true"></i></button>
+              <button class="branch-delete-btn" data-uid="${b.uid}" data-name="${escapeHtml(b.branchName)}" aria-label="Sil"><i class="fa-solid fa-trash" aria-hidden="true"></i></button>
+            </div>
           </div>`;
       })
       .join("");
 
     listEl.querySelectorAll(".branch-view-btn").forEach((btn) => {
       btn.addEventListener("click", () => viewBranch(btn.dataset.uid, btn.dataset.name));
+    });
+    listEl.querySelectorAll(".branch-edit-btn").forEach((btn) => {
+      btn.addEventListener("click", () => openBranchEditModal(btn.dataset.uid, btn.dataset.name));
+    });
+    listEl.querySelectorAll(".branch-delete-btn").forEach((btn) => {
+      btn.addEventListener("click", () => confirmDeleteBranch(btn.dataset.uid, btn.dataset.name));
     });
   }
 
@@ -998,6 +1008,82 @@
     document.getElementById("branchViewingBanner").style.display = "none";
     applyAccountTypeUI();
     switchTab("tab-branches");
+  }
+
+  let editingBranchUid = null;
+
+  function openBranchEditModal(uid, name) {
+    editingBranchUid = uid;
+    document.getElementById("branchEditModalTitle").textContent = `${t("branchEditTitle")} — ${name}`;
+    document.getElementById("branchEditEmail").value = "";
+    document.getElementById("branchEditPassword").value = "";
+    document.getElementById("branchEditModal").style.display = "flex";
+  }
+
+  function closeBranchEditModal() {
+    document.getElementById("branchEditModal").style.display = "none";
+    editingBranchUid = null;
+  }
+
+  function saveBranchEdit() {
+    const newEmail = document.getElementById("branchEditEmail").value.trim();
+    const newPassword = document.getElementById("branchEditPassword").value;
+
+    if (!newEmail && !newPassword) {
+      showToast(t("branchEditFieldsRequired"), "error");
+      return;
+    }
+
+    currentUser
+      .getIdToken()
+      .then((idToken) =>
+        fetch(`${chainConfig.workerUrl}/update-branch`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ idToken, targetUid: editingBranchUid, newEmail: newEmail || null, newPassword: newPassword || null })
+        })
+      )
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.error) {
+          showToast(data.error, "error");
+          return;
+        }
+        showToast(t("branchEditSuccess"), "success");
+        closeBranchEditModal();
+        loadBranches();
+      })
+      .catch((e) => {
+        console.error(e);
+        showToast(t("branchEditError"), "error");
+      });
+  }
+
+  function confirmDeleteBranch(uid, name) {
+    if (!confirm(`${t("branchDeleteConfirm")} "${name}"?`)) return;
+
+    currentUser
+      .getIdToken()
+      .then((idToken) =>
+        fetch(`${chainConfig.workerUrl}/delete-branch`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ idToken, targetUid: uid })
+        })
+      )
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.error) {
+          showToast(data.error, "error");
+          return;
+        }
+        showToast(t("branchDeleteSuccess"), "success");
+        loadBranches();
+      })
+      .catch((e) => {
+        console.error(e);
+        showToast(t("branchDeleteError"), "error");
+      });
   }
 
 
@@ -3353,6 +3439,11 @@
   document.getElementById("downloadBackupBtn").addEventListener("click", downloadBackup);
   document.getElementById("branchCreateBtn").addEventListener("click", createBranch);
   document.getElementById("exitBranchViewBtn").addEventListener("click", exitBranchView);
+  document.getElementById("closeBranchEditModalBtn").addEventListener("click", closeBranchEditModal);
+  document.getElementById("branchEditModal").addEventListener("click", (e) => {
+    if (e.target.id === "branchEditModal") closeBranchEditModal();
+  });
+  document.getElementById("branchEditSaveBtn").addEventListener("click", saveBranchEdit);
   initSettings();
 
   // Ana ekran kısayollarından (manifest.json "shortcuts") gelen ?tab= parametresini işle
