@@ -301,7 +301,13 @@
       adminFieldsRequired: "Tüm alanları doldur.",
       adminToggleError: "İşlem başarısız oldu.",
       adminActiveLabel: "Aktif",
-      adminInactiveLabel: "Pasif"
+      adminInactiveLabel: "Pasif",
+      adminMaxBranchesLabel: "Şube limiti:",
+      adminSaveBtn: "Kaydet",
+      adminBranchLimitSaved: "Şube limiti kaydedildi.",
+      patronModeTitle: "Patron Modu",
+      patronModeSubtitle: "Kendi ürün/kasa sekmelerini gizle, sadece şube yönetimi ve özet görün.",
+      patronModeLabel: "Bu hesabı sadece şube yönetimi için kullan"
     },
 
 
@@ -605,7 +611,13 @@
       adminFieldsRequired: "Fill in all fields.",
       adminToggleError: "The action failed.",
       adminActiveLabel: "Active",
-      adminInactiveLabel: "Inactive"
+      adminInactiveLabel: "Inactive",
+      adminMaxBranchesLabel: "Branch limit:",
+      adminSaveBtn: "Save",
+      adminBranchLimitSaved: "Branch limit saved.",
+      patronModeTitle: "Owner Mode",
+      patronModeSubtitle: "Hide your own product/checkout tabs, see only branch management and summary.",
+      patronModeLabel: "Use this account only for branch management"
     },
 
 
@@ -909,7 +921,13 @@
       adminFieldsRequired: "املأ جميع الحقول.",
       adminToggleError: "فشلت العملية.",
       adminActiveLabel: "نشط",
-      adminInactiveLabel: "غير نشط"
+      adminInactiveLabel: "غير نشط",
+      adminMaxBranchesLabel: "حد الفروع:",
+      adminSaveBtn: "حفظ",
+      adminBranchLimitSaved: "تم حفظ حد الفروع.",
+      patronModeTitle: "وضع المالك",
+      patronModeSubtitle: "أخفِ علامات التبويب الخاصة بالمنتج/الخزينة، واعرض فقط إدارة الفروع والملخص.",
+      patronModeLabel: "استخدم هذا الحساب فقط لإدارة الفروع"
     }
   };
 
