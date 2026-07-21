@@ -307,7 +307,9 @@
       adminBranchLimitSaved: "Şube limiti kaydedildi.",
       patronModeTitle: "Patron Modu",
       patronModeSubtitle: "Kendi ürün/kasa sekmelerini gizle, sadece şube yönetimi ve özet görün.",
-      patronModeLabel: "Bu hesabı sadece şube yönetimi için kullan"
+      adminAccountTypeLabel: "Hesap Türü",
+      adminAccountTypeStandalone: "Bakkal/Market (tek şube)",
+      adminAccountTypePatron: "Patron (Zincir Sahibi)"
     },
 
 
@@ -617,7 +619,9 @@
       adminBranchLimitSaved: "Branch limit saved.",
       patronModeTitle: "Owner Mode",
       patronModeSubtitle: "Hide your own product/checkout tabs, see only branch management and summary.",
-      patronModeLabel: "Use this account only for branch management"
+      adminAccountTypeLabel: "Account Type",
+      adminAccountTypeStandalone: "Grocery/Shop (single branch)",
+      adminAccountTypePatron: "Owner (Chain Owner)"
     },
 
 
@@ -927,7 +931,9 @@
       adminBranchLimitSaved: "تم حفظ حد الفروع.",
       patronModeTitle: "وضع المالك",
       patronModeSubtitle: "أخفِ علامات التبويب الخاصة بالمنتج/الخزينة، واعرض فقط إدارة الفروع والملخص.",
-      patronModeLabel: "استخدم هذا الحساب فقط لإدارة الفروع"
+      adminAccountTypeLabel: "نوع الحساب",
+      adminAccountTypeStandalone: "بقالة/متجر (فرع واحد)",
+      adminAccountTypePatron: "مالك (صاحب سلسلة)"
     }
   };
 
