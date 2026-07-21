@@ -1359,3 +1359,28 @@ body.font-large{zoom:1.18;}
   cursor:pointer;
   flex-shrink:0;
 }
+
+/* Yönetim paneli - şube limiti satırı */
+.admin-branch-limit-row{
+  display:flex;
+  align-items:center;
+  gap:6px;
+  margin-top:6px;
+}
+.admin-branch-limit-row label{font-size:11px;color:var(--text-muted);}
+.admin-branch-limit-input{
+  width:56px;
+  height:28px;
+  text-align:center;
+  font-size:12px;
+}
+.admin-branch-limit-save-btn{
+  background:var(--navy);
+  color:#fff;
+  border:none;
+  border-radius:6px;
+  padding:5px 10px;
+  font-size:11px;
+  font-weight:600;
+  cursor:pointer;
+}
