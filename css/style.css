@@ -1384,3 +1384,21 @@ body.font-large{zoom:1.18;}
   font-weight:600;
   cursor:pointer;
 }
+
+/* Şube satırı - aksiyon butonları */
+.branch-row-actions{
+  display:flex;
+  align-items:center;
+  gap:6px;
+  flex-shrink:0;
+}
+.branch-edit-btn, .branch-delete-btn{
+  background:none;
+  border:1px solid var(--border);
+  border-radius:8px;
+  width:34px;
+  height:34px;
+  cursor:pointer;
+  color:var(--text-secondary);
+}
+.branch-delete-btn{color:var(--red-text);border-color:var(--red-bg);}
