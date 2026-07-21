@@ -451,15 +451,6 @@
       </div>
 
       <div class="card">
-        <p class="card-title" data-i18n="patronModeTitle">Patron Modu</p>
-        <p class="card-subtitle" data-i18n="patronModeSubtitle">Kendi ürün/kasa sekmelerini gizle, sadece şube yönetimi ve özet görün.</p>
-        <label class="checkbox-row">
-          <input id="patronModeToggle" type="checkbox" />
-          <span data-i18n="patronModeLabel">Bu hesabı sadece şube yönetimi için kullan</span>
-        </label>
-      </div>
-
-      <div class="card">
         <p class="card-title" data-i18n="branchSummaryTitle">Tüm Şubeler Özeti</p>
         <div class="stats-grid">
           <div class="stat-card">
@@ -505,6 +496,13 @@
         </div>
         <div class="form-row">
           <input id="adminBusinessPassword" type="text" data-i18n-placeholder="adminPasswordPh" placeholder="Şifre" />
+        </div>
+        <div class="form-row">
+          <label class="field-label" data-i18n="adminAccountTypeLabel">Hesap Türü</label>
+          <select id="adminAccountType">
+            <option value="standalone" data-i18n="adminAccountTypeStandalone">Bakkal/Market (tek şube)</option>
+            <option value="patron" data-i18n="adminAccountTypePatron">Patron (Zincir Sahibi)</option>
+          </select>
         </div>
         <button id="adminCreateBtn" class="btn btn-primary btn-block">
           <i class="fa-solid fa-plus" aria-hidden="true"></i> <span data-i18n="adminCreateBtn">İşletme oluştur</span>
@@ -740,7 +738,7 @@
       <i class="fa-solid fa-gear" aria-hidden="true"></i>
       <span data-i18n="navSettings">Ayarlar</span>
     </button>
-    <button class="nav-btn" data-tab="tab-branches">
+    <button class="nav-btn" id="branchesNavBtn" data-tab="tab-branches" style="display:none;">
       <i class="fa-solid fa-code-branch" aria-hidden="true"></i>
       <span data-i18n="navBranches">Şubelerim</span>
     </button>
