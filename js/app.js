@@ -24,6 +24,7 @@
   let dailyResetConfig = [];
   let breadWhatsAppNumber = "";
   let priceChangeLog = [];
+  let patronMode = false;
   let cart = []; // { productId, name, price, qty }
   let activeProductId = null;
   let activeCustomerId = null;
@@ -123,6 +124,7 @@
           dailyResetConfig = data.dailyResetConfig || [];
           breadWhatsAppNumber = data.breadWhatsAppNumber || "";
           priceChangeLog = data.priceChangeLog || [];
+          if (!viewingBranchUid) patronMode = data.patronMode || false;
         } else {
           const initial = { products: seedData(), sales: [], customers: [], payments: [] };
           docRef.set(initial);
@@ -135,6 +137,7 @@
           breadWhatsAppNumber = "";
           priceChangeLog = [];
         }
+        applyPatronModeUI();
         setSyncStatus("connected");
         renderAll();
       },
@@ -247,6 +250,27 @@
       showApp(false);
       auth.onAuthStateChanged(handleAuthChange);
     }
+  }
+
+  function applyPatronModeUI() {
+    const hideTabs = patronMode && !viewingBranchUid;
+    const operationalTabs = ["tab-products", "tab-kasa", "tab-scan", "tab-sales", "tab-veresiye", "tab-orders", "tab-pricechanges"];
+    operationalTabs.forEach((tabId) => {
+      const btn = document.querySelector(`.nav-btn[data-tab="${tabId}"]`);
+      if (btn) btn.style.display = hideTabs ? "none" : "flex";
+    });
+    const toggle = document.getElementById("patronModeToggle");
+    if (toggle) toggle.checked = patronMode;
+    if (hideTabs) switchTab("tab-branches");
+  }
+
+  function savePatronMode(value) {
+    patronMode = value;
+    const targetRef = originalDocRef || docRef;
+    if (targetRef) {
+      targetRef.set({ patronMode: value }, { merge: true }).catch((e) => console.error("Patron modu kaydedilemedi", e));
+    }
+    applyPatronModeUI();
   }
 
   function save() {
@@ -651,6 +675,11 @@
               <p class="admin-business-name">${escapeHtml(b.businessName)}</p>
               <p class="admin-business-meta">${escapeHtml(b.email)} · ${dateStr}</p>
               <span class="admin-status-badge ${statusClass}">${statusLabel}</span>
+              <div class="admin-branch-limit-row">
+                <label>${t("adminMaxBranchesLabel")}</label>
+                <input type="number" min="0" class="admin-branch-limit-input" data-uid="${b.uid}" placeholder="∞" />
+                <button class="admin-branch-limit-save-btn" data-uid="${b.uid}">${t("adminSaveBtn")}</button>
+              </div>
             </div>
             <button class="admin-toggle-btn" data-uid="${b.uid}" data-active="${b.active}">${toggleLabel}</button>
           </div>`;
@@ -661,6 +690,18 @@
       btn.addEventListener("click", () => {
         const currentlyActive = btn.dataset.active === "true";
         toggleAdminBusiness(btn.dataset.uid, !currentlyActive);
+      });
+    });
+
+    listEl.querySelectorAll(".admin-branch-limit-save-btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const input = listEl.querySelector(`.admin-branch-limit-input[data-uid="${btn.dataset.uid}"]`);
+        const value = Number(input.value);
+        if (!input.value || isNaN(value) || value < 0) {
+          showToast(t("branchFieldsRequired"), "error");
+          return;
+        }
+        setAdminBranchLimit(btn.dataset.uid, value);
       });
     });
   }
@@ -730,6 +771,29 @@
       });
   }
 
+  function setAdminBranchLimit(targetUid, maxBranches) {
+    currentUser
+      .getIdToken()
+      .then((idToken) =>
+        fetch(`${adminConfig.workerUrl}/set-branch-limit`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ idToken, targetUid, maxBranches })
+        })
+      )
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.error) {
+          showToast(data.error, "error");
+          return;
+        }
+        showToast(t("adminBranchLimitSaved"), "success");
+      })
+      .catch((e) => {
+        console.error(e);
+        showToast(t("adminToggleError"), "error");
+      });
+  }
 
 
   function renderCustomers() {
@@ -894,6 +958,7 @@
 
     document.getElementById("branchViewingBanner").style.display = "flex";
     document.getElementById("branchViewingText").textContent = `${t("branchViewingPrefix")} ${name}`;
+    applyPatronModeUI();
     switchTab("tab-products");
   }
 
@@ -905,6 +970,7 @@
     if (firestoreUnsubscribe) firestoreUnsubscribe();
     attachFirestoreListener();
     document.getElementById("branchViewingBanner").style.display = "none";
+    applyPatronModeUI();
     switchTab("tab-branches");
   }
 
@@ -3261,6 +3327,7 @@
   document.getElementById("downloadBackupBtn").addEventListener("click", downloadBackup);
   document.getElementById("branchCreateBtn").addEventListener("click", createBranch);
   document.getElementById("exitBranchViewBtn").addEventListener("click", exitBranchView);
+  document.getElementById("patronModeToggle").addEventListener("change", (e) => savePatronMode(e.target.checked));
   initSettings();
 
   // Ana ekran kısayollarından (manifest.json "shortcuts") gelen ?tab= parametresini işle
