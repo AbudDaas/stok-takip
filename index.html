@@ -664,6 +664,28 @@
     </div>
   </div>
 
+  <!-- ŞUBE DÜZENLEME MODAL (e-posta/şifre değiştirme) -->
+  <div id="branchEditModal" class="modal-overlay" style="display:none;">
+    <div class="modal">
+      <div class="modal-header">
+        <p id="branchEditModalTitle" class="modal-title"></p>
+        <button id="closeBranchEditModalBtn" class="icon-btn" aria-label="Kapat"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button>
+      </div>
+      <div class="modal-body">
+        <p class="card-subtitle" data-i18n="branchEditSubtitle">Sadece değiştirmek istediğin alanı doldur, diğerini boş bırakabilirsin.</p>
+        <div class="form-row">
+          <input id="branchEditEmail" type="email" data-i18n-placeholder="branchEditEmailPh" placeholder="Yeni e-posta (opsiyonel)" />
+        </div>
+        <div class="form-row">
+          <input id="branchEditPassword" type="text" data-i18n-placeholder="branchEditPasswordPh" placeholder="Yeni şifre (opsiyonel)" />
+        </div>
+        <button id="branchEditSaveBtn" class="btn btn-primary btn-block">
+          <span data-i18n="branchEditSaveBtn">Kaydet</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- MÜŞTERİ DETAY MODAL -->
   <div id="customerModal" class="modal-overlay" style="display:none;">
     <div class="modal">
