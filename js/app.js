@@ -928,8 +928,8 @@
   }
 
   function renderBranchSummary(branches) {
-    let totalSales = calcTodaySalesTotal(sales);
-    let totalLowStock = products.filter((p) => p.qty <= p.min).length;
+    let totalSales = 0;
+    let totalLowStock = 0;
 
     branches.forEach((b) => {
       totalSales += calcTodaySalesTotal(b.sales);
