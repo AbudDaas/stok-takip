@@ -415,6 +415,11 @@
     try {
       savedStaffId = sessionStorage.getItem("bakkal_current_staff_id");
     } catch (e) {}
+    if (savedStaffId === "__owner__") {
+      currentStaff = null;
+      applyRoleRestrictionsUI();
+      return;
+    }
     const savedStaff = staffMembers.find((s) => s.id === savedStaffId);
     if (savedStaff) {
       currentStaff = savedStaff;
@@ -458,6 +463,14 @@
     });
 
     document.getElementById("staffPickerScreen").style.display = "flex";
+  }
+
+  function enterAsOwner() {
+    currentStaff = null;
+    try {
+      sessionStorage.setItem("bakkal_current_staff_id", "__owner__");
+    } catch (e) {}
+    applyRoleRestrictionsUI();
   }
 
   function applyRoleRestrictionsUI() {
@@ -3735,6 +3748,7 @@
   document.getElementById("fontLargeBtn").addEventListener("click", () => applyFontSize("large"));
   document.getElementById("downloadBackupBtn").addEventListener("click", downloadBackup);
   document.getElementById("staffAddBtn").addEventListener("click", addStaffMember);
+  document.getElementById("staffOwnerBtn").addEventListener("click", enterAsOwner);
   document.getElementById("branchCreateBtn").addEventListener("click", createBranch);
   document.getElementById("catalogAddBtn").addEventListener("click", addCatalogItem);
   document.getElementById("exitBranchViewBtn").addEventListener("click", exitBranchView);
