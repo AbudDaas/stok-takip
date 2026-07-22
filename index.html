@@ -1,852 +1,1115 @@
-<!DOCTYPE html>
-<html lang="tr">
-<head>
-<meta charset="UTF-8" />
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdnjs.cloudflare.com https://www.gstatic.com; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; img-src 'self' data: blob:; font-src 'self' https://cdnjs.cloudflare.com; connect-src 'self' https://*.googleapis.com https://*.google.com https://*.workers.dev https://identitytoolkit.googleapis.com https://www.gstatic.com wss://*.firebaseio.com; frame-src 'none'; object-src 'none'; base-uri 'self';" />
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<title>Bakkal Stok Takip</title>
-<meta name="theme-color" content="#1F3864" />
-<link rel="manifest" href="manifest.json" />
-<link rel="icon" href="icons/icon-192.png" />
-<link rel="apple-touch-icon" href="icons/icon-192.png" />
-<link rel="stylesheet" href="css/style.css" />
-</head>
-<body>
-
-  <header class="topbar">
-    <div class="topbar-title">
-      <i class="fa-solid fa-store" aria-hidden="true"></i>
-      <span data-i18n="appName">Bakkal Stok Takip</span>
-    </div>
-    <div class="topbar-right">
-      <div class="lang-switch">
-        <button class="lang-btn" data-lang="tr">TR</button>
-        <button class="lang-btn" data-lang="en">EN</button>
-        <button class="lang-btn" data-lang="ar">AR</button>
-      </div>
-      <div id="syncBadge" class="sync-badge" title="Senkronizasyon durumu">
-        <i class="fa-solid fa-cloud" id="syncIcon" aria-hidden="true"></i>
-        <span id="syncText">Yerel</span>
-      </div>
-      <button id="logoutBtn" class="icon-btn-topbar" data-i18n-title="logoutTitle" title="Çıkış yap" style="display:none;">
-        <i class="fa-solid fa-right-from-bracket" aria-hidden="true"></i>
-      </button>
-    </div>
-  </header>
-
-  <!-- GİRİŞ / KAYIT EKRANI (yalnızca bulut senkronizasyonu ayarlıysa gösterilir) -->
-  <div id="authScreen" class="auth-screen" style="display:none;">
-    <div class="auth-box">
-      <div class="auth-logo">
-        <i class="fa-solid fa-store" aria-hidden="true"></i>
-        <span data-i18n="appName">Bakkal Stok Takip</span>
-      </div>
-      <p class="auth-title" data-i18n="authTitle">Giriş Yap</p>
-      <p id="authError" class="auth-error" style="display:none;"></p>
-      <div class="form-row">
-        <input id="authEmail" type="email" data-i18n-placeholder="authEmailPh" placeholder="E-posta" autocomplete="username" />
-      </div>
-      <div class="form-row">
-        <input id="authPassword" type="password" data-i18n-placeholder="authPasswordPh" placeholder="Şifre" autocomplete="current-password" />
-      </div>
-      <button id="authSubmitBtn" class="btn btn-primary btn-block" data-i18n="authSubmit">Giriş Yap</button>
-      <button id="forgotPasswordBtn" class="link-btn" data-i18n="authForgot">Şifremi unuttum</button>
-      <p class="auth-hint" data-i18n="authHint">Hesabınız yoksa işletme sahibinden/yöneticinizden hesap açmasını isteyin.</p>
-    </div>
-  </div>
-
-  <!-- KİM ÇALIŞIYOR? (Personel Seçimi) -->
-  <div id="staffPickerScreen" class="auth-screen" style="display:none;">
-    <div class="auth-box">
-      <div class="auth-logo">
-        <i class="fa-solid fa-users" aria-hidden="true"></i>
-        <span data-i18n="staffPickerTitle">Kim çalışıyor?</span>
-      </div>
-      <div id="staffPickerList" class="staff-picker-list"></div>
-    </div>
-  </div>
-
-  <div id="toastContainer" class="toast-container"></div>
-
-  <main id="app">
-
-    <!-- ÖZET -->
-    <section class="stats-grid">
-      <div class="stat-card">
-        <p class="stat-label" data-i18n="statTotalProducts">Toplam ürün</p>
-        <p class="stat-value" id="statTotal">0</p>
-      </div>
-      <div class="stat-card stat-danger">
-        <p class="stat-label" data-i18n="statOrderNeeded">Sipariş gerekli</p>
-        <p class="stat-value" id="statOrder">0</p>
-      </div>
-    </section>
-
-    <!-- SEKME: ÜRÜNLER -->
-    <section id="tab-products" class="tab-panel active">
-
-      <button id="importBackupBtn" class="btn btn-block import-backup-btn" style="display:none;">
-        <i class="fa-solid fa-arrows-rotateload" aria-hidden="true"></i>
-        <span data-i18n="importBackupBtn">Yerel yedeği içe aktar (eski verileri geri yükle)</span>
-      </button>
-
-      <div class="card">
-        <p class="card-title" data-i18n="addProductTitle">Ürün ekle</p>
-        <div class="form-row voice-name-row">
-          <input id="newName" type="text" data-i18n-placeholder="namePh" placeholder="Ürün adı, örn. pepsi 1 lt" />
-          <button id="voiceNewNameBtn" type="button" class="btn btn-icon-only voice-mic-btn" data-target="newName" aria-label="Sesle ürün adı gir">
-            <i class="fa-solid fa-microphone" aria-hidden="true"></i>
-          </button>
-        </div>
-        <div class="voice-lang-toggle" data-for="newName">
-          <button type="button" class="voice-lang-btn active" data-lang="tr-TR">TR</button>
-          <button type="button" class="voice-lang-btn" data-lang="ar-SA">AR</button>
-        </div>
-        <div class="form-row two-col">
-          <input id="newCategory" type="text" data-i18n-placeholder="categoryPh" placeholder="Kategori, örn. içecekler" />
-          <input id="newMin" type="number" min="0" step="any" data-i18n-placeholder="minStockPh" placeholder="Min. stok" value="5" />
-        </div>
-        <div class="form-row two-col">
-          <input id="newQty" type="number" min="0" step="any" data-i18n-placeholder="startStockPh" placeholder="Başlangıç stok" value="0" />
-          <input id="newPrice" type="number" min="0" step="0.01" data-i18n-placeholder="pricePh" placeholder="Fiyat (₺)" value="0" />
-        </div>
-        <div class="form-row">
-          <input id="newCostPrice" type="number" min="0" step="0.01" data-i18n-placeholder="costPricePh" placeholder="Alış fiyatı (₺, opsiyonel)" value="0" />
-        </div>
-        <div class="form-row">
-          <label class="field-label" data-i18n="unitLabel">Satış birimi</label>
-          <select id="newUnit">
-            <option value="adet" data-i18n="unitAdet">Adet (tam sayı)</option>
-            <option value="kg" data-i18n="unitKg">Kg (tartılı / açık ürün)</option>
-          </select>
-        </div>
-        <div class="form-row barcode-row">
-          <input id="newBarcode" type="text" data-i18n-placeholder="barcodePh" placeholder="Barkod (opsiyonel)" />
-          <button id="scanNewBarcodeBtn" type="button" class="btn btn-icon-only" data-i18n-aria="scanBarcodeAria" aria-label="Barkod tara">
-            <i class="fa-solid fa-barcode" aria-hidden="true"></i>
-          </button>
-        </div>
-        <button id="addBtn" class="btn btn-primary btn-block">
-          <i class="fa-solid fa-plus" aria-hidden="true"></i> <span data-i18n="addProductBtn">Ürün ekle</span>
-        </button>
-      </div>
-
-      <div class="card">
-        <p class="card-title" data-i18n="bulkScanTitle">Rafı fotoğrafla (toplu ekle)</p>
-        <p class="card-subtitle" data-i18n="bulkScanSubtitle">Bir raf fotoğrafı çek, yapay zeka ürünleri tanısın, sistemde olmayanları toplu ekle.</p>
-        <input id="shelfPhotoInput" type="file" accept="image/*" multiple style="display:none;" />
-        <button id="shelfPhotoBtn" class="btn btn-primary btn-block">
-          <i class="fa-solid fa-camera" aria-hidden="true"></i> <span data-i18n="bulkScanBtn">Fotoğraf çek / seç</span>
-        </button>
-        <div id="bulkScanLoading" class="bulk-scan-loading" style="display:none;">
-          <i class="fa-solid fa-spinner spin" aria-hidden="true"></i>
-          <span data-i18n="bulkScanAnalyzing">Fotoğraf analiz ediliyor...</span>
-        </div>
-      </div>
-
-      <div class="card">
-        <p class="card-title" data-i18n="csvImportTitle">Başka sistemden geçiş (toplu içe aktar)</p>
-        <p class="card-subtitle" data-i18n="csvImportSubtitle">Excel/CSV dosyandaki ürünleri tek seferde aktar. Sütun sırası: Ürün adı, Kategori, Stok adedi, Fiyat.</p>
-        <input id="csvImportInput" type="file" accept=".csv,.xlsx,.xls" style="display:none;" />
-        <button id="csvImportBtn" class="btn btn-block">
-          <i class="fa-solid fa-file-arrow-up" aria-hidden="true"></i> <span data-i18n="csvImportBtn">Excel/CSV dosyası seç</span>
-        </button>
-      </div>
-
-      <div class="card">
-        <p class="card-title" data-i18n="invoiceScanTitle">Fatura ile stok girişi (toplu)</p>
-        <p class="card-subtitle" data-i18n="invoiceScanSubtitle">Tedarikçi faturasının fotoğrafını çek, yapay zeka ürünleri okusun — sistemde varsa stoğa eklesin, yoksa yeni ürün olarak oluştursun.</p>
-        <input id="invoicePhotoInput" type="file" accept="image/*" multiple style="display:none;" />
-        <button id="invoicePhotoBtn" class="btn btn-primary btn-block">
-          <i class="fa-solid fa-file-invoice" aria-hidden="true"></i> <span data-i18n="invoiceScanBtn">Fatura fotoğrafla / seç</span>
-        </button>
-        <div id="invoiceScanLoading" class="bulk-scan-loading" style="display:none;">
-          <i class="fa-solid fa-spinner spin" aria-hidden="true"></i>
-          <span data-i18n="invoiceScanAnalyzing">Fatura analiz ediliyor...</span>
-        </div>
-      </div>
-
-      <div class="section-header">
-        <p class="card-title" data-i18n="allProductsTitle">Tüm ürünler</p>
-        <input id="searchBox" type="text" class="search-input" data-i18n-placeholder="searchPh" placeholder="Ürün ara..." />
-      </div>
-
-      <button id="printAllQrBtn" class="btn btn-block" style="margin-bottom:10px;">
-        <i class="fa-solid fa-tags" aria-hidden="true"></i> <span data-i18n="printAllQrBtn">Fiyat etiketlerini yazdır</span>
-      </button>
-
-      <div id="productList" class="list"></div>
-      <p id="emptyState" class="empty-state" data-i18n="emptyProducts">Henüz ürün yok. Yukarıdan ekleyerek başla.</p>
-    </section>
-
-    <!-- SEKME: QR TARA (STOK GİRİŞ/ÇIKIŞ) -->
-    <section id="tab-scan" class="tab-panel">
-      <div class="card">
-        <p class="card-title" data-i18n="scanTitle">QR kod ile giriş / çıkış</p>
-        <p class="card-subtitle" data-i18n="scanSubtitle">Bir ürünün QR kodunu okutarak stok girişi veya çıkışı yapabilirsin.</p>
-        <button id="startScanBtn" class="btn btn-primary btn-block">
-          <i class="fa-solid fa-camera" aria-hidden="true"></i> <span data-i18n="startCamera">Kamerayı başlat</span>
-        </button>
-        <div id="qrReader" class="qr-reader"></div>
-        <button id="stopScanBtn" class="btn btn-block" style="display:none;">
-          <i class="fa-solid fa-stop" aria-hidden="true"></i> <span data-i18n="stopScan">Taramayı durdur</span>
-        </button>
-      </div>
-
-      <div class="card">
-        <p class="card-title" data-i18n="printQrTitle">QR kodları yazdır</p>
-        <p class="card-subtitle" data-i18n="printQrSubtitle">Her ürün için bir QR kod oluşturup rafa yapıştırabilirsin. Ürünler listesinden bir ürüne dokun, "QR kodu göster" seçeneğini kullan.</p>
-      </div>
-    </section>
-
-    <!-- SEKME: KASA (SATIŞ) -->
-    <section id="tab-kasa" class="tab-panel">
-      <div class="card">
-        <p class="card-title" data-i18n="kasaTitle">Kasa — QR okutarak satış</p>
-        <p class="card-subtitle" data-i18n="kasaSubtitle">Müşterinin aldığı ürünlerin QR kodunu sırayla okut, sepete otomatik eklensin.</p>
-        <button id="startKasaScanBtn" class="btn btn-primary btn-block">
-          <i class="fa-solid fa-camera" aria-hidden="true"></i> <span data-i18n="startCamera">Kamerayı başlat</span>
-        </button>
-        <div id="qrReaderKasa" class="qr-reader"></div>
-        <button id="stopKasaScanBtn" class="btn btn-block" style="display:none;">
-          <i class="fa-solid fa-stop" aria-hidden="true"></i> <span data-i18n="stopScan">Taramayı durdur</span>
-        </button>
-      </div>
-
-      <div class="card">
-        <p class="card-title" data-i18n="manualAddTitle">Ürün seç ve ekle (QR'sız)</p>
-        <div class="form-row">
-          <input id="manualAddSearch" type="text" data-i18n-placeholder="searchPh" placeholder="Ürün ara..." />
-        </div>
-        <div id="manualAddResults" class="list"></div>
-      </div>
-
-      <div class="card">
-        <div class="card-header-row">
-          <p class="card-title" data-i18n="cartTitle">Sepet</p>
-          <button id="clearCartBtn" class="btn btn-sm">
-            <i class="fa-solid fa-trash" aria-hidden="true"></i> <span data-i18n="clearCart">Sepeti boşalt</span>
-          </button>
-        </div>
-        <div id="cartList" class="list"></div>
-        <p id="cartEmptyState" class="empty-state" data-i18n="emptyCart">Sepet boş. Ürün QR kodunu okutarak ekle.</p>
-
-        <div class="form-row">
-          <label class="field-label" data-i18n="discountLabel">İndirim (₺)</label>
-          <input id="cartDiscount" type="number" min="0" step="0.01" value="0" />
-        </div>
-
-        <div class="cart-subtotal-row">
-          <span data-i18n="subtotalLabel">Ara toplam</span>
-          <span id="cartSubtotal">0,00 ₺</span>
-        </div>
-        <div class="cart-total-row">
-          <span data-i18n="totalLabel">Toplam</span>
-          <span id="cartTotal">0,00 ₺</span>
-        </div>
-
-        <div class="payment-type-row">
-          <button id="payNakitBtn" class="payment-type-btn active" data-type="nakit">
-            <i class="fa-solid fa-money-bill" aria-hidden="true"></i> <span data-i18n="payNakit">Nakit</span>
-          </button>
-          <button id="payVeresiyeBtn" class="payment-type-btn" data-type="veresiye">
-            <i class="fa-solid fa-book" aria-hidden="true"></i> <span data-i18n="payVeresiye">Veresiye</span>
-          </button>
-        </div>
-        <div id="veresiyeCustomerRow" class="form-row" style="display:none;">
-          <div class="searchable-select">
-            <input id="veresiyeCustomerSearch" type="text" data-i18n-placeholder="searchCustomerPh" placeholder="Müşteri ara..." autocomplete="off" />
-            <input type="hidden" id="veresiyeCustomerSelectedId" />
-            <div id="veresiyeCustomerResults" class="searchable-results"></div>
-          </div>
-        </div>
-
-        <button id="completeSaleBtn" class="btn btn-primary btn-block">
-          <i class="fa-solid fa-check" aria-hidden="true"></i> <span data-i18n="completeSaleBtn">Satışı tamamla</span>
-        </button>
-      </div>
-    </section>
-
-    <!-- SEKME: SATIŞLAR -->
-    <section id="tab-sales" class="tab-panel">
-      <div class="period-filter">
-        <button class="period-btn active" data-period="today" data-i18n="periodToday">Bugün</button>
-        <button class="period-btn" data-period="week" data-i18n="periodWeek">Bu Hafta</button>
-        <button class="period-btn" data-period="month" data-i18n="periodMonth">Bu Ay</button>
-        <button class="period-btn" data-period="all" data-i18n="periodAll">Tümü</button>
-      </div>
-
-      <div class="stats-grid">
-        <div class="stat-card">
-          <p class="stat-label" data-i18n="statPeriodTotal">Toplam ciro</p>
-          <p class="stat-value" id="statPeriodTotal">0,00 ₺</p>
-        </div>
-        <div class="stat-card">
-          <p class="stat-label" data-i18n="statPeriodCount">İşlem sayısı</p>
-          <p class="stat-value" id="statPeriodCount">0</p>
-        </div>
-      </div>
-
-      <div class="profit-highlight-card">
-        <p class="stat-label" data-i18n="statNetProfit">Net kâr</p>
-        <p class="stat-value" id="statNetProfit">0,00 ₺</p>
-      </div>
-
-      <p class="card-title" data-i18n="topProductsTitle">En çok satan ürünler</p>
-      <div id="topProductsList" class="list"></div>
-      <p id="topProductsEmptyState" class="empty-state" data-i18n="emptyTopProducts">Bu dönemde satış yok.</p>
-
-      <p class="card-title" data-i18n="salesHistoryTitle">Satış geçmişi</p>
-      <div id="salesList" class="list"></div>
-      <p id="salesEmptyState" class="empty-state" data-i18n="emptySales">Bu dönemde satış yapılmadı.</p>
-    </section>
-
-    <!-- SEKME: VERESİYE -->
-    <section id="tab-veresiye" class="tab-panel">
-      <div class="card">
-        <p class="card-title" data-i18n="addCustomerTitle">Müşteri ekle</p>
-        <div class="form-row">
-          <input id="newCustomerName" type="text" data-i18n-placeholder="customerNamePh" placeholder="Müşteri adı" />
-        </div>
-        <div class="form-row">
-          <input id="newCustomerPhone" type="text" data-i18n-placeholder="customerPhonePh" placeholder="Telefon (opsiyonel)" />
-        </div>
-        <button id="addCustomerBtn" class="btn btn-primary btn-block">
-          <i class="fa-solid fa-user-plus" aria-hidden="true"></i> <span data-i18n="addCustomerBtn">Müşteri ekle</span>
-        </button>
-      </div>
-
-      <div class="stats-grid">
-        <div class="stat-card stat-danger">
-          <p class="stat-label" data-i18n="statTotalDebt">Toplam alacak</p>
-          <p class="stat-value" id="statTotalDebt">0,00 ₺</p>
-        </div>
-        <div class="stat-card">
-          <p class="stat-label" data-i18n="statCustomerCount">Müşteri sayısı</p>
-          <p class="stat-value" id="statCustomerCount">0</p>
-        </div>
-      </div>
-
-      <p class="card-title" data-i18n="customersTitle">Müşteriler</p>
-      <div id="customerList" class="list"></div>
-      <p id="customerEmptyState" class="empty-state" data-i18n="emptyCustomers">Henüz müşteri yok.</p>
-    </section>
-
-    <!-- SEKME: SİPARİŞ LİSTESİ -->
-    <section id="tab-orders" class="tab-panel">
-
-      <div class="card">
-        <p class="card-title" data-i18n="breadStatusTitle">🍞 Günlük Ürün Takibi</p>
-        <p class="card-subtitle" data-i18n="breadSetupSubtitle">Her gün otomatik sıfırlanacak/takip edilecek ürünlerini burada ayarla.</p>
-
-        <div class="form-row">
-          <input id="breadWhatsAppNumber" type="text" data-i18n-placeholder="breadWhatsAppNumberPh" placeholder="WhatsApp numarası (905XXXXXXXXX)" />
-        </div>
-
-        <div class="form-row">
-          <input id="breadConfigName" type="text" data-i18n-placeholder="breadConfigNamePh" placeholder="Ürün adı (örn. ekmek)" />
-        </div>
-        <div class="form-row two-col">
-          <input id="breadConfigQty" type="number" min="0" data-i18n-placeholder="breadConfigQtyPh" placeholder="Günlük başlangıç adedi" />
-          <input id="breadConfigStaleName" type="text" data-i18n-placeholder="breadConfigStaleNamePh" placeholder="Bayat ürün adı (opsiyonel)" />
-        </div>
-        <div class="form-row">
-          <label class="checkbox-row">
-            <input id="breadConfigAutoReset" type="checkbox" checked />
-            <span data-i18n="breadConfigAutoResetLabel">Her sabah otomatik sıfırla ve bayata aktar</span>
-          </label>
-        </div>
-        <button id="breadConfigAddBtn" class="btn btn-block">
-          <i class="fa-solid fa-plus" aria-hidden="true"></i> <span data-i18n="breadConfigAddBtn">Takibe ekle</span>
-        </button>
-
-        <p class="card-subtitle" data-i18n="breadConfigListTitle" style="margin-top:14px;">Takip edilen ürünler</p>
-        <div id="breadConfigList" class="list"></div>
-
-        <p class="card-subtitle" data-i18n="breadCurrentTitle" style="margin-top:14px;">Şu anki durum</p>
-        <div id="breadCurrentList"></div>
-        <button id="breadWhatsAppBtn" class="btn btn-primary btn-block">
-          <i class="fa-brands fa-whatsapp" aria-hidden="true"></i> <span data-i18n="breadWhatsAppBtn">WhatsApp'tan gönder</span>
-        </button>
-        <button id="notifEnableBtn" class="btn btn-block" style="margin-top:8px;">
-          <i class="fa-solid fa-bell" aria-hidden="true"></i> <span data-i18n="notifEnableBtn">Bildirimleri aç</span>
-        </button>
-        <p class="card-subtitle" data-i18n="breadLogTitle" style="margin-top:14px;">Geçmiş</p>
-        <div id="breadLogList" class="list"></div>
-        <p id="breadLogEmptyState" class="empty-state" data-i18n="breadLogEmpty">Henüz bir kayıt yok.</p>
-      </div>
-
-      <div class="card-header-row">
-        <p class="card-title" data-i18n="orderListTitle">Acil sipariş listesi</p>
-        <button id="resetBtn" class="btn btn-sm">
-          <i class="fa-solid fa-arrows-rotate" aria-hidden="true"></i> <span data-i18n="resetAllBtn">Tümünü sıfırla</span>
-        </button>
-      </div>
-      <div id="orderList" class="list"></div>
-      <p id="orderEmptyState" class="empty-state" data-i18n="emptyOrders">Şu anda sipariş edilmesi gereken ürün yok.</p>
-    </section>
-
-    <!-- SEKME: YÖNETİM (sadece yönetici hesabıyla görünür) -->
-    <!-- SEKME: FİYAT DEĞİŞİMİ -->
-    <section id="tab-pricechanges" class="tab-panel">
-      <div class="card-header-row">
-        <p class="card-title" data-i18n="priceChangesTitle">Fiyatı Değişen Ürünler</p>
-      </div>
-      <p class="card-subtitle" data-i18n="priceChangesSubtitle">Fatura ile stok girişi yaptığında, fiyatı önceye göre değişen ürünler burada 2 gün boyunca listelenir.</p>
-      <div id="priceChangesList" class="list"></div>
-      <p id="priceChangesEmptyState" class="empty-state" data-i18n="priceChangesEmpty">Son 2 günde fiyatı değişen ürün yok.</p>
-    </section>
-
-    <!-- SEKME: AYARLAR -->
-    <section id="tab-settings" class="tab-panel">
-      <div class="card">
-        <p class="card-title" data-i18n="settingsThemeTitle">Görünüm</p>
-        <p class="card-subtitle" data-i18n="settingsThemeSubtitle">Uygulamanın açık ya da koyu temada görünmesini seç.</p>
-        <div class="settings-toggle-row">
-          <button class="settings-toggle-btn" id="themeLightBtn" data-value="light">
-            <i class="fa-solid fa-sun" aria-hidden="true"></i> <span data-i18n="settingsThemeLight">Açık</span>
-          </button>
-          <button class="settings-toggle-btn" id="themeDarkBtn" data-value="dark">
-            <i class="fa-solid fa-moon" aria-hidden="true"></i> <span data-i18n="settingsThemeDark">Koyu</span>
-          </button>
-        </div>
-      </div>
-
-      <div class="card">
-        <p class="card-title" data-i18n="settingsNavTitle">Menü Konumu</p>
-        <p class="card-subtitle" data-i18n="settingsNavSubtitle">Alt menüyü ekranın altında ya da (YouTube gibi) yan tarafta göster.</p>
-        <div class="settings-toggle-row">
-          <button class="settings-toggle-btn" id="navBottomBtn" data-value="bottom">
-            <i class="fa-solid fa-table-columns" aria-hidden="true"></i> <span data-i18n="settingsNavBottom">Alttan</span>
-          </button>
-          <button class="settings-toggle-btn" id="navSideBtn" data-value="side">
-            <i class="fa-solid fa-table-cells" aria-hidden="true"></i> <span data-i18n="settingsNavSide">Yandan</span>
-          </button>
-        </div>
-      </div>
-
-      <div class="card">
-        <p class="card-title" data-i18n="settingsFontTitle">Yazı Boyutu</p>
-        <p class="card-subtitle" data-i18n="settingsFontSubtitle">Yazıların ve butonların daha büyük görünmesini sağla.</p>
-        <div class="settings-toggle-row">
-          <button class="settings-toggle-btn" id="fontNormalBtn" data-value="normal">
-            <i class="fa-solid fa-font" aria-hidden="true"></i> <span data-i18n="settingsFontNormal">Normal</span>
-          </button>
-          <button class="settings-toggle-btn" id="fontLargeBtn" data-value="large">
-            <i class="fa-solid fa-text-height" aria-hidden="true"></i> <span data-i18n="settingsFontLarge">Büyük</span>
-          </button>
-        </div>
-      </div>
-
-      <div class="card">
-        <p class="card-title" data-i18n="settingsBackupTitle">Veri Yedeği</p>
-        <p class="card-subtitle" data-i18n="settingsBackupSubtitle">Tüm ürün, satış ve müşteri verini bir dosya olarak indir, güvenli bir yerde sakla.</p>
-        <button id="downloadBackupBtn" class="btn btn-block">
-          <i class="fa-solid fa-download" aria-hidden="true"></i> <span data-i18n="settingsBackupBtn">Yedeği indir</span>
-        </button>
-      </div>
-
-      <div class="card">
-        <p class="card-title" data-i18n="settingsAboutTitle">Hakkında</p>
-        <p class="settings-about-row"><span data-i18n="settingsAppName">Uygulama</span>: Bakkal Stok Takip</p>
-        <p class="settings-about-row"><span data-i18n="settingsVersion">Sürüm</span>: 1.0.0</p>
-        <p class="settings-about-row"><span data-i18n="settingsLastUpdate">Son güncelleme</span>: 21.07.2026</p>
-      </div>
-
-      <div class="card">
-        <p class="card-title" data-i18n="staffMgmtTitle">Personel Yönetimi</p>
-        <p class="card-subtitle" data-i18n="staffMgmtSubtitle">Kasiyer eklersen, o kişi sadece Kasa/Satış/Veresiye görür — ürün, ayar ve stok bilgilerine erişemez.</p>
-        <div class="form-row">
-          <input id="staffName" type="text" data-i18n-placeholder="staffNamePh" placeholder="Personel adı" />
-        </div>
-        <div class="form-row two-col">
-          <input id="staffPin" type="text" inputmode="numeric" maxlength="4" data-i18n-placeholder="staffPinPh" placeholder="4 haneli PIN" />
-          <select id="staffRole">
-            <option value="cashier" data-i18n="staffRoleCashier">Kasiyer</option>
-            <option value="manager" data-i18n="staffRoleManager">Müdür</option>
-          </select>
-        </div>
-        <button id="staffAddBtn" class="btn btn-block">
-          <i class="fa-solid fa-user-plus" aria-hidden="true"></i> <span data-i18n="staffAddBtn">Personel ekle</span>
-        </button>
-        <div id="staffList" class="list" style="margin-top:12px;"></div>
-        <p id="staffEmptyState" class="empty-state" data-i18n="staffEmptyState">Henüz personel eklenmedi (herkes tam yetkiyle giriyor).</p>
-      </div>
-
-      <div class="card">
-        <p class="card-title" data-i18n="auditLogTitle">İşlem Geçmişi</p>
-        <p class="card-subtitle" data-i18n="auditLogSubtitle">Kim, ne zaman, ne işlem yaptı — son 300 kayıt.</p>
-        <div id="auditLogList" class="list"></div>
-        <p id="auditLogEmptyState" class="empty-state" data-i18n="auditLogEmpty">Henüz bir kayıt yok.</p>
-      </div>
-    </section>
-
-    <!-- SEKME: ŞUBELERİM (zincir marketler için) -->
-    <section id="tab-branches" class="tab-panel">
-      <div id="branchViewingBanner" class="branch-viewing-banner" style="display:none;">
-        <span id="branchViewingText"></span>
-        <button id="exitBranchViewBtn" class="btn btn-sm"><span data-i18n="branchExitView">Kendi hesabıma dön</span></button>
-      </div>
-
-      <div class="card">
-        <p class="card-title" data-i18n="branchSummaryTitle">Tüm Şubeler Özeti</p>
-        <div class="stats-grid">
-          <div class="stat-card">
-            <p class="stat-label" data-i18n="branchSummarySales">Bugün toplam satış</p>
-            <p class="stat-value" id="branchSummarySales">0,00 ₺</p>
-          </div>
-          <div class="stat-card">
-            <p class="stat-label" data-i18n="branchSummaryOrders">Kritik stok (tüm şubeler)</p>
-            <p class="stat-value" id="branchSummaryOrders">0</p>
-          </div>
-        </div>
-      </div>
-
-      <div class="card">
-        <p class="card-title" data-i18n="catalogTitle">Ana Ürün Kataloğu</p>
-        <p class="card-subtitle" data-i18n="catalogSubtitle">Buraya eklediğin ürün adı/kategori/fiyatı TÜM şubelere gönderilir. Her şube kendi stok adedini ayrı tutar, buradan sadece fiyat/isim değişir.</p>
-        <div class="form-row">
-          <input id="catalogName" type="text" data-i18n-placeholder="catalogNamePh" placeholder="Ürün adı" />
-        </div>
-        <div class="form-row two-col">
-          <input id="catalogCategory" type="text" data-i18n-placeholder="catalogCategoryPh" placeholder="Kategori" />
-          <input id="catalogPrice" type="number" min="0" step="any" data-i18n-placeholder="catalogPricePh" placeholder="Satış fiyatı (₺)" />
-        </div>
-        <button id="catalogAddBtn" class="btn btn-block">
-          <i class="fa-solid fa-plus" aria-hidden="true"></i> <span data-i18n="catalogAddBtn">Kataloğa ekle ve tüm şubelere gönder</span>
-        </button>
-        <div id="catalogSyncing" class="bulk-scan-loading" style="display:none;">
-          <i class="fa-solid fa-spinner spin" aria-hidden="true"></i>
-          <span data-i18n="catalogSyncing">Şubelere gönderiliyor...</span>
-        </div>
-        <p class="card-subtitle" data-i18n="catalogListTitle" style="margin-top:14px;">Kataloğdaki ürünler</p>
-        <div id="catalogList" class="list"></div>
-        <p id="catalogEmptyState" class="empty-state" data-i18n="catalogEmptyState">Kataloğa henüz ürün eklenmedi.</p>
-      </div>
-
-      <div class="card">
-        <p class="card-title" data-i18n="branchAddTitle">Yeni şube ekle</p>
-        <div class="form-row">
-          <input id="branchName" type="text" data-i18n-placeholder="branchNamePh" placeholder="Şube adı (örn. Kadıköy Şubesi)" />
-        </div>
-        <div class="form-row">
-          <input id="branchEmail" type="email" data-i18n-placeholder="branchEmailPh" placeholder="Şube için e-posta" />
-        </div>
-        <div class="form-row">
-          <input id="branchPassword" type="text" data-i18n-placeholder="branchPasswordPh" placeholder="Şube için şifre" />
-        </div>
-        <button id="branchCreateBtn" class="btn btn-primary btn-block">
-          <i class="fa-solid fa-plus" aria-hidden="true"></i> <span data-i18n="branchCreateBtn">Şube oluştur</span>
-        </button>
-      </div>
-
-      <p class="card-title" data-i18n="branchListTitle">Şubeler</p>
-      <div id="branchList" class="list"></div>
-      <p id="branchEmptyState" class="empty-state" data-i18n="branchEmptyState">Henüz şube eklenmedi.</p>
-    </section>
-
-    <section id="tab-admin" class="tab-panel">
-      <div class="card">
-        <p class="card-title" data-i18n="adminAddTitle">Yeni işletme ekle</p>
-        <div class="form-row">
-          <input id="adminBusinessName" type="text" data-i18n-placeholder="adminBusinessNamePh" placeholder="İşletme adı" />
-        </div>
-        <div class="form-row">
-          <input id="adminBusinessEmail" type="email" data-i18n-placeholder="adminEmailPh" placeholder="E-posta" />
-        </div>
-        <div class="form-row">
-          <input id="adminBusinessPassword" type="text" data-i18n-placeholder="adminPasswordPh" placeholder="Şifre" />
-        </div>
-        <div class="form-row">
-          <label class="field-label" data-i18n="adminAccountTypeLabel">Hesap Türü</label>
-          <select id="adminAccountType">
-            <option value="standalone" data-i18n="adminAccountTypeStandalone">Bakkal/Market (tek şube)</option>
-            <option value="patron" data-i18n="adminAccountTypePatron">Patron (Zincir Sahibi)</option>
-          </select>
-        </div>
-        <button id="adminCreateBtn" class="btn btn-primary btn-block">
-          <i class="fa-solid fa-plus" aria-hidden="true"></i> <span data-i18n="adminCreateBtn">İşletme oluştur</span>
-        </button>
-      </div>
-
-      <p class="card-title" data-i18n="adminListTitle">İşletmeler</p>
-      <div id="adminBusinessList" class="list"></div>
-      <p id="adminEmptyState" class="empty-state" data-i18n="adminEmptyState">Henüz işletme eklenmedi.</p>
-    </section>
-
-  </main>
-
-  <!-- ÜRÜN DETAY / QR MODAL -->
-  <div id="detailModal" class="modal-overlay" style="display:none;">
-    <div class="modal">
-      <div class="modal-header">
-        <p id="modalProductName" class="modal-title"></p>
-        <button id="closeModalBtn" class="icon-btn" aria-label="Kapat"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button>
-      </div>
-      <div class="modal-body">
-        <div class="qty-control">
-          <button id="qtyMinusBtn" class="qty-btn" aria-label="Stok azalt"><i class="fa-solid fa-minus" aria-hidden="true"></i></button>
-          <input id="modalQtyInput" class="qty-display qty-input" type="text" inputmode="decimal" />
-          <button id="qtyPlusBtn" class="qty-btn" aria-label="Stok arttır"><i class="fa-solid fa-plus" aria-hidden="true"></i></button>
-        </div>
-        <p id="modalStatus" class="status-pill"></p>
-
-        <div class="modal-section">
-          <div id="modalQrCode" class="qr-code-box"></div>
-          <button id="printQrBtn" class="btn btn-block">
-            <i class="fa-solid fa-print" aria-hidden="true"></i> <span data-i18n="printQrBtn">QR kodu yazdır</span>
-          </button>
-        </div>
-
-        <div class="modal-section">
-          <label class="field-label" data-i18n="productNameLabel">Ürün adı</label>
-          <div class="voice-name-row">
-            <input id="editName" type="text" />
-            <button id="voiceEditNameBtn" type="button" class="btn btn-icon-only voice-mic-btn" data-target="editName" aria-label="Sesle ürün adı gir">
-              <i class="fa-solid fa-microphone" aria-hidden="true"></i>
-            </button>
-          </div>
-          <div class="voice-lang-toggle" data-for="editName">
-            <button type="button" class="voice-lang-btn active" data-lang="tr-TR">TR</button>
-            <button type="button" class="voice-lang-btn" data-lang="ar-SA">AR</button>
-          </div>
-          <div class="form-row two-col">
-            <div>
-              <label class="field-label" data-i18n="categoryLabel">Kategori</label>
-              <input id="editCategory" type="text" />
-            </div>
-            <div>
-              <label class="field-label" data-i18n="minStockLabel">Min. stok</label>
-              <input id="editMin" type="number" min="0" step="any" />
-            </div>
-          </div>
-          <label class="field-label" data-i18n="priceLabel">Fiyat (₺)</label>
-          <input id="editPrice" type="number" min="0" step="0.01" />
-          <label class="field-label" data-i18n="costPriceLabel">Alış fiyatı (₺, opsiyonel)</label>
-          <input id="editCostPrice" type="number" min="0" step="0.01" />
-          <label class="field-label" data-i18n="unitLabel">Satış birimi</label>
-          <select id="editUnit">
-            <option value="adet" data-i18n="unitAdet">Adet (tam sayı)</option>
-            <option value="kg" data-i18n="unitKg">Kg (tartılı / açık ürün)</option>
-          </select>
-          <label class="field-label" data-i18n="barcodeLabel">Barkod</label>
-          <div class="form-row barcode-row">
-            <input id="editBarcode" type="text" data-i18n-placeholder="barcodePh" placeholder="Barkod (opsiyonel)" />
-            <button id="scanEditBarcodeBtn" type="button" class="btn btn-icon-only" data-i18n-aria="scanBarcodeAria" aria-label="Barkod tara">
-              <i class="fa-solid fa-barcode" aria-hidden="true"></i>
-            </button>
-          </div>
-          <button id="saveEditBtn" class="btn btn-primary btn-block" data-i18n="saveBtn">Kaydet</button>
-          <button id="deleteProductBtn" class="btn btn-danger btn-block">
-            <i class="fa-solid fa-trash" aria-hidden="true"></i> <span data-i18n="deleteProductBtn">Ürünü sil</span>
-          </button>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- HIZLI BARKOD TARAMA MODAL -->
-  <!-- ÖZEL MİKTAR/AĞIRLIK SORMA PENCERESİ -->
-  <div id="promptModal" class="modal-overlay" style="display:none;">
-    <div class="modal prompt-modal">
-      <p id="promptModalTitle" class="modal-title prompt-modal-title"></p>
-      <input id="promptModalInput" type="text" inputmode="decimal" class="prompt-modal-input" />
-      <div class="prompt-modal-actions">
-        <button id="promptModalCancelBtn" class="btn" data-i18n="promptCancelBtn">İptal</button>
-        <button id="promptModalOkBtn" class="btn btn-primary" data-i18n="promptOkBtn">Tamam</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- KG / TUTAR SEÇEREK MİKTAR GİRME PENCERESİ (tartılı ürünler için) -->
-  <div id="kgPricePromptModal" class="modal-overlay" style="display:none;">
-    <div class="modal prompt-modal">
-      <p id="kgPricePromptTitle" class="modal-title prompt-modal-title"></p>
-      <div class="kg-price-mode-tabs">
-        <button id="kgPriceModeKgBtn" class="kg-price-mode-btn active" data-mode="kg">
-          <i class="fa-solid fa-weight-hanging" aria-hidden="true"></i> <span data-i18n="kgModeLabel">Ağırlık (kg)</span>
-        </button>
-        <button id="kgPriceModePriceBtn" class="kg-price-mode-btn" data-mode="price">
-          <i class="fa-solid fa-turkish-lira-sign" aria-hidden="true"></i> <span data-i18n="priceModeLabel">Tutar (₺)</span>
-        </button>
-      </div>
-      <input id="kgPricePromptInput" type="text" inputmode="decimal" class="prompt-modal-input" />
-      <p id="kgPricePromptPreview" class="kg-price-preview"></p>
-      <div class="prompt-modal-actions">
-        <button id="kgPricePromptCancelBtn" class="btn" data-i18n="promptCancelBtn">İptal</button>
-        <button id="kgPricePromptOkBtn" class="btn btn-primary" data-i18n="promptOkBtn">Tamam</button>
-      </div>
-    </div>
-  </div>
-
-  <div id="barcodeScanModal" class="modal-overlay" style="display:none;">
-    <div class="modal">
-      <div class="modal-header">
-        <p class="modal-title" data-i18n="quickBarcodeTitle">Barkodu tara</p>
-        <button id="closeBarcodeModalBtn" class="icon-btn" aria-label="Kapat"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button>
-      </div>
-      <div class="modal-body">
-        <p class="card-subtitle" data-i18n="quickBarcodeSubtitle">Ürünün üzerindeki barkodu kameraya göster.</p>
-        <div id="quickScanReader" class="qr-reader"></div>
-      </div>
-    </div>
-  </div>
-
-  <!-- TOPLU FOTOĞRAF TARAMA SONUÇ MODAL -->
-  <div id="bulkScanModal" class="modal-overlay" style="display:none;">
-    <div class="modal">
-      <div class="modal-header">
-        <p id="bulkScanModalTitle" class="modal-title"></p>
-        <button id="closeBulkScanModalBtn" class="icon-btn" aria-label="Kapat"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button>
-      </div>
-      <div class="modal-body">
-        <div id="bulkScanResultsList" class="list"></div>
-        <button id="bulkAddAllBtn" class="btn btn-primary btn-block">
-          <span data-i18n="bulkAddAllBtn">Hepsini ekle</span>
-        </button>
-      </div>
-    </div>
-  </div>
-
-  <!-- FATURA TARAMA SONUÇ MODAL -->
-  <div id="invoiceScanModal" class="modal-overlay" style="display:none;">
-    <div class="modal">
-      <div class="modal-header">
-        <p id="invoiceScanModalTitle" class="modal-title"></p>
-        <button id="closeInvoiceScanModalBtn" class="icon-btn" aria-label="Kapat"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button>
-      </div>
-      <div class="modal-body">
-        <div id="invoiceScanResultsList" class="list"></div>
-        <button id="invoiceApplyBtn" class="btn btn-primary btn-block">
-          <span data-i18n="invoiceApplyBtn">Onayla ve uygula</span>
-        </button>
-      </div>
-    </div>
-  </div>
-
-  <!-- ŞUBE DÜZENLEME MODAL (e-posta/şifre değiştirme) -->
-  <div id="branchEditModal" class="modal-overlay" style="display:none;">
-    <div class="modal">
-      <div class="modal-header">
-        <p id="branchEditModalTitle" class="modal-title"></p>
-        <button id="closeBranchEditModalBtn" class="icon-btn" aria-label="Kapat"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button>
-      </div>
-      <div class="modal-body">
-        <p class="card-subtitle" data-i18n="branchEditSubtitle">Sadece değiştirmek istediğin alanı doldur, diğerini boş bırakabilirsin.</p>
-        <div class="form-row">
-          <input id="branchEditEmail" type="email" data-i18n-placeholder="branchEditEmailPh" placeholder="Yeni e-posta (opsiyonel)" />
-        </div>
-        <div class="form-row">
-          <input id="branchEditPassword" type="password" data-i18n-placeholder="branchEditPasswordPh" placeholder="Yeni şifre (opsiyonel)" autocomplete="new-password" />
-        </div>
-        <button id="branchEditSaveBtn" class="btn btn-primary btn-block">
-          <span data-i18n="branchEditSaveBtn">Kaydet</span>
-        </button>
-      </div>
-    </div>
-  </div>
-
-  <!-- MÜŞTERİ DETAY MODAL -->
-  <div id="customerModal" class="modal-overlay" style="display:none;">
-    <div class="modal">
-      <div class="modal-header">
-        <p id="customerModalName" class="modal-title"></p>
-        <button id="closeCustomerModalBtn" class="icon-btn" aria-label="Kapat"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button>
-      </div>
-      <div class="modal-body">
-        <p class="debt-display">
-          <span data-i18n="currentBalance">Güncel bakiye</span>
-          <span id="customerModalDebt" class="debt-amount">0,00 ₺</span>
-        </p>
-
-        <div class="modal-section">
-          <label class="field-label" data-i18n="takePayment">Ödeme al</label>
-          <div class="form-row barcode-row">
-            <input id="paymentAmountInput" type="number" min="0" step="0.01" data-i18n-placeholder="amountPh" placeholder="Tutar (₺)" />
-            <button id="recordPaymentBtn" class="btn btn-primary" style="width:auto;padding:0 16px;" data-i18n="saveBtn">Kaydet</button>
-          </div>
-        </div>
-
-        <div class="modal-section">
-          <label class="field-label" data-i18n="customerNameLabel">Müşteri adı</label>
-          <input id="editCustomerName" type="text" />
-          <label class="field-label" data-i18n="phoneLabel">Telefon</label>
-          <input id="editCustomerPhone" type="text" />
-          <button id="saveCustomerEditBtn" class="btn btn-primary btn-block" data-i18n="saveBtn">Kaydet</button>
-          <button id="deleteCustomerBtn" class="btn btn-danger btn-block">
-            <i class="fa-solid fa-trash" aria-hidden="true"></i> <span data-i18n="deleteCustomerBtn">Müşteriyi sil</span>
-          </button>
-        </div>
-
-        <div class="modal-section">
-          <p class="field-label" data-i18n="historyTitle">İşlem geçmişi</p>
-          <div id="customerHistoryList" class="list"></div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- ALT NAVİGASYON -->
-  <nav class="bottom-nav">
-    <button class="nav-btn active" data-tab="tab-products">
-      <i class="fa-solid fa-list" aria-hidden="true"></i>
-      <span data-i18n="navProducts">Ürünler</span>
-    </button>
-    <button class="nav-btn" data-tab="tab-kasa">
-      <i class="fa-solid fa-money-bill-register" aria-hidden="true"></i>
-      <span data-i18n="navKasa">Kasa</span>
-    </button>
-    <button class="nav-btn" data-tab="tab-scan">
-      <i class="fa-solid fa-qrcode" aria-hidden="true"></i>
-      <span data-i18n="navScan">QR Tara</span>
-    </button>
-    <button class="nav-btn" data-tab="tab-sales">
-      <i class="fa-solid fa-receipt" aria-hidden="true"></i>
-      <span data-i18n="navSales">Satışlar</span>
-    </button>
-    <button class="nav-btn" data-tab="tab-veresiye">
-      <i class="fa-solid fa-book" aria-hidden="true"></i>
-      <span data-i18n="navVeresiye">Veresiye</span>
-    </button>
-    <button class="nav-btn" data-tab="tab-orders">
-      <i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>
-      <span data-i18n="navOrders">Sipariş</span>
-    </button>
-    <button class="nav-btn" data-tab="tab-pricechanges">
-      <i class="fa-solid fa-arrow-right-arrow-left" aria-hidden="true"></i>
-      <span data-i18n="navPriceChanges">Fiyat Değişimi</span>
-    </button>
-    <button class="nav-btn" data-tab="tab-settings">
-      <i class="fa-solid fa-gear" aria-hidden="true"></i>
-      <span data-i18n="navSettings">Ayarlar</span>
-    </button>
-    <button class="nav-btn" id="branchesNavBtn" data-tab="tab-branches" style="display:none;">
-      <i class="fa-solid fa-code-branch" aria-hidden="true"></i>
-      <span data-i18n="navBranches">Şubelerim</span>
-    </button>
-    <button class="nav-btn" id="adminNavBtn" data-tab="tab-admin" style="display:none;">
-      <i class="fa-solid fa-user-shield" aria-hidden="true"></i>
-      <span data-i18n="navAdmin">Yönetim</span>
-    </button>
-  </nav>
-
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-
-  <!-- Firebase (bulut senkronizasyonu) -->
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-messaging-compat.js"></script>
-  <script src="js/firebase-config.js"></script>
-  <script src="js/bulk-scan-config.js"></script>
-  <script src="js/admin-config.js"></script>
-  <script src="js/push-config.js"></script>
-  <script src="js/chain-config.js"></script>
-
-  <script src="js/i18n.js"></script>
-  <script src="js/app.js"></script>
-</body>
-</html>
+(function () {
+  "use strict";
+
+  const TRANSLATIONS = {
+    tr: {
+      appName: "Bakkal Stok Takip",
+      syncLocal: "Yerel",
+      syncConnecting: "Bağlanıyor",
+      syncConnected: "Senkron",
+      syncError: "Hata",
+      logoutTitle: "Çıkış yap",
+
+      authTitle: "Giriş Yap",
+      authEmailPh: "E-posta",
+      authPasswordPh: "Şifre",
+      authSubmit: "Giriş Yap",
+      authForgot: "Şifremi unuttum",
+      authHint: "Hesabınız yoksa işletme sahibinden/yöneticinizden hesap açmasını isteyin.",
+
+      statTotalProducts: "Toplam ürün",
+      statOrderNeeded: "Sipariş gerekli",
+
+      navProducts: "Ürünler",
+      navKasa: "Kasa",
+      navScan: "QR Tara",
+      navSales: "Satışlar",
+      navVeresiye: "Veresiye",
+      navOrders: "Sipariş",
+
+      addProductTitle: "Ürün ekle",
+      namePh: "Ürün adı, örn. pepsi 1 lt",
+      categoryPh: "Kategori, örn. içecekler",
+      minStockPh: "Min. stok",
+      startStockPh: "Başlangıç stok",
+      pricePh: "Fiyat (₺)",
+      unitLabel: "Satış birimi",
+      unitAdet: "Adet (tam sayı)",
+      unitKg: "Kg (tartılı / açık ürün)",
+      barcodePh: "Barkod (opsiyonel)",
+      scanBarcodeAria: "Barkod tara",
+      addProductBtn: "Ürün ekle",
+
+      allProductsTitle: "Tüm ürünler",
+      searchPh: "Ürün ara...",
+      emptyProducts: "Henüz ürün yok. Yukarıdan ekleyerek başla.",
+
+      scanTitle: "QR kod ile giriş / çıkış",
+      scanSubtitle: "Bir ürünün QR kodunu okutarak stok girişi veya çıkışı yapabilirsin.",
+      startCamera: "Kamerayı başlat",
+      stopScan: "Taramayı durdur",
+      printQrTitle: "QR kodları yazdır",
+      printQrSubtitle: "Her ürün için bir QR kod oluşturup rafa yapıştırabilirsin. Ürünler listesinden bir ürüne dokun, \"QR kodu göster\" seçeneğini kullan.",
+
+      kasaTitle: "Kasa — QR okutarak satış",
+      kasaSubtitle: "Müşterinin aldığı ürünlerin QR kodunu sırayla okut, sepete otomatik eklensin.",
+      manualAddTitle: "Ürün seç ve ekle (QR'sız)",
+      cartTitle: "Sepet",
+      clearCart: "Sepeti boşalt",
+      emptyCart: "Sepet boş. Ürün QR kodunu okutarak ekle.",
+      discountLabel: "İndirim (₺)",
+      subtotalLabel: "Ara toplam",
+      totalLabel: "Toplam",
+      payNakit: "Nakit",
+      payVeresiye: "Veresiye",
+      completeSaleBtn: "Satışı tamamla",
+
+      periodToday: "Bugün",
+      periodWeek: "Bu Hafta",
+      periodMonth: "Bu Ay",
+      periodAll: "Tümü",
+      statPeriodTotal: "Toplam ciro",
+      statPeriodCount: "İşlem sayısı",
+      topProductsTitle: "En çok satan ürünler",
+      emptyTopProducts: "Bu dönemde satış yok.",
+      salesHistoryTitle: "Satış geçmişi",
+      emptySales: "Bu dönemde satış yapılmadı.",
+      cancelSaleBtn: "İptal et",
+
+      addCustomerTitle: "Müşteri ekle",
+      customerNamePh: "Müşteri adı",
+      customerPhonePh: "Telefon (opsiyonel)",
+      addCustomerBtn: "Müşteri ekle",
+      statTotalDebt: "Toplam alacak",
+      statCustomerCount: "Müşteri sayısı",
+      customersTitle: "Müşteriler",
+      emptyCustomers: "Henüz müşteri yok.",
+
+      orderListTitle: "Acil sipariş listesi",
+      resetAllBtn: "Tümünü sıfırla",
+      emptyOrders: "Şu anda sipariş edilmesi gereken ürün yok.",
+
+      printQrBtn: "QR kodu yazdır",
+      productNameLabel: "Ürün adı",
+      categoryLabel: "Kategori",
+      minStockLabel: "Min. stok",
+      priceLabel: "Fiyat (₺)",
+      barcodeLabel: "Barkod",
+      saveBtn: "Kaydet",
+      deleteProductBtn: "Ürünü sil",
+
+      quickBarcodeTitle: "Barkodu tara",
+      quickBarcodeSubtitle: "Ürünün üzerindeki barkodu kameraya göster.",
+
+      currentBalance: "Güncel bakiye",
+      takePayment: "Ödeme al",
+      amountPh: "Tutar (₺)",
+      customerNameLabel: "Müşteri adı",
+      phoneLabel: "Telefon",
+      deleteCustomerBtn: "Müşteriyi sil",
+      historyTitle: "İşlem geçmişi",
+
+      // Durum etiketleri
+      statusTukendi: "Tükendi",
+      statusKritik: "Kritik",
+      statusYeterli: "Yeterli",
+
+      unitAdetShort: "adet",
+      unitKgShort: "kg",
+
+      // Uyarılar / onaylar / bilgi mesajları
+      alertNotRegistered: "Bu kod kayıtlı bir ürüne ait değil.",
+      alertInvalidAmount: "Geçerli bir miktar girmedin.",
+      alertInvalidWeight: "Geçerli bir ağırlık girmedin.",
+      confirmStockDirection: "Stok GİRİŞİ için Tamam, ÇIKIŞI için İptal'e bas.",
+      promptKgAmount: "Kaç kg?",
+      promptAdetAmount: "kaç adet?",
+      currentStockLabel: "Mevcut stok",
+      cameraError: "Kamera başlatılamadı. Tarayıcı izinlerini kontrol et.",
+      confirmResetAll: "Tüm ürünlerin stoğu minimum seviyeye sıfırlansın mı?",
+      confirmDeleteProduct: "Bu ürünü silmek istediğine emin misin?",
+      confirmClearCart: "Sepeti boşaltmak istediğine emin misin?",
+      alertEmptyCart: "Sepet boş.",
+      alertNeedCustomer: "Önce Veresiye sekmesinden bir müşteri eklemen gerekiyor.",
+      alertSelectCustomer: "Lütfen bir müşteri seç.",
+      alertSaleComplete: "Satış tamamlandı:",
+      veresiyeLabel: "Veresiye",
+      confirmCancelSale: "Bu satış iptal edilsin mi?",
+      confirmCancelSaleDetail: "tutarındaki satış silinecek ve ürünler stoğa geri eklenecek.",
+      soldQtyLabel: "adet satıldı",
+      confirmDeleteCustomer: "Bu müşteriyi silmek istediğine emin misin?",
+      alertInvalidPayment: "Geçerli bir tutar gir.",
+      confirmLogout: "Çıkış yapmak istediğine emin misin?",
+      authErrRequired: "E-posta ve şifre gerekli.",
+      authErrForgotNeedsEmail: "Şifre sıfırlama bağlantısı göndermek için önce e-posta adresini yaz.",
+      authResetSent: "Şifre sıfırlama bağlantısı e-postana gönderildi. Gelen kutunu (ve spam klasörünü) kontrol et.",
+      authErrInvalidEmail: "Geçersiz e-posta adresi.",
+      authErrUserNotFound: "Bu e-posta ile kayıtlı bir hesap bulunamadı. İşletme sahibinden hesap açmasını isteyin.",
+      authErrWrongPassword: "Şifre hatalı.",
+      authErrInvalidCredential: "E-posta veya şifre hatalı.",
+      authErrTooMany: "Çok fazla deneme yapıldı, biraz sonra tekrar dene.",
+      authErrGeneric: "Bir hata oluştu, tekrar dene.",
+      noMatchingProducts: "Eşleşen ürün yok.",
+      addBtnShort: "Ekle",
+      qrLibError: "QR kütüphanesi yüklenemedi (internet bağlantısını kontrol et).",
+      paymentReceivedLabel: "Ödeme alındı",
+      categoryOtherDefault: "diğer",
+      promptNewWeight: "yeni ağırlık (kg)",
+      editWeightAria: "Ağırlığı düzenle",
+      decreaseAria: "Azalt",
+      increaseAria: "Arttır",
+      removeAria: "Kaldır",
+      perKgSuffix: "/kg",
+      noTransactionsYet: "Henüz işlem yok.",
+      confirmDeleteCustomerWithDebt: "Bu müşterinin",
+      confirmDeleteCustomerWithDebtSuffix: "bakiyesi var. Yine de silmek istediğine emin misin?",
+      printWindowTitle: "QR Yazdır",
+      stockShortLabel: "Stok",
+      addedToCartSuffix: "eklendi",
+      bulkScanTitle: "Rafı fotoğrafla (toplu ekle)",
+      bulkScanSubtitle: "Bir raf fotoğrafı çek, yapay zeka ürünleri tanısın, sistemde olmayanları toplu ekle.",
+      bulkScanBtn: "Fotoğraf çek / seç",
+      bulkScanAnalyzing: "Fotoğraf analiz ediliyor...",
+      bulkScanNotConfigured: "Bu özellik henüz kurulmamış. README dosyasındaki kurulum adımlarını takip et.",
+      bulkScanError: "Fotoğraf analiz edilemedi, tekrar dene.",
+      bulkScanNoNew: "Fotoğrafta sistemde olmayan yeni bir ürün bulunamadı.",
+      bulkScanFoundTitle: "Sistemde olmayan {n} ürün bulundu",
+      bulkAddAllBtn: "Hepsini ekle",
+      bulkAddedAlert: "{n} ürün eklendi.",
+      importBackupBtn: "Yerel yedeği içe aktar (eski verileri geri yükle)",
+      importParseError: "Yerel yedek okunamadı.",
+      importNoLocalBackup: "Bu cihazda içe aktarılacak yerel bir yedek bulunamadı.",
+      importConfirm: "Bu cihazda {n} ürün bulundu. Bunları hesabına eklemek istiyor musun?",
+      importSuccess: "{n} ürün hesabına eklendi.",
+      searchCustomerPh: "Müşteri ara...",
+      noMatchingCustomers: "Eşleşen müşteri yok.",
+      costPricePh: "Alış fiyatı (₺, opsiyonel)",
+      costPriceLabel: "Alış fiyatı (₺, opsiyonel)",
+      statNetProfit: "Net kâr",
+      profitLabel: "Kâr",
+      promptOkBtn: "Tamam",
+      promptCancelBtn: "İptal",
+      invoiceScanTitle: "Fatura ile stok girişi (toplu)",
+      invoiceScanSubtitle: "Tedarikçi faturasının fotoğrafını çek, yapay zeka ürünleri okusun — sistemde varsa stoğa eklesin, yoksa yeni ürün olarak oluştursun.",
+      invoiceScanBtn: "Fatura fotoğrafla / seç",
+      invoiceScanAnalyzing: "Fatura analiz ediliyor...",
+      invoiceScanNotConfigured: "Bu özellik henüz kurulmamış. README dosyasındaki kurulum adımlarını takip et.",
+      invoiceScanNoItems: "Faturada okunabilecek bir ürün satırı bulunamadı.",
+      invoiceScanFoundTitle: "Faturada {n} ürün bulundu",
+      invoiceExistingLabel: "Mevcut ürün · stok +{qty}",
+      invoiceNewLabel: "Yeni ürün eklenecek",
+      invoiceApplyBtn: "Onayla ve uygula",
+      invoiceMarkupLabel: "Kâr oranı (%)",
+      voiceNotSupported: "Bu tarayıcı sesli girişi desteklemiyor.",
+      voiceNoSpeech: "Ses algılanamadı, tekrar dene.",
+      voiceNoPermission: "Mikrofon izni verilmedi.",
+      voiceError: "Sesli giriş sırasında bir hata oluştu.",
+      invoiceAppliedAlert: "{n} ürün güncellendi/eklendi.",
+      kgModeLabel: "Ağırlık (kg)",
+      priceModeLabel: "Tutar (₺)",
+      kgPricePreviewKg: "= {value} ₺",
+      kgPricePreviewPrice: "= {value} kg",
+      breadStatusTitle: "🍞 Günlük Ürün Takibi",
+      breadSetupSubtitle: "Her gün otomatik sıfırlanacak/takip edilecek ürünlerini burada ayarla.",
+      breadWhatsAppNumberPh: "WhatsApp numarası (905XXXXXXXXX)",
+      breadConfigNamePh: "Ürün adı (örn. ekmek)",
+      breadConfigQtyPh: "Günlük başlangıç adedi",
+      breadConfigStaleNamePh: "Bayat ürün adı (opsiyonel)",
+      breadConfigAutoResetLabel: "Her sabah otomatik sıfırla ve bayata aktar",
+      breadConfigAddBtn: "Takibe ekle",
+      breadConfigListTitle: "Takip edilen ürünler",
+      breadCurrentTitle: "Şu anki durum",
+      breadConfigEmpty: "Henüz takip edilen ürün yok.",
+      breadConfigNameRequired: "Ürün adı gerekli.",
+      breadConfigAdded: "Takibe eklendi.",
+      breadConfigRemoved: "Takipten kaldırıldı.",
+      breadNoWhatsAppNumber: "Önce bir WhatsApp numarası gir.",
+      sharedPhotoPrompt: "Bu paylaşılan fotoğraf ne için kullanılsın?\n\nTamam = Raf taraması (ürün tanıma)\nİptal = Fatura taraması (stok girişi)",
+      notifEnableBtn: "Bildirimleri aç",
+      notifDisableBtn: "Bildirimler açık",
+      notifPermissionDenied: "Bildirim izni verilmedi.",
+      notifEnabled: "Bildirimler açıldı.",
+      notifError: "Bildirimler açılırken bir hata oluştu.",
+      syncReconnected: "Bağlantı geri geldi, veriler senkronize ediliyor.",
+      csvImportTitle: "Başka sistemden geçiş (toplu içe aktar)",
+      csvImportSubtitle: "Excel/CSV dosyandaki ürünleri tek seferde aktar. Sütun sırası: Ürün adı, Kategori, Stok adedi, Fiyat.",
+      csvImportBtn: "Excel/CSV dosyası seç",
+      printAllQrBtn: "Fiyat etiketlerini yazdır",
+      navPriceChanges: "Fiyat Değişimi",
+      priceChangesTitle: "Fiyatı Değişen Ürünler",
+      priceChangesSubtitle: "Fatura ile stok girişi yaptığında, fiyatı önceye göre değişen ürünler burada 2 gün boyunca listelenir.",
+      priceChangesEmpty: "Son 2 günde fiyatı değişen ürün yok.",
+      priceIncreasedLabel: "Fiyat arttı",
+      priceDecreasedLabel: "Fiyat düştü",
+      navSettings: "Ayarlar",
+      settingsThemeTitle: "Görünüm",
+      settingsThemeSubtitle: "Uygulamanın açık ya da koyu temada görünmesini seç.",
+      settingsThemeLight: "Açık",
+      settingsThemeDark: "Koyu",
+      settingsNavTitle: "Menü Konumu",
+      settingsNavSubtitle: "Alt menüyü ekranın altında ya da (YouTube gibi) yan tarafta göster.",
+      settingsNavBottom: "Alttan",
+      settingsNavSide: "Yandan",
+      settingsFontTitle: "Yazı Boyutu",
+      settingsFontSubtitle: "Yazıların ve butonların daha büyük görünmesini sağla.",
+      settingsFontNormal: "Normal",
+      settingsFontLarge: "Büyük",
+      settingsBackupTitle: "Veri Yedeği",
+      settingsBackupSubtitle: "Tüm ürün, satış ve müşteri verini bir dosya olarak indir, güvenli bir yerde sakla.",
+      settingsBackupBtn: "Yedeği indir",
+      settingsBackupSuccess: "Yedek indirildi.",
+      settingsAboutTitle: "Hakkında",
+      settingsAppName: "Uygulama",
+      settingsVersion: "Sürüm",
+      settingsLastUpdate: "Son güncelleme",
+      navBranches: "Şubelerim",
+      branchExitView: "Kendi hesabıma dön",
+      branchSummaryTitle: "Tüm Şubeler Özeti",
+      branchSummarySales: "Bugün toplam satış",
+      branchSummaryOrders: "Kritik stok (tüm şubeler)",
+      branchAddTitle: "Yeni şube ekle",
+      branchNamePh: "Şube adı (örn. Kadıköy Şubesi)",
+      branchEmailPh: "Şube için e-posta",
+      branchPasswordPh: "Şube için şifre",
+      branchCreateBtn: "Şube oluştur",
+      branchListTitle: "Şubeler",
+      branchEmptyState: "Henüz şube eklenmedi.",
+      branchFieldsRequired: "Tüm alanları doldur.",
+      branchCreateSuccess: "Şube oluşturuldu.",
+      branchCreateError: "Şube oluşturulamadı.",
+      branchNotConfigured: "Şube yönetimi henüz kurulmamış.",
+      branchViewBtn: "Görüntüle",
+      branchViewingPrefix: "Şu an görüntülüyorsun:",
+      branchEditSubtitle: "Sadece değiştirmek istediğin alanı doldur, diğerini boş bırakabilirsin.",
+      branchEditEmailPh: "Yeni e-posta (opsiyonel)",
+      branchEditPasswordPh: "Yeni şifre (opsiyonel)",
+      branchEditSaveBtn: "Kaydet",
+      branchEditTitle: "Düzenle",
+      branchEditSuccess: "Şube bilgileri güncellendi.",
+      branchEditError: "Güncelleme başarısız oldu.",
+      branchEditFieldsRequired: "Yeni e-posta ya da şifreden en az birini gir.",
+      branchDeleteConfirm: "adlı şubeyi TAMAMEN silmek istediğine emin misin? Bu işlem geri alınamaz, şubenin hesabı ve tüm verisi silinecek.",
+      branchDeleteSuccess: "Şube silindi.",
+      branchDeleteError: "Şube silinemedi.",
+      catalogTitle: "Ana Ürün Kataloğu",
+      catalogSubtitle: "Buraya eklediğin ürün adı/kategori/fiyatı TÜM şubelere gönderilir. Her şube kendi stok adedini ayrı tutar, buradan sadece fiyat/isim değişir.",
+      catalogNamePh: "Ürün adı",
+      catalogCategoryPh: "Kategori",
+      catalogPricePh: "Satış fiyatı (₺)",
+      catalogAddBtn: "Kataloğa ekle ve tüm şubelere gönder",
+      catalogSyncing: "Şubelere gönderiliyor...",
+      catalogListTitle: "Kataloğdaki ürünler",
+      catalogEmptyState: "Kataloğa henüz ürün eklenmedi.",
+      catalogSyncSuccess: "Katalog tüm şubelere gönderildi.",
+      catalogSyncError: "Katalog şubelere gönderilemedi.",
+      breadAutoResetYes: "Otomatik sıfırlama: Açık",
+      breadAutoResetNo: "Otomatik sıfırlama: Kapalı",
+      breadCurrentLabel: "Şu anki stok:",
+      breadWhatsAppBtn: "WhatsApp'tan gönder",
+      breadLogTitle: "Geçmiş",
+      breadLogEmpty: "Henüz bir kayıt yok.",
+      breadNotFound: "'ekmek' adında bir ürün bulunamadı.",
+      navAdmin: "Yönetim",
+      adminAddTitle: "Yeni işletme ekle",
+      adminBusinessNamePh: "İşletme adı",
+      adminEmailPh: "E-posta",
+      adminPasswordPh: "Şifre",
+      adminCreateBtn: "İşletme oluştur",
+      adminListTitle: "İşletmeler",
+      adminEmptyState: "Henüz işletme eklenmedi.",
+      adminNotConfigured: "Yönetim paneli henüz kurulmamış.",
+      adminCreateSuccess: "İşletme oluşturuldu.",
+      adminCreateError: "İşletme oluşturulamadı.",
+      adminFieldsRequired: "Tüm alanları doldur.",
+      adminToggleError: "İşlem başarısız oldu.",
+      adminActiveLabel: "Aktif",
+      adminInactiveLabel: "Pasif",
+      adminMaxBranchesLabel: "Şube limiti:",
+      adminSaveBtn: "Kaydet",
+      adminBranchLimitSaved: "Şube limiti kaydedildi.",
+      patronModeTitle: "Patron Modu",
+      patronModeSubtitle: "Kendi ürün/kasa sekmelerini gizle, sadece şube yönetimi ve özet görün.",
+      adminAccountTypeLabel: "Hesap Türü",
+      adminAccountTypeStandalone: "Bakkal/Market (tek şube)",
+      adminAccountTypePatron: "Patron (Zincir Sahibi)",
+      staffPickerTitle: "Kim çalışıyor?",
+      staffOwnerBtn: "Ben işletme sahibiyim, tam yetkiyle gir",
+      staffMgmtTitle: "Personel Yönetimi",
+      staffMgmtSubtitle: "Kasiyer eklersen, o kişi sadece Kasa/Satış/Veresiye görür — ürün, ayar ve stok bilgilerine erişemez.",
+      staffNamePh: "Personel adı",
+      staffPinPh: "4 haneli PIN",
+      staffRoleCashier: "Kasiyer",
+      staffRoleManager: "Müdür",
+      staffAddBtn: "Personel ekle",
+      staffEmptyState: "Henüz personel eklenmedi (herkes tam yetkiyle giriyor).",
+      staffFieldsRequired: "Ad ve 4 haneli PIN gerekli.",
+      staffPinInvalid: "PIN 4 haneli bir sayı olmalı.",
+      staffAdded: "Personel eklendi.",
+      staffRemoved: "Personel kaldırıldı.",
+      staffPinPrompt: "PIN kodunu gir",
+      staffPinWrong: "Yanlış PIN.",
+      staffRestrictedAlert: "Bu işlem için müdür yetkisi gerekiyor.",
+      auditLogTitle: "İşlem Geçmişi",
+      auditLogSubtitle: "Kim, ne zaman, ne işlem yaptı — son 300 kayıt.",
+      auditLogEmpty: "Henüz bir kayıt yok.",
+    },
+
+
+
+
+
+    en: {
+      appName: "Grocery Stock Tracker",
+      syncLocal: "Local",
+      syncConnecting: "Connecting",
+      syncConnected: "Synced",
+      syncError: "Error",
+      logoutTitle: "Log out",
+
+      authTitle: "Log In",
+      authEmailPh: "Email",
+      authPasswordPh: "Password",
+      authSubmit: "Log In",
+      authForgot: "Forgot password",
+      authHint: "If you don't have an account, ask the business owner/manager to create one for you.",
+
+      statTotalProducts: "Total products",
+      statOrderNeeded: "Needs ordering",
+
+      navProducts: "Products",
+      navKasa: "Checkout",
+      navScan: "Scan QR",
+      navSales: "Sales",
+      navVeresiye: "Tabs/Credit",
+      navOrders: "Orders",
+
+      addProductTitle: "Add product",
+      namePh: "Product name, e.g. pepsi 1 lt",
+      categoryPh: "Category, e.g. beverages",
+      minStockPh: "Min. stock",
+      startStockPh: "Starting stock",
+      pricePh: "Price (₺)",
+      unitLabel: "Sale unit",
+      unitAdet: "Piece (whole number)",
+      unitKg: "Kg (weighed / loose item)",
+      barcodePh: "Barcode (optional)",
+      scanBarcodeAria: "Scan barcode",
+      addProductBtn: "Add product",
+
+      allProductsTitle: "All products",
+      searchPh: "Search product...",
+      emptyProducts: "No products yet. Add one above to get started.",
+
+      scanTitle: "Stock in / out via QR",
+      scanSubtitle: "Scan a product's QR code to record stock coming in or going out.",
+      startCamera: "Start camera",
+      stopScan: "Stop scanning",
+      printQrTitle: "Print QR codes",
+      printQrSubtitle: "You can generate a QR code for each product and stick it on the shelf. Tap a product in the list and use \"Show QR code\".",
+
+      kasaTitle: "Checkout — sell by scanning QR",
+      kasaSubtitle: "Scan the QR code of each item the customer is buying, they'll be added to the cart automatically.",
+      manualAddTitle: "Pick a product and add (no QR)",
+      cartTitle: "Cart",
+      clearCart: "Clear cart",
+      emptyCart: "Cart is empty. Scan a product's QR code to add it.",
+      discountLabel: "Discount (₺)",
+      subtotalLabel: "Subtotal",
+      totalLabel: "Total",
+      payNakit: "Cash",
+      payVeresiye: "Credit (Tab)",
+      completeSaleBtn: "Complete sale",
+
+      periodToday: "Today",
+      periodWeek: "This Week",
+      periodMonth: "This Month",
+      periodAll: "All",
+      statPeriodTotal: "Total revenue",
+      statPeriodCount: "Number of sales",
+      topProductsTitle: "Best-selling products",
+      emptyTopProducts: "No sales in this period.",
+      salesHistoryTitle: "Sales history",
+      emptySales: "No sales were made in this period.",
+      cancelSaleBtn: "Cancel",
+
+      addCustomerTitle: "Add customer",
+      customerNamePh: "Customer name",
+      customerPhonePh: "Phone (optional)",
+      addCustomerBtn: "Add customer",
+      statTotalDebt: "Total owed",
+      statCustomerCount: "Number of customers",
+      customersTitle: "Customers",
+      emptyCustomers: "No customers yet.",
+
+      orderListTitle: "Urgent order list",
+      resetAllBtn: "Reset all",
+      emptyOrders: "No products currently need ordering.",
+
+      printQrBtn: "Print QR code",
+      productNameLabel: "Product name",
+      categoryLabel: "Category",
+      minStockLabel: "Min. stock",
+      priceLabel: "Price (₺)",
+      barcodeLabel: "Barcode",
+      saveBtn: "Save",
+      deleteProductBtn: "Delete product",
+
+      quickBarcodeTitle: "Scan barcode",
+      quickBarcodeSubtitle: "Show the product's barcode to the camera.",
+
+      currentBalance: "Current balance",
+      takePayment: "Take payment",
+      amountPh: "Amount (₺)",
+      customerNameLabel: "Customer name",
+      phoneLabel: "Phone",
+      deleteCustomerBtn: "Delete customer",
+      historyTitle: "Transaction history",
+
+      statusTukendi: "Out of stock",
+      statusKritik: "Low stock",
+      statusYeterli: "In stock",
+
+      unitAdetShort: "pcs",
+      unitKgShort: "kg",
+
+      alertNotRegistered: "This code doesn't belong to a registered product.",
+      alertInvalidAmount: "You didn't enter a valid amount.",
+      alertInvalidWeight: "You didn't enter a valid weight.",
+      confirmStockDirection: "Press OK for stock IN, Cancel for stock OUT.",
+      promptKgAmount: "How many kg?",
+      promptAdetAmount: "how many pieces?",
+      currentStockLabel: "Current stock",
+      cameraError: "Couldn't start the camera. Check your browser permissions.",
+      confirmResetAll: "Reset the stock of all products to minimum level?",
+      confirmDeleteProduct: "Are you sure you want to delete this product?",
+      confirmClearCart: "Are you sure you want to clear the cart?",
+      alertEmptyCart: "Cart is empty.",
+      alertNeedCustomer: "You need to add a customer from the Tabs/Credit tab first.",
+      alertSelectCustomer: "Please select a customer.",
+      alertSaleComplete: "Sale completed:",
+      veresiyeLabel: "Credit",
+      confirmCancelSale: "Cancel this sale?",
+      confirmCancelSaleDetail: "worth of sale will be deleted and the items will be added back to stock.",
+      soldQtyLabel: "sold",
+      confirmDeleteCustomer: "Are you sure you want to delete this customer?",
+      alertInvalidPayment: "Enter a valid amount.",
+      confirmLogout: "Are you sure you want to log out?",
+      authErrRequired: "Email and password are required.",
+      authErrForgotNeedsEmail: "Enter your email first to receive a password reset link.",
+      authResetSent: "A password reset link has been sent to your email. Check your inbox (and spam folder).",
+      authErrInvalidEmail: "Invalid email address.",
+      authErrUserNotFound: "No account found with this email. Ask the business owner to create one.",
+      authErrWrongPassword: "Incorrect password.",
+      authErrInvalidCredential: "Incorrect email or password.",
+      authErrTooMany: "Too many attempts, try again shortly.",
+      authErrGeneric: "Something went wrong, please try again.",
+      noMatchingProducts: "No matching products.",
+      addBtnShort: "Add",
+      qrLibError: "The QR library failed to load (check your internet connection).",
+      paymentReceivedLabel: "Payment received",
+      categoryOtherDefault: "other",
+      promptNewWeight: "new weight (kg)",
+      editWeightAria: "Edit weight",
+      decreaseAria: "Decrease",
+      increaseAria: "Increase",
+      removeAria: "Remove",
+      perKgSuffix: "/kg",
+      noTransactionsYet: "No transactions yet.",
+      confirmDeleteCustomerWithDebt: "This customer has a balance of",
+      confirmDeleteCustomerWithDebtSuffix: "Delete anyway?",
+      printWindowTitle: "Print QR",
+      stockShortLabel: "Stock",
+      addedToCartSuffix: "added",
+      bulkScanTitle: "Photograph the shelf (bulk add)",
+      bulkScanSubtitle: "Take a photo of a shelf, let AI recognize products, bulk-add the ones missing from your system.",
+      bulkScanBtn: "Take / choose photo",
+      bulkScanAnalyzing: "Analyzing photo...",
+      bulkScanNotConfigured: "This feature isn't set up yet. Follow the setup steps in the README file.",
+      bulkScanError: "Couldn't analyze the photo, try again.",
+      bulkScanNoNew: "No new products (not already in your system) were found in the photo.",
+      bulkScanFoundTitle: "{n} new products found",
+      bulkAddAllBtn: "Add all",
+      bulkAddedAlert: "{n} products added.",
+      importBackupBtn: "Import local backup (restore old data)",
+      importParseError: "Couldn't read the local backup.",
+      importNoLocalBackup: "No local backup found on this device.",
+      importConfirm: "Found {n} products on this device. Add them to your account?",
+      importSuccess: "{n} products added to your account.",
+      searchCustomerPh: "Search customer...",
+      noMatchingCustomers: "No matching customers.",
+      costPricePh: "Cost price (₺, optional)",
+      costPriceLabel: "Cost price (₺, optional)",
+      statNetProfit: "Net profit",
+      profitLabel: "Profit",
+      promptOkBtn: "OK",
+      promptCancelBtn: "Cancel",
+      invoiceScanTitle: "Stock in via invoice (bulk)",
+      invoiceScanSubtitle: "Take a photo of a supplier invoice, let AI read the products — restock existing ones, create new ones automatically.",
+      invoiceScanBtn: "Photograph / choose invoice",
+      invoiceScanAnalyzing: "Analyzing invoice...",
+      invoiceScanNotConfigured: "This feature isn't set up yet. Follow the setup steps in the README file.",
+      invoiceScanNoItems: "No readable product lines were found on the invoice.",
+      invoiceScanFoundTitle: "{n} items found on invoice",
+      invoiceExistingLabel: "Existing product · stock +{qty}",
+      invoiceNewLabel: "New product will be created",
+      invoiceApplyBtn: "Confirm and apply",
+      invoiceMarkupLabel: "Profit margin (%)",
+      voiceNotSupported: "This browser doesn't support voice input.",
+      voiceNoSpeech: "No speech detected, try again.",
+      voiceNoPermission: "Microphone permission denied.",
+      voiceError: "An error occurred during voice input.",
+      invoiceAppliedAlert: "{n} products updated/added.",
+      kgModeLabel: "Weight (kg)",
+      priceModeLabel: "Amount (₺)",
+      kgPricePreviewKg: "= {value} ₺",
+      kgPricePreviewPrice: "= {value} kg",
+      breadStatusTitle: "🍞 Daily Product Tracking",
+      breadSetupSubtitle: "Set up the products that should reset/be tracked automatically each day.",
+      breadWhatsAppNumberPh: "WhatsApp number (905XXXXXXXXX)",
+      breadConfigNamePh: "Product name (e.g. bread)",
+      breadConfigQtyPh: "Daily starting quantity",
+      breadConfigStaleNamePh: "Stale product name (optional)",
+      breadConfigAutoResetLabel: "Auto-reset and move leftovers to stale product each morning",
+      breadConfigAddBtn: "Add to tracking",
+      breadConfigListTitle: "Tracked products",
+      breadCurrentTitle: "Current status",
+      breadConfigEmpty: "No tracked products yet.",
+      breadConfigNameRequired: "Product name is required.",
+      breadConfigAdded: "Added to tracking.",
+      breadConfigRemoved: "Removed from tracking.",
+      breadNoWhatsAppNumber: "Enter a WhatsApp number first.",
+      sharedPhotoPrompt: "What should this shared photo be used for?\n\nOK = Shelf scan (product recognition)\nCancel = Invoice scan (stock entry)",
+      notifEnableBtn: "Enable notifications",
+      notifDisableBtn: "Notifications on",
+      notifPermissionDenied: "Notification permission denied.",
+      notifEnabled: "Notifications enabled.",
+      notifError: "An error occurred enabling notifications.",
+      syncReconnected: "Connection restored, syncing data.",
+      csvImportTitle: "Migrate from another system (bulk import)",
+      csvImportSubtitle: "Import products from your Excel/CSV file at once. Column order: Product name, Category, Stock quantity, Price.",
+      csvImportBtn: "Choose Excel/CSV file",
+      printAllQrBtn: "Print price tags",
+      navPriceChanges: "Price Changes",
+      priceChangesTitle: "Products with Changed Prices",
+      priceChangesSubtitle: "When you enter stock via invoice, products whose price changed from before are listed here for 2 days.",
+      priceChangesEmpty: "No price changes in the last 2 days.",
+      priceIncreasedLabel: "Price increased",
+      priceDecreasedLabel: "Price decreased",
+      navSettings: "Settings",
+      settingsThemeTitle: "Appearance",
+      settingsThemeSubtitle: "Choose whether the app appears in light or dark theme.",
+      settingsThemeLight: "Light",
+      settingsThemeDark: "Dark",
+      settingsNavTitle: "Menu Position",
+      settingsNavSubtitle: "Show the bottom menu at the bottom, or on the side (like YouTube).",
+      settingsNavBottom: "Bottom",
+      settingsNavSide: "Side",
+      settingsFontTitle: "Font Size",
+      settingsFontSubtitle: "Make text and buttons appear larger.",
+      settingsFontNormal: "Normal",
+      settingsFontLarge: "Large",
+      settingsBackupTitle: "Data Backup",
+      settingsBackupSubtitle: "Download all your product, sales, and customer data as a file and keep it somewhere safe.",
+      settingsBackupBtn: "Download backup",
+      settingsBackupSuccess: "Backup downloaded.",
+      settingsAboutTitle: "About",
+      settingsAppName: "App",
+      settingsVersion: "Version",
+      settingsLastUpdate: "Last updated",
+      navBranches: "My Branches",
+      branchExitView: "Back to my account",
+      branchSummaryTitle: "All Branches Summary",
+      branchSummarySales: "Today's total sales",
+      branchSummaryOrders: "Low stock (all branches)",
+      branchAddTitle: "Add new branch",
+      branchNamePh: "Branch name (e.g. Downtown Branch)",
+      branchEmailPh: "Email for the branch",
+      branchPasswordPh: "Password for the branch",
+      branchCreateBtn: "Create branch",
+      branchListTitle: "Branches",
+      branchEmptyState: "No branches added yet.",
+      branchFieldsRequired: "Fill in all fields.",
+      branchCreateSuccess: "Branch created.",
+      branchCreateError: "Couldn't create the branch.",
+      branchNotConfigured: "Branch management isn't set up yet.",
+      branchViewBtn: "View",
+      branchViewingPrefix: "Currently viewing:",
+      branchEditSubtitle: "Only fill in the field you want to change, leave the other blank.",
+      branchEditEmailPh: "New email (optional)",
+      branchEditPasswordPh: "New password (optional)",
+      branchEditSaveBtn: "Save",
+      branchEditTitle: "Edit",
+      branchEditSuccess: "Branch details updated.",
+      branchEditError: "Update failed.",
+      branchEditFieldsRequired: "Enter a new email or password (at least one).",
+      branchDeleteConfirm: "Are you sure you want to PERMANENTLY delete the branch named",
+      branchDeleteSuccess: "Branch deleted.",
+      branchDeleteError: "Couldn't delete the branch.",
+      catalogTitle: "Master Product Catalog",
+      catalogSubtitle: "Products added here are pushed to ALL branches. Each branch keeps its own stock quantity — only the price/name is shared.",
+      catalogNamePh: "Product name",
+      catalogCategoryPh: "Category",
+      catalogPricePh: "Selling price (₺)",
+      catalogAddBtn: "Add to catalog and push to all branches",
+      catalogSyncing: "Pushing to branches...",
+      catalogListTitle: "Products in catalog",
+      catalogEmptyState: "No products added to the catalog yet.",
+      catalogSyncSuccess: "Catalog pushed to all branches.",
+      catalogSyncError: "Couldn't push the catalog to branches.",
+      breadAutoResetYes: "Auto-reset: On",
+      breadAutoResetNo: "Auto-reset: Off",
+      breadCurrentLabel: "Current stock:",
+      breadWhatsAppBtn: "Send via WhatsApp",
+      breadLogTitle: "History",
+      breadLogEmpty: "No records yet.",
+      breadNotFound: "No product named 'ekmek' was found.",
+      navAdmin: "Admin",
+      adminAddTitle: "Add new business",
+      adminBusinessNamePh: "Business name",
+      adminEmailPh: "Email",
+      adminPasswordPh: "Password",
+      adminCreateBtn: "Create business",
+      adminListTitle: "Businesses",
+      adminEmptyState: "No businesses added yet.",
+      adminNotConfigured: "The admin panel isn't set up yet.",
+      adminCreateSuccess: "Business created.",
+      adminCreateError: "Couldn't create the business.",
+      adminFieldsRequired: "Fill in all fields.",
+      adminToggleError: "The action failed.",
+      adminActiveLabel: "Active",
+      adminInactiveLabel: "Inactive",
+      adminMaxBranchesLabel: "Branch limit:",
+      adminSaveBtn: "Save",
+      adminBranchLimitSaved: "Branch limit saved.",
+      patronModeTitle: "Owner Mode",
+      patronModeSubtitle: "Hide your own product/checkout tabs, see only branch management and summary.",
+      adminAccountTypeLabel: "Account Type",
+      adminAccountTypeStandalone: "Grocery/Shop (single branch)",
+      adminAccountTypePatron: "Owner (Chain Owner)",
+      staffPickerTitle: "Who's working?",
+      staffOwnerBtn: "I'm the owner, enter with full access",
+      staffMgmtTitle: "Staff Management",
+      staffMgmtSubtitle: "If you add a cashier, they'll only see Checkout/Sales/Credit — no access to products, settings, or stock info.",
+      staffNamePh: "Staff name",
+      staffPinPh: "4-digit PIN",
+      staffRoleCashier: "Cashier",
+      staffRoleManager: "Manager",
+      staffAddBtn: "Add staff",
+      staffEmptyState: "No staff added yet (everyone logs in with full access).",
+      staffFieldsRequired: "Name and a 4-digit PIN are required.",
+      staffPinInvalid: "PIN must be a 4-digit number.",
+      staffAdded: "Staff member added.",
+      staffRemoved: "Staff member removed.",
+      staffPinPrompt: "Enter PIN code",
+      staffPinWrong: "Wrong PIN.",
+      staffRestrictedAlert: "This action requires manager access.",
+      auditLogTitle: "Audit Log",
+      auditLogSubtitle: "Who did what, and when — last 300 entries.",
+      auditLogEmpty: "No records yet.",
+    },
+
+
+
+
+
+    ar: {
+      appName: "متابعة مخزون البقالة",
+      syncLocal: "محلي",
+      syncConnecting: "جارٍ الاتصال",
+      syncConnected: "متزامن",
+      syncError: "خطأ",
+      logoutTitle: "تسجيل الخروج",
+
+      authTitle: "تسجيل الدخول",
+      authEmailPh: "البريد الإلكتروني",
+      authPasswordPh: "كلمة المرور",
+      authSubmit: "تسجيل الدخول",
+      authForgot: "نسيت كلمة المرور",
+      authHint: "إذا لم يكن لديك حساب، اطلب من صاحب العمل/المدير إنشاء حساب لك.",
+
+      statTotalProducts: "إجمالي المنتجات",
+      statOrderNeeded: "يحتاج طلب",
+
+      navProducts: "المنتجات",
+      navKasa: "الصندوق",
+      navScan: "مسح QR",
+      navSales: "المبيعات",
+      navVeresiye: "الديون",
+      navOrders: "الطلبات",
+
+      addProductTitle: "إضافة منتج",
+      namePh: "اسم المنتج، مثال: بيبسي 1 لتر",
+      categoryPh: "الفئة، مثال: مشروبات",
+      minStockPh: "الحد الأدنى للمخزون",
+      startStockPh: "المخزون الابتدائي",
+      pricePh: "السعر (₺)",
+      unitLabel: "وحدة البيع",
+      unitAdet: "قطعة (عدد صحيح)",
+      unitKg: "كجم (توزن / سلعة مفتوحة)",
+      barcodePh: "الباركود (اختياري)",
+      scanBarcodeAria: "مسح الباركود",
+      addProductBtn: "إضافة منتج",
+
+      allProductsTitle: "جميع المنتجات",
+      searchPh: "ابحث عن منتج...",
+      emptyProducts: "لا توجد منتجات بعد. أضف واحدًا من الأعلى للبدء.",
+
+      scanTitle: "إدخال / إخراج المخزون عبر QR",
+      scanSubtitle: "امسح رمز QR الخاص بمنتج لتسجيل دخول أو خروج المخزون.",
+      startCamera: "تشغيل الكاميرا",
+      stopScan: "إيقاف المسح",
+      printQrTitle: "طباعة رموز QR",
+      printQrSubtitle: "يمكنك إنشاء رمز QR لكل منتج ولصقه على الرف. اضغط على منتج من القائمة واستخدم \"عرض رمز QR\".",
+
+      kasaTitle: "الصندوق — بيع عبر مسح QR",
+      kasaSubtitle: "امسح رمز QR لكل منتج يشتريه العميل، وستُضاف تلقائيًا إلى السلة.",
+      manualAddTitle: "اختر منتجًا وأضفه (بدون QR)",
+      cartTitle: "السلة",
+      clearCart: "إفراغ السلة",
+      emptyCart: "السلة فارغة. امسح رمز QR لمنتج لإضافته.",
+      discountLabel: "الخصم (₺)",
+      subtotalLabel: "المجموع الفرعي",
+      totalLabel: "الإجمالي",
+      payNakit: "نقدًا",
+      payVeresiye: "دين (آجل)",
+      completeSaleBtn: "إتمام البيع",
+
+      periodToday: "اليوم",
+      periodWeek: "هذا الأسبوع",
+      periodMonth: "هذا الشهر",
+      periodAll: "الكل",
+      statPeriodTotal: "إجمالي الإيرادات",
+      statPeriodCount: "عدد العمليات",
+      topProductsTitle: "الأكثر مبيعًا",
+      emptyTopProducts: "لا مبيعات في هذه الفترة.",
+      salesHistoryTitle: "سجل المبيعات",
+      emptySales: "لم تتم أي مبيعات في هذه الفترة.",
+      cancelSaleBtn: "إلغاء",
+
+      addCustomerTitle: "إضافة عميل",
+      customerNamePh: "اسم العميل",
+      customerPhonePh: "الهاتف (اختياري)",
+      addCustomerBtn: "إضافة عميل",
+      statTotalDebt: "إجمالي الديون",
+      statCustomerCount: "عدد العملاء",
+      customersTitle: "العملاء",
+      emptyCustomers: "لا يوجد عملاء بعد.",
+
+      orderListTitle: "قائمة الطلب العاجلة",
+      resetAllBtn: "إعادة تعيين الكل",
+      emptyOrders: "لا توجد منتجات تحتاج إلى طلب حاليًا.",
+
+      printQrBtn: "طباعة رمز QR",
+      productNameLabel: "اسم المنتج",
+      categoryLabel: "الفئة",
+      minStockLabel: "الحد الأدنى للمخزون",
+      priceLabel: "السعر (₺)",
+      barcodeLabel: "الباركود",
+      saveBtn: "حفظ",
+      deleteProductBtn: "حذف المنتج",
+
+      quickBarcodeTitle: "مسح الباركود",
+      quickBarcodeSubtitle: "أظهر باركود المنتج أمام الكاميرا.",
+
+      currentBalance: "الرصيد الحالي",
+      takePayment: "استلام دفعة",
+      amountPh: "المبلغ (₺)",
+      customerNameLabel: "اسم العميل",
+      phoneLabel: "الهاتف",
+      deleteCustomerBtn: "حذف العميل",
+      historyTitle: "سجل العمليات",
+
+      statusTukendi: "نفد",
+      statusKritik: "منخفض",
+      statusYeterli: "متوفر",
+
+      unitAdetShort: "قطعة",
+      unitKgShort: "كجم",
+
+      alertNotRegistered: "هذا الرمز لا يخص منتجًا مسجلاً.",
+      alertInvalidAmount: "لم تُدخل كمية صحيحة.",
+      alertInvalidWeight: "لم تُدخل وزنًا صحيحًا.",
+      confirmStockDirection: "اضغط موافق للإدخال، وإلغاء للإخراج.",
+      promptKgAmount: "كم كجم؟",
+      promptAdetAmount: "كم قطعة؟",
+      currentStockLabel: "المخزون الحالي",
+      cameraError: "تعذر تشغيل الكاميرا. تحقق من أذونات المتصفح.",
+      confirmResetAll: "هل تريد إعادة تعيين مخزون جميع المنتجات إلى الحد الأدنى؟",
+      confirmDeleteProduct: "هل أنت متأكد من حذف هذا المنتج؟",
+      confirmClearCart: "هل أنت متأكد من إفراغ السلة؟",
+      alertEmptyCart: "السلة فارغة.",
+      alertNeedCustomer: "يجب عليك أولاً إضافة عميل من تبويب الديون.",
+      alertSelectCustomer: "الرجاء اختيار عميل.",
+      alertSaleComplete: "تم إتمام البيع:",
+      veresiyeLabel: "دين",
+      confirmCancelSale: "هل تريد إلغاء هذا البيع؟",
+      confirmCancelSaleDetail: "سيتم حذف عملية البيع بهذه القيمة وإعادة المنتجات إلى المخزون.",
+      soldQtyLabel: "تم بيع",
+      confirmDeleteCustomer: "هل أنت متأكد من حذف هذا العميل؟",
+      alertInvalidPayment: "أدخل مبلغًا صحيحًا.",
+      confirmLogout: "هل أنت متأكد من تسجيل الخروج؟",
+      authErrRequired: "البريد الإلكتروني وكلمة المرور مطلوبان.",
+      authErrForgotNeedsEmail: "أدخل بريدك الإلكتروني أولاً لتلقي رابط إعادة تعيين كلمة المرور.",
+      authResetSent: "تم إرسال رابط إعادة تعيين كلمة المرور إلى بريدك الإلكتروني. تحقق من صندوق الوارد (ومجلد الرسائل غير المرغوب فيها).",
+      authErrInvalidEmail: "بريد إلكتروني غير صالح.",
+      authErrUserNotFound: "لم يتم العثور على حساب بهذا البريد الإلكتروني. اطلب من صاحب العمل إنشاء حساب.",
+      authErrWrongPassword: "كلمة المرور غير صحيحة.",
+      authErrInvalidCredential: "البريد الإلكتروني أو كلمة المرور غير صحيحة.",
+      authErrTooMany: "محاولات كثيرة جدًا، حاول مرة أخرى بعد قليل.",
+      authErrGeneric: "حدث خطأ ما، حاول مرة أخرى.",
+      noMatchingProducts: "لا توجد منتجات مطابقة.",
+      addBtnShort: "إضافة",
+      qrLibError: "تعذر تحميل مكتبة QR (تحقق من اتصال الإنترنت).",
+      paymentReceivedLabel: "تم استلام الدفعة",
+      categoryOtherDefault: "أخرى",
+      promptNewWeight: "الوزن الجديد (كجم)",
+      editWeightAria: "تعديل الوزن",
+      decreaseAria: "إنقاص",
+      increaseAria: "زيادة",
+      removeAria: "إزالة",
+      perKgSuffix: "/كجم",
+      noTransactionsYet: "لا توجد معاملات بعد.",
+      confirmDeleteCustomerWithDebt: "لدى هذا العميل رصيد قدره",
+      confirmDeleteCustomerWithDebtSuffix: "هل تريد الحذف على أي حال؟",
+      printWindowTitle: "طباعة رمز QR",
+      stockShortLabel: "المخزون",
+      addedToCartSuffix: "تمت الإضافة",
+      bulkScanTitle: "صوّر الرف (إضافة جماعية)",
+      bulkScanSubtitle: "التقط صورة للرف، ودع الذكاء الاصطناعي يتعرف على المنتجات، ثم أضف الجديدة منها دفعة واحدة.",
+      bulkScanBtn: "التقط / اختر صورة",
+      bulkScanAnalyzing: "جارٍ تحليل الصورة...",
+      bulkScanNotConfigured: "هذه الميزة غير مُعدّة بعد. اتبع خطوات الإعداد في ملف README.",
+      bulkScanError: "تعذر تحليل الصورة، حاول مرة أخرى.",
+      bulkScanNoNew: "لم يتم العثور على منتجات جديدة غير موجودة في نظامك.",
+      bulkScanFoundTitle: "تم العثور على {n} منتج جديد",
+      bulkAddAllBtn: "إضافة الكل",
+      bulkAddedAlert: "تمت إضافة {n} منتج.",
+      importBackupBtn: "استيراد النسخة المحلية (استعادة البيانات القديمة)",
+      importParseError: "تعذرت قراءة النسخة المحلية.",
+      importNoLocalBackup: "لم يتم العثور على نسخة محلية على هذا الجهاز.",
+      importConfirm: "تم العثور على {n} منتج على هذا الجهاز. هل تريد إضافتها إلى حسابك؟",
+      importSuccess: "تمت إضافة {n} منتج إلى حسابك.",
+      searchCustomerPh: "ابحث عن عميل...",
+      noMatchingCustomers: "لا يوجد عملاء مطابقون.",
+      costPricePh: "سعر الشراء (₺، اختياري)",
+      costPriceLabel: "سعر الشراء (₺، اختياري)",
+      statNetProfit: "صافي الربح",
+      profitLabel: "الربح",
+      promptOkBtn: "موافق",
+      promptCancelBtn: "إلغاء",
+      invoiceScanTitle: "إدخال مخزون عبر الفاتورة (دفعة واحدة)",
+      invoiceScanSubtitle: "التقط صورة لفاتورة المورد، ودع الذكاء الاصطناعي يقرأ المنتجات — يزيد مخزون الموجود، وينشئ الجديد تلقائيًا.",
+      invoiceScanBtn: "تصوير / اختيار الفاتورة",
+      invoiceScanAnalyzing: "جارٍ تحليل الفاتورة...",
+      invoiceScanNotConfigured: "هذه الميزة غير مُعدّة بعد. اتبع خطوات الإعداد في ملف README.",
+      invoiceScanNoItems: "لم يتم العثور على أي بند منتج قابل للقراءة في الفاتورة.",
+      invoiceScanFoundTitle: "تم العثور على {n} عنصر في الفاتورة",
+      invoiceExistingLabel: "منتج موجود · المخزون +{qty}",
+      invoiceNewLabel: "سيتم إنشاء منتج جديد",
+      invoiceApplyBtn: "تأكيد وتطبيق",
+      invoiceMarkupLabel: "نسبة الربح (%)",
+      voiceNotSupported: "هذا المتصفح لا يدعم الإدخال الصوتي.",
+      voiceNoSpeech: "لم يتم اكتشاف أي صوت، حاول مرة أخرى.",
+      voiceNoPermission: "تم رفض إذن الميكروفون.",
+      voiceError: "حدث خطأ أثناء الإدخال الصوتي.",
+      invoiceAppliedAlert: "تم تحديث/إضافة {n} منتج.",
+      kgModeLabel: "الوزن (كجم)",
+      priceModeLabel: "المبلغ (₺)",
+      kgPricePreviewKg: "= {value} ₺",
+      kgPricePreviewPrice: "= {value} كجم",
+      breadStatusTitle: "🍞 متابعة المنتجات اليومية",
+      breadSetupSubtitle: "قم بإعداد المنتجات التي يجب إعادة تعيينها/متابعتها تلقائيًا كل يوم.",
+      breadWhatsAppNumberPh: "رقم واتساب (905XXXXXXXXX)",
+      breadConfigNamePh: "اسم المنتج (مثال: خبز)",
+      breadConfigQtyPh: "الكمية اليومية الأولية",
+      breadConfigStaleNamePh: "اسم المنتج القديم (اختياري)",
+      breadConfigAutoResetLabel: "إعادة تعيين تلقائيًا ونقل الفائض كل صباح",
+      breadConfigAddBtn: "إضافة للمتابعة",
+      breadConfigListTitle: "المنتجات المتابعة",
+      breadCurrentTitle: "الحالة الحالية",
+      breadConfigEmpty: "لا توجد منتجات متابعة بعد.",
+      breadConfigNameRequired: "اسم المنتج مطلوب.",
+      breadConfigAdded: "تمت الإضافة للمتابعة.",
+      breadConfigRemoved: "تمت الإزالة من المتابعة.",
+      breadNoWhatsAppNumber: "أدخل رقم واتساب أولاً.",
+      sharedPhotoPrompt: "لماذا تريد استخدام هذه الصورة المشتركة؟\n\nموافق = مسح الرف (التعرف على المنتج)\nإلغاء = مسح الفاتورة (إدخال المخزون)",
+      notifEnableBtn: "تفعيل الإشعارات",
+      notifDisableBtn: "الإشعارات مفعّلة",
+      notifPermissionDenied: "تم رفض إذن الإشعارات.",
+      notifEnabled: "تم تفعيل الإشعارات.",
+      notifError: "حدث خطأ أثناء تفعيل الإشعارات.",
+      syncReconnected: "تمت استعادة الاتصال، جارٍ مزامنة البيانات.",
+      csvImportTitle: "الانتقال من نظام آخر (استيراد جماعي)",
+      csvImportSubtitle: "استورد المنتجات من ملف Excel/CSV دفعة واحدة. ترتيب الأعمدة: اسم المنتج، الفئة، الكمية، السعر.",
+      csvImportBtn: "اختر ملف Excel/CSV",
+      printAllQrBtn: "طباعة ملصقات الأسعار",
+      navPriceChanges: "تغييرات الأسعار",
+      priceChangesTitle: "المنتجات التي تغير سعرها",
+      priceChangesSubtitle: "عند إدخال المخزون عبر الفاتورة، تُدرج هنا المنتجات التي تغير سعرها لمدة يومين.",
+      priceChangesEmpty: "لا توجد تغييرات أسعار في اليومين الماضيين.",
+      priceIncreasedLabel: "ارتفع السعر",
+      priceDecreasedLabel: "انخفض السعر",
+      navSettings: "الإعدادات",
+      settingsThemeTitle: "المظهر",
+      settingsThemeSubtitle: "اختر ما إذا كان التطبيق يظهر بالوضع الفاتح أو الداكن.",
+      settingsThemeLight: "فاتح",
+      settingsThemeDark: "داكن",
+      settingsNavTitle: "موضع القائمة",
+      settingsNavSubtitle: "اعرض القائمة السفلية في الأسفل، أو على الجانب (مثل يوتيوب).",
+      settingsNavBottom: "أسفل",
+      settingsNavSide: "جانب",
+      settingsFontTitle: "حجم الخط",
+      settingsFontSubtitle: "اجعل النصوص والأزرار تظهر بحجم أكبر.",
+      settingsFontNormal: "عادي",
+      settingsFontLarge: "كبير",
+      settingsBackupTitle: "نسخة احتياطية",
+      settingsBackupSubtitle: "قم بتنزيل جميع بيانات المنتجات والمبيعات والعملاء كملف واحتفظ به في مكان آمن.",
+      settingsBackupBtn: "تنزيل النسخة الاحتياطية",
+      settingsBackupSuccess: "تم تنزيل النسخة الاحتياطية.",
+      settingsAboutTitle: "حول",
+      settingsAppName: "التطبيق",
+      settingsVersion: "الإصدار",
+      settingsLastUpdate: "آخر تحديث",
+      navBranches: "فروعي",
+      branchExitView: "العودة إلى حسابي",
+      branchSummaryTitle: "ملخص جميع الفروع",
+      branchSummarySales: "إجمالي مبيعات اليوم",
+      branchSummaryOrders: "مخزون منخفض (جميع الفروع)",
+      branchAddTitle: "إضافة فرع جديد",
+      branchNamePh: "اسم الفرع (مثال: فرع المركز)",
+      branchEmailPh: "البريد الإلكتروني للفرع",
+      branchPasswordPh: "كلمة مرور الفرع",
+      branchCreateBtn: "إنشاء فرع",
+      branchListTitle: "الفروع",
+      branchEmptyState: "لم تتم إضافة أي فرع بعد.",
+      branchFieldsRequired: "املأ جميع الحقول.",
+      branchCreateSuccess: "تم إنشاء الفرع.",
+      branchCreateError: "تعذر إنشاء الفرع.",
+      branchNotConfigured: "إدارة الفروع غير مُعدّة بعد.",
+      branchViewBtn: "عرض",
+      branchViewingPrefix: "تعرض حاليًا:",
+      branchEditSubtitle: "املأ فقط الحقل الذي تريد تغييره، واترك الآخر فارغًا.",
+      branchEditEmailPh: "البريد الإلكتروني الجديد (اختياري)",
+      branchEditPasswordPh: "كلمة المرور الجديدة (اختياري)",
+      branchEditSaveBtn: "حفظ",
+      branchEditTitle: "تعديل",
+      branchEditSuccess: "تم تحديث بيانات الفرع.",
+      branchEditError: "فشل التحديث.",
+      branchEditFieldsRequired: "أدخل بريدًا إلكترونيًا أو كلمة مرور جديدة (واحد على الأقل).",
+      branchDeleteConfirm: "هل أنت متأكد أنك تريد حذف الفرع نهائيًا باسم",
+      branchDeleteSuccess: "تم حذف الفرع.",
+      branchDeleteError: "تعذر حذف الفرع.",
+      catalogTitle: "كتالوج المنتجات الرئيسي",
+      catalogSubtitle: "يتم إرسال المنتجات المضافة هنا إلى جميع الفروع. يحتفظ كل فرع بكميته الخاصة، فقط السعر/الاسم مشترك.",
+      catalogNamePh: "اسم المنتج",
+      catalogCategoryPh: "الفئة",
+      catalogPricePh: "سعر البيع (₺)",
+      catalogAddBtn: "أضف إلى الكتالوج وأرسل لجميع الفروع",
+      catalogSyncing: "جارٍ الإرسال إلى الفروع...",
+      catalogListTitle: "المنتجات في الكتالوج",
+      catalogEmptyState: "لم تتم إضافة أي منتج إلى الكتالوج بعد.",
+      catalogSyncSuccess: "تم إرسال الكتالوج إلى جميع الفروع.",
+      catalogSyncError: "تعذر إرسال الكتالوج إلى الفروع.",
+      breadAutoResetYes: "إعادة التعيين التلقائي: مفعّل",
+      breadAutoResetNo: "إعادة التعيين التلقائي: معطّل",
+      breadCurrentLabel: "المخزون الحالي:",
+      breadWhatsAppBtn: "إرسال عبر واتساب",
+      breadLogTitle: "السجل",
+      breadLogEmpty: "لا توجد سجلات بعد.",
+      breadNotFound: "لم يتم العثور على منتج باسم 'ekmek'.",
+      navAdmin: "الإدارة",
+      adminAddTitle: "إضافة عمل جديد",
+      adminBusinessNamePh: "اسم العمل",
+      adminEmailPh: "البريد الإلكتروني",
+      adminPasswordPh: "كلمة المرور",
+      adminCreateBtn: "إنشاء عمل",
+      adminListTitle: "الأعمال",
+      adminEmptyState: "لم تتم إضافة أي عمل بعد.",
+      adminNotConfigured: "لوحة الإدارة غير مُعدّة بعد.",
+      adminCreateSuccess: "تم إنشاء العمل.",
+      adminCreateError: "تعذر إنشاء العمل.",
+      adminFieldsRequired: "املأ جميع الحقول.",
+      adminToggleError: "فشلت العملية.",
+      adminActiveLabel: "نشط",
+      adminInactiveLabel: "غير نشط",
+      adminMaxBranchesLabel: "حد الفروع:",
+      adminSaveBtn: "حفظ",
+      adminBranchLimitSaved: "تم حفظ حد الفروع.",
+      patronModeTitle: "وضع المالك",
+      patronModeSubtitle: "أخفِ علامات التبويب الخاصة بالمنتج/الخزينة، واعرض فقط إدارة الفروع والملخص.",
+      adminAccountTypeLabel: "نوع الحساب",
+      adminAccountTypeStandalone: "بقالة/متجر (فرع واحد)",
+      adminAccountTypePatron: "مالك (صاحب سلسلة)",
+      staffPickerTitle: "من يعمل؟",
+      staffOwnerBtn: "أنا صاحب العمل، الدخول بصلاحية كاملة",
+      staffMgmtTitle: "إدارة الموظفين",
+      staffMgmtSubtitle: "إذا أضفت كاشير، فسيرى فقط الخزينة/المبيعات/الدين — بدون وصول للمنتجات أو الإعدادات أو المخزون.",
+      staffNamePh: "اسم الموظف",
+      staffPinPh: "رمز PIN من 4 أرقام",
+      staffRoleCashier: "كاشير",
+      staffRoleManager: "مدير",
+      staffAddBtn: "إضافة موظف",
+      staffEmptyState: "لم تتم إضافة أي موظف بعد (الجميع يدخل بصلاحية كاملة).",
+      staffFieldsRequired: "الاسم ورمز PIN من 4 أرقام مطلوبان.",
+      staffPinInvalid: "يجب أن يكون PIN رقمًا من 4 أرقام.",
+      staffAdded: "تمت إضافة الموظف.",
+      staffRemoved: "تمت إزالة الموظف.",
+      staffPinPrompt: "أدخل رمز PIN",
+      staffPinWrong: "رمز PIN خاطئ.",
+      staffRestrictedAlert: "يتطلب هذا الإجراء صلاحية مدير.",
+      auditLogTitle: "سجل العمليات",
+      auditLogSubtitle: "من فعل ماذا ومتى — آخر 300 سجل.",
+      auditLogEmpty: "لا توجد سجلات بعد."
+    }
+  };
+
+  const LANG_KEY = "bakkal_lang";
+
+  function getLang() {
+    try {
+      return localStorage.getItem(LANG_KEY) || "tr";
+    } catch (e) {
+      return "tr";
+    }
+  }
+
+  function setLang(lang) {
+    try {
+      localStorage.setItem(LANG_KEY, lang);
+    } catch (e) {}
+    applyLang(lang);
+  }
+
+  function t(key) {
+    const lang = getLang();
+    return (TRANSLATIONS[lang] && TRANSLATIONS[lang][key]) || TRANSLATIONS.tr[key] || key;
+  }
+
+  function applyLang(lang) {
+    document.documentElement.lang = lang;
+    document.documentElement.dir = lang === "ar" ? "rtl" : "ltr";
+
+    document.querySelectorAll("[data-i18n]").forEach((el) => {
+      el.textContent = t(el.getAttribute("data-i18n"));
+    });
+    document.querySelectorAll("[data-i18n-placeholder]").forEach((el) => {
+      el.placeholder = t(el.getAttribute("data-i18n-placeholder"));
+    });
+    document.querySelectorAll("[data-i18n-aria]").forEach((el) => {
+      el.setAttribute("aria-label", t(el.getAttribute("data-i18n-aria")));
+    });
+    document.querySelectorAll("[data-i18n-title]").forEach((el) => {
+      el.title = t(el.getAttribute("data-i18n-title"));
+    });
+
+    document.querySelectorAll(".lang-btn").forEach((btn) => {
+      btn.classList.toggle("active", btn.dataset.lang === lang);
+    });
+
+    if (typeof window.onLangChanged === "function") {
+      window.onLangChanged(lang);
+    }
+  }
+
+  window.i18n = { t, getLang, setLang, applyLang };
+})();
