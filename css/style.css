@@ -1402,3 +1402,57 @@ body.font-large{zoom:1.18;}
   color:var(--text-secondary);
 }
 .branch-delete-btn{color:var(--red-text);border-color:var(--red-bg);}
+
+/* İşlem Geçmişi (Audit Log) */
+.audit-log-row{
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:var(--radius);
+  padding:10px 12px;
+  margin-bottom:6px;
+}
+.audit-log-action{margin:0;font-size:13px;font-weight:600;}
+.audit-log-meta{margin:2px 0 0;font-size:12px;color:var(--text-muted);}
+
+/* Kim çalışıyor? (personel seçim ekranı) */
+.staff-picker-list{
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+  margin-top:10px;
+}
+.staff-picker-btn{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  background:var(--bg);
+  border:1px solid var(--border);
+  border-radius:var(--radius);
+  padding:14px 16px;
+  font-size:15px;
+  font-weight:600;
+  color:var(--text-primary);
+  cursor:pointer;
+}
+.staff-picker-role{font-size:12px;font-weight:600;color:var(--text-muted);}
+
+/* Personel Yönetimi listesi */
+.staff-row{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:var(--radius);
+  padding:10px 12px;
+  margin-bottom:6px;
+}
+.staff-row-name{margin:0;font-size:14px;font-weight:600;}
+.staff-row-role{margin:2px 0 0;font-size:12px;color:var(--text-muted);}
+.staff-remove-btn{
+  background:none;
+  border:none;
+  color:var(--red-text);
+  font-size:16px;
+  cursor:pointer;
+}
