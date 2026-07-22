@@ -55,6 +55,17 @@
     </div>
   </div>
 
+  <!-- KİM ÇALIŞIYOR? (Personel Seçimi) -->
+  <div id="staffPickerScreen" class="auth-screen" style="display:none;">
+    <div class="auth-box">
+      <div class="auth-logo">
+        <i class="fa-solid fa-users" aria-hidden="true"></i>
+        <span data-i18n="staffPickerTitle">Kim çalışıyor?</span>
+      </div>
+      <div id="staffPickerList" class="staff-picker-list"></div>
+    </div>
+  </div>
+
   <div id="toastContainer" class="toast-container"></div>
 
   <main id="app">
@@ -441,6 +452,33 @@
         <p class="settings-about-row"><span data-i18n="settingsVersion">Sürüm</span>: 1.0.0</p>
         <p class="settings-about-row"><span data-i18n="settingsLastUpdate">Son güncelleme</span>: 21.07.2026</p>
       </div>
+
+      <div class="card">
+        <p class="card-title" data-i18n="staffMgmtTitle">Personel Yönetimi</p>
+        <p class="card-subtitle" data-i18n="staffMgmtSubtitle">Kasiyer eklersen, o kişi sadece Kasa/Satış/Veresiye görür — ürün, ayar ve stok bilgilerine erişemez.</p>
+        <div class="form-row">
+          <input id="staffName" type="text" data-i18n-placeholder="staffNamePh" placeholder="Personel adı" />
+        </div>
+        <div class="form-row two-col">
+          <input id="staffPin" type="text" inputmode="numeric" maxlength="4" data-i18n-placeholder="staffPinPh" placeholder="4 haneli PIN" />
+          <select id="staffRole">
+            <option value="cashier" data-i18n="staffRoleCashier">Kasiyer</option>
+            <option value="manager" data-i18n="staffRoleManager">Müdür</option>
+          </select>
+        </div>
+        <button id="staffAddBtn" class="btn btn-block">
+          <i class="fa-solid fa-user-plus" aria-hidden="true"></i> <span data-i18n="staffAddBtn">Personel ekle</span>
+        </button>
+        <div id="staffList" class="list" style="margin-top:12px;"></div>
+        <p id="staffEmptyState" class="empty-state" data-i18n="staffEmptyState">Henüz personel eklenmedi (herkes tam yetkiyle giriyor).</p>
+      </div>
+
+      <div class="card">
+        <p class="card-title" data-i18n="auditLogTitle">İşlem Geçmişi</p>
+        <p class="card-subtitle" data-i18n="auditLogSubtitle">Kim, ne zaman, ne işlem yaptı — son 300 kayıt.</p>
+        <div id="auditLogList" class="list"></div>
+        <p id="auditLogEmptyState" class="empty-state" data-i18n="auditLogEmpty">Henüz bir kayıt yok.</p>
+      </div>
     </section>
 
     <!-- SEKME: ŞUBELERİM (zincir marketler için) -->
@@ -462,6 +500,28 @@
             <p class="stat-value" id="branchSummaryOrders">0</p>
           </div>
         </div>
+      </div>
+
+      <div class="card">
+        <p class="card-title" data-i18n="catalogTitle">Ana Ürün Kataloğu</p>
+        <p class="card-subtitle" data-i18n="catalogSubtitle">Buraya eklediğin ürün adı/kategori/fiyatı TÜM şubelere gönderilir. Her şube kendi stok adedini ayrı tutar, buradan sadece fiyat/isim değişir.</p>
+        <div class="form-row">
+          <input id="catalogName" type="text" data-i18n-placeholder="catalogNamePh" placeholder="Ürün adı" />
+        </div>
+        <div class="form-row two-col">
+          <input id="catalogCategory" type="text" data-i18n-placeholder="catalogCategoryPh" placeholder="Kategori" />
+          <input id="catalogPrice" type="number" min="0" step="any" data-i18n-placeholder="catalogPricePh" placeholder="Satış fiyatı (₺)" />
+        </div>
+        <button id="catalogAddBtn" class="btn btn-block">
+          <i class="fa-solid fa-plus" aria-hidden="true"></i> <span data-i18n="catalogAddBtn">Kataloğa ekle ve tüm şubelere gönder</span>
+        </button>
+        <div id="catalogSyncing" class="bulk-scan-loading" style="display:none;">
+          <i class="fa-solid fa-spinner spin" aria-hidden="true"></i>
+          <span data-i18n="catalogSyncing">Şubelere gönderiliyor...</span>
+        </div>
+        <p class="card-subtitle" data-i18n="catalogListTitle" style="margin-top:14px;">Kataloğdaki ürünler</p>
+        <div id="catalogList" class="list"></div>
+        <p id="catalogEmptyState" class="empty-state" data-i18n="catalogEmptyState">Kataloğa henüz ürün eklenmedi.</p>
       </div>
 
       <div class="card">
