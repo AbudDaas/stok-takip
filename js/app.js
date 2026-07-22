@@ -895,11 +895,14 @@
                 <input type="number" min="0" class="admin-branch-limit-input" data-uid="${b.uid}" placeholder="∞" />
                 <button class="admin-branch-limit-save-btn" data-uid="${b.uid}">${t("adminSaveBtn")}</button>
               </div>
+              <div class="admin-branches-list" id="adminBranches-${b.uid}"></div>
             </div>
             <button class="admin-toggle-btn" data-uid="${b.uid}" data-active="${b.active}">${toggleLabel}</button>
           </div>`;
       })
       .join("");
+
+    list.forEach((b) => loadBranchesForAdmin(b.uid));
 
     listEl.querySelectorAll(".admin-toggle-btn").forEach((btn) => {
       btn.addEventListener("click", () => {
@@ -919,6 +922,39 @@
         setAdminBranchLimit(btn.dataset.uid, value);
       });
     });
+  }
+
+  function loadBranchesForAdmin(patronUid) {
+    const container = document.getElementById(`adminBranches-${patronUid}`);
+    if (!container) return;
+
+    currentUser
+      .getIdToken()
+      .then((idToken) =>
+        fetch(`${adminConfig.workerUrl}/list-branches-for`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ idToken, targetUid: patronUid })
+        })
+      )
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.error || !data.branches || !data.branches.length) {
+          container.innerHTML = "";
+          return;
+        }
+        container.innerHTML = data.branches
+          .map(
+            (br) => `
+              <div class="admin-branch-sub-row">
+                <i class="fa-solid fa-code-branch" aria-hidden="true"></i>
+                <span class="admin-branch-sub-name">${escapeHtml(br.branchName)}</span>
+                <span class="admin-branch-sub-email">${escapeHtml(br.email)}</span>
+              </div>`
+          )
+          .join("");
+      })
+      .catch((e) => console.error("Şubeler yüklenemedi", e));
   }
 
   function createAdminBusiness() {
