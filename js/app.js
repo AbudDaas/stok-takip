@@ -25,6 +25,10 @@
   let breadWhatsAppNumber = "";
   let priceChangeLog = [];
   let accountType = "standalone";
+  let auditLog = [];
+  let staffMembers = [];
+  let currentStaff = null;
+  let masterCatalog = [];
   let cart = []; // { productId, name, price, qty }
   let activeProductId = null;
   let activeCustomerId = null;
@@ -125,6 +129,9 @@
           breadWhatsAppNumber = data.breadWhatsAppNumber || "";
           priceChangeLog = data.priceChangeLog || [];
           accountType = data.accountType || "standalone";
+          auditLog = data.auditLog || [];
+          staffMembers = data.staffMembers || [];
+          masterCatalog = data.masterCatalog || [];
         } else {
           const initial = { products: seedData(), sales: [], customers: [], payments: [] };
           docRef.set(initial);
@@ -138,6 +145,7 @@
           priceChangeLog = [];
         }
         applyAccountTypeUI();
+        checkStaffSelection();
         setSyncStatus("connected");
         renderAll();
       },
@@ -298,18 +306,187 @@
     if (branchesBtn) branchesBtn.style.display = "none";
   }
 
+  // ---------- İşlem Geçmişi (Audit Log) ----------
+  function logAudit(action, details) {
+    const actorName = currentStaff ? `${currentStaff.name} (${currentStaff.role === "manager" ? t("staffRoleManager") : t("staffRoleCashier")})` : (currentUser && currentUser.email) || "?";
+    auditLog.push({
+      timestamp: new Date().toISOString(),
+      actor: actorName,
+      action,
+      details: details || ""
+    });
+    if (auditLog.length > 300) {
+      auditLog = auditLog.slice(auditLog.length - 300);
+    }
+  }
+
+  function renderAuditLog() {
+    const listEl = document.getElementById("auditLogList");
+    const emptyEl = document.getElementById("auditLogEmptyState");
+    if (!listEl) return;
+
+    const sorted = [...auditLog].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp)).slice(0, 100);
+    if (!sorted.length) {
+      listEl.innerHTML = "";
+      emptyEl.style.display = "block";
+      return;
+    }
+    emptyEl.style.display = "none";
+
+    listEl.innerHTML = sorted
+      .map((entry) => {
+        const d = new Date(entry.timestamp);
+        const dateStr = d.toLocaleString(locale(), { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
+        return `
+          <div class="audit-log-row">
+            <p class="audit-log-action">${escapeHtml(entry.action)}</p>
+            <p class="audit-log-meta">${dateStr} · ${escapeHtml(entry.actor)}${entry.details ? " · " + escapeHtml(entry.details) : ""}</p>
+          </div>`;
+      })
+      .join("");
+  }
+
+  // ---------- Personel Yönetimi (Kasiyer / Müdür rolleri) ----------
+  function renderStaffList() {
+    const listEl = document.getElementById("staffList");
+    const emptyEl = document.getElementById("staffEmptyState");
+    if (!listEl) return;
+
+    if (!staffMembers.length) {
+      listEl.innerHTML = "";
+      emptyEl.style.display = "block";
+      return;
+    }
+    emptyEl.style.display = "none";
+
+    listEl.innerHTML = staffMembers
+      .map((s, i) => {
+        const roleLabel = s.role === "manager" ? t("staffRoleManager") : t("staffRoleCashier");
+        return `
+          <div class="staff-row">
+            <div>
+              <p class="staff-row-name">${escapeHtml(s.name)}</p>
+              <p class="staff-row-role">${roleLabel}</p>
+            </div>
+            <button class="staff-remove-btn" data-index="${i}" aria-label="Kaldır"><i class="fa-solid fa-trash" aria-hidden="true"></i></button>
+          </div>`;
+      })
+      .join("");
+
+    listEl.querySelectorAll(".staff-remove-btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        staffMembers.splice(Number(btn.dataset.index), 1);
+        save();
+        renderStaffList();
+        showToast(t("staffRemoved"), "success");
+      });
+    });
+  }
+
+  function addStaffMember() {
+    const name = document.getElementById("staffName").value.trim();
+    const pin = document.getElementById("staffPin").value.trim();
+    const role = document.getElementById("staffRole").value;
+
+    if (!name || !pin) {
+      showToast(t("staffFieldsRequired"), "error");
+      return;
+    }
+    if (!/^\d{4}$/.test(pin)) {
+      showToast(t("staffPinInvalid"), "error");
+      return;
+    }
+
+    staffMembers.push({ id: genId(), name, pin, role });
+    save();
+    renderStaffList();
+    document.getElementById("staffName").value = "";
+    document.getElementById("staffPin").value = "";
+    showToast(t("staffAdded"), "success");
+  }
+
+  function checkStaffSelection() {
+    if (!staffMembers.length) {
+      currentStaff = null;
+      applyRoleRestrictionsUI();
+      return;
+    }
+    let savedStaffId = null;
+    try {
+      savedStaffId = sessionStorage.getItem("bakkal_current_staff_id");
+    } catch (e) {}
+    const savedStaff = staffMembers.find((s) => s.id === savedStaffId);
+    if (savedStaff) {
+      currentStaff = savedStaff;
+      applyRoleRestrictionsUI();
+      return;
+    }
+    showStaffPicker();
+  }
+
+  function showStaffPicker() {
+    const listEl = document.getElementById("staffPickerList");
+    listEl.innerHTML = staffMembers
+      .map((s) => {
+        const roleLabel = s.role === "manager" ? t("staffRoleManager") : t("staffRoleCashier");
+        return `
+          <button class="staff-picker-btn" data-id="${s.id}">
+            <span>${escapeHtml(s.name)}</span>
+            <span class="staff-picker-role">${roleLabel}</span>
+          </button>`;
+      })
+      .join("");
+
+    listEl.querySelectorAll(".staff-picker-btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const staff = staffMembers.find((s) => s.id === btn.dataset.id);
+        if (!staff) return;
+        showPrompt(t("staffPinPrompt"), "").then((enteredPin) => {
+          if (enteredPin === null) return;
+          if (enteredPin !== staff.pin) {
+            showToast(t("staffPinWrong"), "error");
+            return;
+          }
+          currentStaff = staff;
+          try {
+            sessionStorage.setItem("bakkal_current_staff_id", staff.id);
+          } catch (e) {}
+          document.getElementById("staffPickerScreen").style.display = "none";
+          applyRoleRestrictionsUI();
+        });
+      });
+    });
+
+    document.getElementById("staffPickerScreen").style.display = "flex";
+  }
+
+  function applyRoleRestrictionsUI() {
+    document.getElementById("staffPickerScreen").style.display = "none";
+    if (!currentStaff || currentStaff.role === "manager") return;
+
+    // Kasiyer: sadece Kasa, Satışlar, Veresiye görünür.
+    const cashierBlockedTabs = ["tab-products", "tab-scan", "tab-orders", "tab-pricechanges", "tab-settings", "tab-branches"];
+    cashierBlockedTabs.forEach((tabId) => {
+      const btn = document.querySelector(`.nav-btn[data-tab="${tabId}"]`);
+      if (btn) btn.style.display = "none";
+    });
+    const adminBtn = document.getElementById("adminNavBtn");
+    if (adminBtn) adminBtn.style.display = "none";
+    switchTab("tab-kasa");
+  }
+
   function save() {
     if (cloudEnabled) {
       if (!docRef) return;
       suppressNextSnapshot = true;
-      docRef.set({ products, sales, customers, payments, dailyResetConfig, breadWhatsAppNumber, priceChangeLog }, { merge: true }).catch((e) => {
+      docRef.set({ products, sales, customers, payments, dailyResetConfig, breadWhatsAppNumber, priceChangeLog, auditLog, staffMembers }, { merge: true }).catch((e) => {
         console.error("Bulut kaydetme hatası", e);
         setSyncStatus("error");
         registerBackgroundSync();
       });
     } else {
       try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify({ products, sales, customers, payments, dailyResetConfig, breadWhatsAppNumber, priceChangeLog }));
+        localStorage.setItem(STORAGE_KEY, JSON.stringify({ products, sales, customers, payments, dailyResetConfig, breadWhatsAppNumber, priceChangeLog, auditLog, staffMembers }));
       } catch (e) {
         console.error("Yerel kaydetme hatası", e);
       }
@@ -861,6 +1038,8 @@
     return (salesArr || []).filter((s) => new Date(s.timestamp) >= today).reduce((sum, s) => sum + s.total, 0);
   }
 
+  let loadedBranches = [];
+
   function loadBranches() {
     if (!currentUser || !cloudEnabled) return;
     db.collection("isletmeler")
@@ -877,12 +1056,116 @@
             sales: data.sales || []
           });
         });
+        loadedBranches = branches;
         renderBranchList(branches);
         renderBranchSummary(branches);
       })
       .catch((e) => {
         console.error("Şube listesi okunamadı", e);
         renderBranchList([]);
+      });
+  }
+
+  // ---------- Ana Ürün Kataloğu (tüm şubelere senkronize) ----------
+  function renderCatalogList() {
+    const listEl = document.getElementById("catalogList");
+    const emptyEl = document.getElementById("catalogEmptyState");
+    if (!listEl) return;
+
+    if (!masterCatalog.length) {
+      listEl.innerHTML = "";
+      emptyEl.style.display = "block";
+      return;
+    }
+    emptyEl.style.display = "none";
+
+    listEl.innerHTML = masterCatalog
+      .map((item, i) => `
+        <div class="branch-row">
+          <div class="branch-info">
+            <p class="branch-name">${escapeHtml(item.name)}</p>
+            <p class="branch-meta">${escapeHtml(item.category)} · ${formatTL(item.price)}</p>
+          </div>
+          <button class="branch-delete-btn" data-index="${i}" aria-label="Kaldır"><i class="fa-solid fa-trash" aria-hidden="true"></i></button>
+        </div>`)
+      .join("");
+
+    listEl.querySelectorAll(".branch-delete-btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        masterCatalog.splice(Number(btn.dataset.index), 1);
+        saveMasterCatalog();
+        renderCatalogList();
+      });
+    });
+  }
+
+  function saveMasterCatalog() {
+    const targetRef = originalDocRef || docRef;
+    if (targetRef) {
+      targetRef.set({ masterCatalog }, { merge: true }).catch((e) => console.error("Katalog kaydedilemedi", e));
+    }
+  }
+
+  function addCatalogItem() {
+    const name = document.getElementById("catalogName").value.trim();
+    const category = document.getElementById("catalogCategory").value.trim() || t("categoryOtherDefault");
+    const price = Number(document.getElementById("catalogPrice").value) || 0;
+
+    if (!name) {
+      showToast(t("branchFieldsRequired"), "error");
+      return;
+    }
+
+    const existingIndex = masterCatalog.findIndex((it) => it.name.trim().toLowerCase() === name.trim().toLowerCase());
+    if (existingIndex >= 0) {
+      masterCatalog[existingIndex] = { name, category, price };
+    } else {
+      masterCatalog.push({ name, category, price });
+    }
+
+    saveMasterCatalog();
+    renderCatalogList();
+    document.getElementById("catalogName").value = "";
+    document.getElementById("catalogCategory").value = "";
+    document.getElementById("catalogPrice").value = "";
+
+    pushCatalogToAllBranches();
+  }
+
+  function pushCatalogToAllBranches() {
+    if (!loadedBranches.length) return;
+    const loadingEl = document.getElementById("catalogSyncing");
+    if (loadingEl) loadingEl.style.display = "flex";
+
+    const writes = loadedBranches.map((branch) => {
+      const branchProducts = branch.products.map((p) => ({ ...p }));
+
+      masterCatalog.forEach((item) => {
+        const match = branchProducts.find((p) => p.name.trim().toLowerCase() === item.name.trim().toLowerCase());
+        if (match) {
+          match.category = item.category;
+          match.price = item.price;
+        } else {
+          branchProducts.push(mkProduct(item.name, item.category, 0, 5, item.price, "", "adet", 0));
+        }
+      });
+
+      return db
+        .collection("isletmeler")
+        .doc(branch.uid)
+        .set({ products: branchProducts }, { merge: true });
+    });
+
+    Promise.all(writes)
+      .then(() => {
+        if (loadingEl) loadingEl.style.display = "none";
+        showToast(t("catalogSyncSuccess"), "success");
+        loadBranches();
+      })
+      .catch((e) => {
+        console.error("Katalog şubelere gönderilemedi", e);
+        if (loadingEl) loadingEl.style.display = "none";
+        showToast(t("catalogSyncError"), "error");
       });
   }
 
@@ -1537,6 +1820,7 @@
     const unit = unitInput.value;
 
     products.push(mkProduct(name, category, qty, min, price, barcode, unit, costPrice));
+    logAudit("Ürün eklendi", `${name} (${qty} adet, ${formatTL(price)})`);
     nameInput.value = "";
     catInput.value = "";
     minInput.value = "5";
@@ -1551,7 +1835,9 @@
   }
 
   function deleteProduct(id) {
-    products = products.filter((p) => p.id !== id);
+    const p = products.find((x) => x.id === id);
+    products = products.filter((x) => x.id !== id);
+    if (p) logAudit("Ürün silindi", p.name);
     save();
     closeModal();
     renderAll();
@@ -1561,6 +1847,7 @@
     const p = products.find((x) => x.id === id);
     if (!p) return;
     p.qty = Math.max(0, Math.round((p.qty + delta) * 1000) / 1000);
+    logAudit("Stok güncellendi", `${p.name}: ${delta > 0 ? "+" : ""}${delta} → ${p.qty}`);
     save();
     renderAll();
     if (activeProductId === id) updateModalContent(p);
@@ -1574,7 +1861,9 @@
       updateModalContent(p);
       return;
     }
+    const oldQty = p.qty;
     p.qty = Math.round(newQty * 1000) / 1000;
+    logAudit("Stok elle güncellendi", `${p.name}: ${oldQty} → ${p.qty}`);
     save();
     renderAll();
     if (activeProductId === id) updateModalContent(p);
@@ -1592,6 +1881,7 @@
     p.costPrice = Number(document.getElementById("editCostPrice").value) || 0;
     p.barcode = document.getElementById("editBarcode").value.trim();
     p.unit = document.getElementById("editUnit").value;
+    logAudit("Ürün düzenlendi", `${name} (${formatTL(p.price)})`);
     save();
     renderAll();
     updateModalContent(p);
@@ -1723,6 +2013,8 @@
     renderCustomers();
     renderBreadStatus();
     renderPriceChanges();
+    renderAuditLog();
+    renderStaffList();
     translateMissingProductNames();
   }
 
@@ -2327,6 +2619,7 @@
       customerId,
       customerName
     });
+    logAudit("Satış tamamlandı", `${formatTL(total)} (${saleItems.length} ürün)`);
 
     cart = [];
     discountInput.value = "0";
@@ -2348,6 +2641,7 @@
       if (p) p.qty += item.qty;
     });
     sales = sales.filter((s) => s.id !== saleId);
+    logAudit("Satış iptal edildi", formatTL(sale.total));
     save();
     renderAll();
   }
@@ -3191,7 +3485,10 @@
     });
     if (tabId !== "tab-scan" && scanning) stopScan();
     if (tabId !== "tab-kasa" && scanningKasa) stopScanKasa();
-    if (tabId === "tab-branches" && !viewingBranchUid) loadBranches();
+    if (tabId === "tab-branches" && !viewingBranchUid) {
+      loadBranches();
+      renderCatalogList();
+    }
   }
 
   // ---------- Event wiring ----------
@@ -3437,7 +3734,9 @@
   document.getElementById("fontNormalBtn").addEventListener("click", () => applyFontSize("normal"));
   document.getElementById("fontLargeBtn").addEventListener("click", () => applyFontSize("large"));
   document.getElementById("downloadBackupBtn").addEventListener("click", downloadBackup);
+  document.getElementById("staffAddBtn").addEventListener("click", addStaffMember);
   document.getElementById("branchCreateBtn").addEventListener("click", createBranch);
+  document.getElementById("catalogAddBtn").addEventListener("click", addCatalogItem);
   document.getElementById("exitBranchViewBtn").addEventListener("click", exitBranchView);
   document.getElementById("closeBranchEditModalBtn").addEventListener("click", closeBranchEditModal);
   document.getElementById("branchEditModal").addEventListener("click", (e) => {
