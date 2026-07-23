@@ -1650,3 +1650,11 @@ body.font-large{zoom:1.18;}
 .voice-command-confirm p{margin:0 0 10px;font-size:14px;font-weight:600;color:var(--amber-text);}
 .voice-command-confirm-actions{display:flex;gap:8px;}
 .voice-command-confirm-actions .btn{flex:1;}
+
+/* Veri Kullanımı çubuğu */
+.data-size-bar-track{
+  width:100%;height:10px;background:var(--bg);border-radius:5px;overflow:hidden;
+}
+.data-size-bar-fill{height:100%;width:0%;background:var(--green);transition:width 0.3s, background 0.3s;}
+.data-size-bar-fill.data-size-warn{background:var(--amber);}
+.data-size-bar-fill.data-size-danger{background:var(--red);}
