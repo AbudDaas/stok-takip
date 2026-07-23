@@ -1484,3 +1484,53 @@ body.font-large{zoom:1.18;}
   border-radius:10px;
   margin-left:6px;
 }
+
+/* AI Panel */
+.health-score-row{display:flex;align-items:center;gap:16px;}
+.health-score-circle{
+  width:80px;height:80px;
+  border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-size:28px;font-weight:800;
+  flex-shrink:0;
+  border:5px solid var(--border);
+}
+.health-score-circle span{color:var(--text-primary);}
+.health-score-circle.health-good{border-color:var(--green);}
+.health-score-circle.health-medium{border-color:var(--amber);}
+.health-score-circle.health-bad{border-color:var(--red);}
+.health-score-reasons{flex:1;min-width:0;}
+.health-reason{margin:0 0 6px;font-size:12px;display:flex;align-items:center;gap:6px;}
+.health-reason-ok{color:var(--green-text);}
+.health-reason-bad{color:var(--red-text);}
+
+.order-engine-row{
+  display:flex;align-items:center;justify-content:space-between;
+  background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
+  padding:10px 12px;margin-bottom:6px;
+}
+.order-engine-name{margin:0;font-size:13px;font-weight:600;}
+.order-engine-meta{margin:2px 0 0;font-size:12px;color:var(--text-muted);}
+.order-engine-suggestion{display:flex;align-items:baseline;gap:4px;flex-shrink:0;}
+.order-engine-qty{font-size:20px;font-weight:800;color:var(--navy);}
+.order-engine-unit{font-size:12px;color:var(--text-muted);}
+
+.expiry-row{
+  display:flex;align-items:center;justify-content:space-between;
+  border-radius:var(--radius);padding:10px 12px;margin-bottom:6px;
+  font-size:13px;font-weight:600;
+}
+.expiry-soon{background:var(--amber-bg);color:var(--amber-text);}
+.expiry-urgent{background:var(--red-bg);color:var(--red-text);}
+.expiry-expired{background:var(--red-bg);color:var(--red-text);opacity:0.7;}
+
+.anomaly-row{
+  background:var(--red-bg);border-radius:var(--radius);padding:10px 12px;margin-bottom:6px;
+}
+.anomaly-detail{margin:0;font-size:13px;font-weight:600;color:var(--red-text);}
+.anomaly-meta{margin:2px 0 0;font-size:12px;color:var(--text-muted);}
+
+.advisor-answer{
+  background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);
+  padding:12px 14px;margin-bottom:10px;font-size:14px;line-height:1.5;white-space:pre-wrap;
+}
