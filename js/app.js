@@ -24,6 +24,10 @@
   let dailyResetConfig = [];
   let breadWhatsAppNumber = "";
   let priceChangeLog = [];
+  let fiscalEnabled = false;
+  let fiscalProvider = "foriba";
+  let fiscalApiKey = "";
+  let fiscalVkn = "";
   let suppliers = [];
   let supplierTransactions = [];
   let returns = [];
@@ -98,7 +102,10 @@
       const adminNavBtn = document.getElementById("adminNavBtn");
       if (adminNavBtn) {
         adminNavBtn.style.display = user.uid === ADMIN_UID ? "flex" : "none";
-        if (user.uid === ADMIN_UID) loadAdminBusinessList();
+        if (user.uid === ADMIN_UID) {
+          loadAdminBusinessList();
+          loadAdminFeedback();
+        }
       }
     } else {
       currentUser = null;
@@ -134,6 +141,10 @@
           dailyResetConfig = data.dailyResetConfig || [];
           breadWhatsAppNumber = data.breadWhatsAppNumber || "";
           priceChangeLog = data.priceChangeLog || [];
+          fiscalEnabled = data.fiscalEnabled || false;
+          fiscalProvider = data.fiscalProvider || "foriba";
+          fiscalApiKey = data.fiscalApiKey || "";
+          fiscalVkn = data.fiscalVkn || "";
           suppliers = data.suppliers || [];
           supplierTransactions = data.supplierTransactions || [];
           returns = data.returns || [];
@@ -360,6 +371,90 @@
 
   // ---------- Personel Yönetimi (Kasiyer / Müdür rolleri) ----------
   // ---------- Sahip PIN'i ----------
+  // ---------- Resmi Mali Kayıt (E-Fatura/Yazar Kasa) — pasif, istenince aktif edilebilir ----------
+  function toggleFiscalEnabled(checked) {
+    fiscalEnabled = checked;
+    document.getElementById("fiscalConfigFields").style.display = checked ? "block" : "none";
+    const targetRef = originalDocRef || docRef;
+    if (targetRef) {
+      targetRef.set({ fiscalEnabled: checked }, { merge: true }).catch((e) => console.error("Mali kayıt ayarı kaydedilemedi", e));
+    }
+  }
+
+  // ---------- Geri Bildirim / Sorun Bildir ----------
+  function sendFeedback() {
+    const textEl = document.getElementById("feedbackText");
+    const message = textEl.value.trim();
+    if (!message) {
+      showToast(t("feedbackEmptyError"), "error");
+      return;
+    }
+    if (!isChainConfigured()) {
+      showToast(t("feedbackNotConfigured"), "error");
+      return;
+    }
+    currentUser
+      .getIdToken()
+      .then((idToken) =>
+        fetch(`${chainConfig.workerUrl}/submit-feedback`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ idToken, message })
+        })
+      )
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.error) {
+          showToast(data.error, "error");
+          return;
+        }
+        textEl.value = "";
+        showToast(t("feedbackSentSuccess"), "success");
+      })
+      .catch((e) => {
+        console.error(e);
+        showToast(t("feedbackSendError"), "error");
+      });
+  }
+
+  function saveFiscalSettings() {
+    fiscalProvider = document.getElementById("fiscalProvider").value;
+    fiscalApiKey = document.getElementById("fiscalApiKey").value.trim();
+    fiscalVkn = document.getElementById("fiscalVkn").value.trim();
+
+    const targetRef = originalDocRef || docRef;
+    if (targetRef) {
+      targetRef
+        .set({ fiscalProvider, fiscalApiKey, fiscalVkn }, { merge: true })
+        .catch((e) => console.error("Mali kayıt ayarları kaydedilemedi", e));
+    }
+
+    const statusEl = document.getElementById("fiscalStatus");
+    if (fiscalApiKey) {
+      statusEl.textContent = t("fiscalNotConnectedYet");
+      statusEl.style.color = "var(--amber-text)";
+    } else {
+      statusEl.textContent = "";
+    }
+    showToast(t("fiscalSettingsSaved"), "success");
+  }
+
+  function renderFiscalSettings() {
+    const toggle = document.getElementById("fiscalEnabledToggle");
+    if (!toggle) return;
+    toggle.checked = fiscalEnabled;
+    document.getElementById("fiscalConfigFields").style.display = fiscalEnabled ? "block" : "none";
+    document.getElementById("fiscalProvider").value = fiscalProvider;
+    document.getElementById("fiscalApiKey").value = fiscalApiKey;
+    document.getElementById("fiscalVkn").value = fiscalVkn;
+  }
+
+  // Gerçek bir entegratöre bağlanmıyor — sadece altyapı hazır olduğunda buradan devam edilir.
+  function attemptSendToFiscalProvider(sale) {
+    if (!fiscalEnabled || !fiscalApiKey) return;
+    console.log("Mali kayıt gönderimi (henüz gerçek entegratör bağlantısı yok):", sale.id, fiscalProvider);
+  }
+
   function saveOwnerPin() {
     const value = document.getElementById("ownerPinInput").value.trim();
     if (!/^\d{4,6}$/.test(value)) {
@@ -963,6 +1058,47 @@
   }
   function isAdminConfigured() {
     return typeof adminConfig !== "undefined" && adminConfig.workerUrl && adminConfig.workerUrl.indexOf("BURAYA") !== 0;
+  }
+
+  function loadAdminFeedback() {
+    if (!currentUser || currentUser.uid !== ADMIN_UID) return;
+    db.collection("admin")
+      .doc("feedback")
+      .get()
+      .then((snap) => {
+        const list = snap.exists && snap.data().list ? snap.data().list : [];
+        renderAdminFeedback(list);
+      })
+      .catch((e) => {
+        console.error("Geri bildirimler okunamadı", e);
+        renderAdminFeedback([]);
+      });
+  }
+
+  function renderAdminFeedback(list) {
+    const listEl = document.getElementById("adminFeedbackList");
+    const emptyEl = document.getElementById("adminFeedbackEmptyState");
+    if (!listEl) return;
+
+    if (!list.length) {
+      listEl.innerHTML = "";
+      emptyEl.style.display = "block";
+      return;
+    }
+    emptyEl.style.display = "none";
+
+    const sorted = [...list].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+    listEl.innerHTML = sorted
+      .map((f) => {
+        const d = new Date(f.timestamp);
+        const dateStr = d.toLocaleString(locale(), { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
+        return `
+          <div class="audit-log-row">
+            <p class="audit-log-action">${escapeHtml(f.message)}</p>
+            <p class="audit-log-meta">${dateStr} · ${escapeHtml(f.email || f.uid)}</p>
+          </div>`;
+      })
+      .join("");
   }
 
   function loadAdminBusinessList() {
@@ -2085,7 +2221,10 @@
       '3. "add_veresiye" - Bir müşteriye veresiye (borç) ekleme. params: {customerName, amount}',
       '4. "add_product" - Yeni ürün ekleme. params: {name, price, qty (belirtilmemişse 0), category (belirtilmemişse "Diğer")}',
       '5. "check_stock" - Bir ürünün stok durumunu sorma. params: {productName}',
-      '6. "unknown" - Yukarıdakilerden hiçbiri net değilse.',
+      '6. "clear_cart" - Kasadaki sepeti tamamen boşaltma/temizleme.',
+      '7. "apply_discount" - Mevcut sepete belirli bir TL indirim uygulama. params: {amount}',
+      '8. "check_customer_debt" - Bir müşterinin güncel veresiye borcunu sorma. params: {customerName}',
+      '9. "unknown" - Yukarıdakilerden hiçbiri net değilse.',
       "",
       "Sistemdeki gerçek ürün adları (productName için bunlardan EN YAKIN eşleşeni seç, yoksa kullanıcının söylediği gibi bırak):",
       productNames || "(henüz ürün yok)",
@@ -2125,6 +2264,51 @@
   function handleVoiceCommandAction(parsed) {
     const action = parsed.action;
     const params = parsed.params || {};
+
+    if (action === "clear_cart") {
+      if (!cart.length) {
+        showToast(t("voiceCartEmpty"), "info");
+        return;
+      }
+      showVoiceCommandConfirm(t("voiceConfirmClearCart"), () => {
+        clearCart();
+        speakFeedback(t("voiceCartClearedDone"));
+      });
+      return;
+    }
+
+    if (action === "apply_discount") {
+      const amount = Number(params.amount) || 0;
+      if (!cart.length) {
+        showToast(t("voiceCartEmpty"), "error");
+        return;
+      }
+      if (!amount || amount <= 0) {
+        showToast(t("alertInvalidAmount"), "error");
+        return;
+      }
+      showVoiceCommandConfirm(`${t("voiceConfirmDiscount")}: ${formatTL(amount)}`, () => {
+        document.getElementById("cartDiscount").value = amount;
+        renderCart();
+        speakFeedback(t("voiceDiscountDone"));
+      });
+      return;
+    }
+
+    if (action === "check_customer_debt") {
+      const customer = customers.find((c) => c.name.toLowerCase() === String(params.customerName || "").toLowerCase());
+      if (!customer) {
+        const msg = `${t("voiceCustomerNotFound")}: ${params.customerName}`;
+        showToast(msg, "error");
+        speakFeedback(msg);
+        return;
+      }
+      const debt = getCustomerDebt(customer.id);
+      const msg = `${customer.name}: ${formatTL(debt)}`;
+      showToast(msg, "info");
+      speakFeedback(msg);
+      return;
+    }
 
     if (action === "add_to_cart") {
       const product = findProductByFuzzyName(params.productName);
@@ -2600,6 +2784,8 @@
     renderAuditLog();
     renderStaffList();
     renderOwnerPinStatus();
+    renderDataSize();
+    renderFiscalSettings();
     renderAiPanel();
     translateMissingProductNames();
   }
@@ -3225,7 +3411,7 @@
       if (p) p.qty = Math.max(0, p.qty - item.qty);
     });
 
-    sales.push({
+    const newSale = {
       id: genId(),
       timestamp: new Date().toISOString(),
       items: saleItems,
@@ -3237,7 +3423,9 @@
       paymentType: selectedPaymentType,
       customerId,
       customerName
-    });
+    };
+    sales.push(newSale);
+    attemptSendToFiscalProvider(newSale);
     logAudit("Satış tamamlandı", `${formatTL(total)} (${saleItems.length} ürün)`);
 
     cart = [];
@@ -4895,6 +5083,38 @@
     document.getElementById("onboardingModal").style.display = "none";
   }
 
+  // ---------- Veri Boyutu Takibi ----------
+  function renderDataSize() {
+    const fillEl = document.getElementById("dataSizeBarFill");
+    const labelEl = document.getElementById("dataSizeLabel");
+    if (!fillEl) return;
+
+    const dataObj = {
+      products,
+      sales,
+      customers,
+      payments,
+      dailyResetConfig,
+      breadLog,
+      priceChangeLog,
+      auditLog,
+      staffMembers,
+      suppliers,
+      supplierTransactions,
+      returns
+    };
+    const sizeBytes = new Blob([JSON.stringify(dataObj)]).size;
+    const sizeKB = Math.round(sizeBytes / 1024);
+    const limitKB = 1024;
+    const percent = Math.min(100, Math.round((sizeKB / limitKB) * 100));
+
+    fillEl.style.width = percent + "%";
+    fillEl.classList.toggle("data-size-warn", percent >= 60 && percent < 85);
+    fillEl.classList.toggle("data-size-danger", percent >= 85);
+
+    labelEl.textContent = `${sizeKB} KB / ${limitKB} KB (%${percent})`;
+  }
+
   function downloadBackup() {
     const backup = {
       exportedAt: new Date().toISOString(),
@@ -4956,6 +5176,9 @@
   document.getElementById("downloadBackupBtn").addEventListener("click", downloadBackup);
   document.getElementById("staffAddBtn").addEventListener("click", addStaffMember);
   document.getElementById("ownerPinSaveBtn").addEventListener("click", saveOwnerPin);
+  document.getElementById("fiscalEnabledToggle").addEventListener("change", (e) => toggleFiscalEnabled(e.target.checked));
+  document.getElementById("fiscalSaveBtn").addEventListener("click", saveFiscalSettings);
+  document.getElementById("feedbackSendBtn").addEventListener("click", sendFeedback);
   document.getElementById("staffOwnerBtn").addEventListener("click", enterAsOwner);
   document.getElementById("staffPickerBackBtn").addEventListener("click", staffPickerGoBack);
   document.getElementById("staffPickerPinSubmitBtn").addEventListener("click", submitStaffPickerPin);
