@@ -1934,6 +1934,7 @@
     p.costPrice = Number(document.getElementById("editCostPrice").value) || 0;
     p.barcode = document.getElementById("editBarcode").value.trim();
     p.unit = document.getElementById("editUnit").value;
+    p.expiryDate = document.getElementById("editExpiryDate").value || null;
     logAudit("Ürün düzenlendi", `${name} (${formatTL(p.price)})`);
     save();
     renderAll();
@@ -2068,6 +2069,7 @@
     renderPriceChanges();
     renderAuditLog();
     renderStaffList();
+    renderAiPanel();
     translateMissingProductNames();
   }
 
@@ -2083,6 +2085,7 @@
     document.getElementById("editCostPrice").value = p.costPrice || 0;
     document.getElementById("editBarcode").value = p.barcode || "";
     document.getElementById("editUnit").value = p.unit || "adet";
+    document.getElementById("editExpiryDate").value = p.expiryDate || "";
     updateModalContent(p);
     document.getElementById("detailModal").style.display = "flex";
     renderQrCode(p.id);
@@ -3487,6 +3490,276 @@
       .join("");
   }
 
+  // ==================== AI PANEL ====================
+
+  // ---------- 1) Günlük Rapor + Market Sağlık Skoru ----------
+  function renderDailyReportAndHealth() {
+    const reportSoldOutEl = document.getElementById("reportSoldOutCount");
+    if (!reportSoldOutEl) return;
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const todaySales = sales.filter((s) => new Date(s.timestamp) >= today);
+
+    const soldOutCount = products.filter((p) => p.qty <= 0).length;
+    const criticalCount = products.filter((p) => p.qty > 0 && p.qty < p.min).length;
+    const orderNeededCount = products.filter((p) => p.qty <= p.min).length;
+    const todayProfit = todaySales.reduce((sum, s) => sum + (s.profit || 0), 0);
+
+    document.getElementById("reportSoldOutCount").textContent = soldOutCount;
+    document.getElementById("reportCriticalCount").textContent = criticalCount;
+    document.getElementById("reportEstProfit").textContent = formatTL(todayProfit);
+    document.getElementById("reportOrderCount").textContent = orderNeededCount;
+
+    // Sağlık skoru: 100'den başla, sorunlara göre düş
+    let score = 100;
+    const reasons = [];
+
+    if (criticalCount > 0) {
+      score -= Math.min(criticalCount * 3, 30);
+      reasons.push({ ok: false, text: `${criticalCount} ${t("healthReasonCritical")}` });
+    } else {
+      reasons.push({ ok: true, text: t("healthReasonNoCritical") });
+    }
+
+    if (soldOutCount > 0) {
+      score -= Math.min(soldOutCount * 5, 25);
+      reasons.push({ ok: false, text: `${soldOutCount} ${t("healthReasonSoldOut")}` });
+    }
+
+    const last7 = sales.filter((s) => new Date(s.timestamp) >= new Date(Date.now() - 7 * 86400000));
+    const prev7 = sales.filter((s) => {
+      const d = new Date(s.timestamp);
+      return d >= new Date(Date.now() - 14 * 86400000) && d < new Date(Date.now() - 7 * 86400000);
+    });
+    const last7Total = last7.reduce((sum, s) => sum + s.total, 0);
+    const prev7Total = prev7.reduce((sum, s) => sum + s.total, 0);
+    if (prev7Total > 0 && last7Total < prev7Total) {
+      score -= 10;
+      reasons.push({ ok: false, text: t("healthReasonSalesDown") });
+    } else if (last7Total > 0) {
+      reasons.push({ ok: true, text: t("healthReasonSalesUp") });
+    }
+
+    const expiringSoon = products.filter((p) => p.expiryDate && daysUntil(p.expiryDate) <= 7 && daysUntil(p.expiryDate) >= 0);
+    if (expiringSoon.length > 0) {
+      score -= Math.min(expiringSoon.length * 3, 15);
+      reasons.push({ ok: false, text: `${expiringSoon.length} ${t("healthReasonExpiring")}` });
+    }
+
+    reasons.push({ ok: true, text: t("healthReasonOrdersRegular") });
+
+    score = Math.max(0, Math.min(100, Math.round(score)));
+    const circle = document.getElementById("healthScoreCircle");
+    document.getElementById("healthScoreValue").textContent = score;
+    circle.className = "health-score-circle " + (score >= 80 ? "health-good" : score >= 50 ? "health-medium" : "health-bad");
+
+    document.getElementById("healthScoreReasons").innerHTML = reasons
+      .map((r) => `<p class="health-reason ${r.ok ? "health-reason-ok" : "health-reason-bad"}"><i class="fa-solid ${r.ok ? "fa-check" : "fa-triangle-exclamation"}" aria-hidden="true"></i> ${escapeHtml(r.text)}</p>`)
+      .join("");
+  }
+
+  function daysUntil(dateStr) {
+    const target = new Date(dateStr);
+    target.setHours(0, 0, 0, 0);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return Math.round((target - today) / 86400000);
+  }
+
+  // ---------- 2) AI Sipariş Motoru (satış hızına göre) ----------
+  function renderOrderEngine() {
+    const listEl = document.getElementById("orderEngineList");
+    const emptyEl = document.getElementById("orderEngineEmptyState");
+    if (!listEl) return;
+
+    const cutoff = new Date(Date.now() - 14 * 86400000);
+    const recentSales = sales.filter((s) => new Date(s.timestamp) >= cutoff);
+
+    const salesByProduct = {};
+    recentSales.forEach((s) => {
+      s.items.forEach((item) => {
+        salesByProduct[item.name] = (salesByProduct[item.name] || 0) + item.qty;
+      });
+    });
+
+    const suggestions = products
+      .map((p) => {
+        const totalSold = salesByProduct[p.name] || 0;
+        const avgDaily = totalSold / 14;
+        if (avgDaily <= 0) return null;
+        const daysLeft = p.qty / avgDaily;
+        if (daysLeft > 7) return null;
+        const suggestedOrder = Math.max(0, Math.ceil(avgDaily * 14 - p.qty));
+        if (suggestedOrder <= 0) return null;
+        return { name: p.name, daysLeft, avgDaily, suggestedOrder, unit: p.unit };
+      })
+      .filter(Boolean)
+      .sort((a, b) => a.daysLeft - b.daysLeft);
+
+    if (!suggestions.length) {
+      listEl.innerHTML = "";
+      emptyEl.style.display = "block";
+      return;
+    }
+    emptyEl.style.display = "none";
+
+    listEl.innerHTML = suggestions
+      .map((s) => {
+        const daysLabel = s.daysLeft <= 0 ? t("orderEngineToday") : `${Math.ceil(s.daysLeft)} ${t("orderEngineDaysLeft")}`;
+        return `
+          <div class="order-engine-row">
+            <div class="order-engine-info">
+              <p class="order-engine-name">${escapeHtml(s.name)}</p>
+              <p class="order-engine-meta">${t("orderEngineRunsOut")}: ${daysLabel}</p>
+            </div>
+            <div class="order-engine-suggestion">
+              <span class="order-engine-qty">${s.suggestedOrder}</span>
+              <span class="order-engine-unit">${s.unit === "kg" ? t("unitKgShort") : t("unitAdetShort")}</span>
+            </div>
+          </div>`;
+      })
+      .join("");
+  }
+
+  // ---------- 3) Son Kullanma Tarihi Takibi ----------
+  function renderExpiryTracking() {
+    const listEl = document.getElementById("expiryList");
+    const emptyEl = document.getElementById("expiryEmptyState");
+    if (!listEl) return;
+
+    const withExpiry = products
+      .filter((p) => p.expiryDate)
+      .map((p) => ({ ...p, daysLeft: daysUntil(p.expiryDate) }))
+      .filter((p) => p.daysLeft <= 14)
+      .sort((a, b) => a.daysLeft - b.daysLeft);
+
+    if (!withExpiry.length) {
+      listEl.innerHTML = "";
+      emptyEl.style.display = "block";
+      return;
+    }
+    emptyEl.style.display = "none";
+
+    listEl.innerHTML = withExpiry
+      .map((p) => {
+        const urgentClass = p.daysLeft < 0 ? "expiry-expired" : p.daysLeft <= 3 ? "expiry-urgent" : "expiry-soon";
+        const daysLabel = p.daysLeft < 0 ? t("expiryPassed") : p.daysLeft === 0 ? t("expiryToday") : `${p.daysLeft} ${t("expiryDaysLeft")}`;
+        return `
+          <div class="expiry-row ${urgentClass}">
+            <span class="expiry-name">${escapeHtml(p.name)}</span>
+            <span class="expiry-days">${daysLabel}</span>
+          </div>`;
+      })
+      .join("");
+  }
+
+  // ---------- 4) Hırsızlık / Anormal Durum Algılama ----------
+  function renderAnomalyDetection() {
+    const listEl = document.getElementById("anomalyList");
+    const emptyEl = document.getElementById("anomalyEmptyState");
+    if (!listEl) return;
+
+    const cutoff = new Date(Date.now() - 7 * 86400000);
+    const suspicious = auditLog.filter((entry) => {
+      if (new Date(entry.timestamp) < cutoff) return false;
+
+      let decrease = 0;
+      if (entry.action === "Stok güncellendi") {
+        // Format: "Ürün: -5 → 10" ya da "Ürün: +3 → 13" — işaretli fark doğrudan yazılı
+        const deltaMatch = entry.details.match(/:\s*([+-]\d+(\.\d+)?)\s*→/);
+        if (deltaMatch) decrease = -Number(deltaMatch[1]);
+      } else if (entry.action === "Stok elle güncellendi") {
+        // Format: "Ürün: 15 → 10" — eski ve yeni miktarın farkını hesapla
+        const rangeMatch = entry.details.match(/:\s*(\d+(\.\d+)?)\s*→\s*(\d+(\.\d+)?)/);
+        if (rangeMatch) decrease = Number(rangeMatch[1]) - Number(rangeMatch[3]);
+      } else {
+        return false;
+      }
+
+      return decrease >= 5;
+    });
+
+    if (!suspicious.length) {
+      listEl.innerHTML = "";
+      emptyEl.style.display = "block";
+      return;
+    }
+    emptyEl.style.display = "none";
+
+    listEl.innerHTML = suspicious
+      .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
+      .map((entry) => {
+        const d = new Date(entry.timestamp);
+        const dateStr = d.toLocaleString(locale(), { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
+        return `
+          <div class="anomaly-row">
+            <p class="anomaly-detail">${escapeHtml(entry.details)}</p>
+            <p class="anomaly-meta">${dateStr} · ${escapeHtml(entry.actor)}</p>
+          </div>`;
+      })
+      .join("");
+  }
+
+  // ---------- 5) AI Market Danışmanı ----------
+  function askAiAdvisor() {
+    const question = document.getElementById("advisorQuestion").value.trim();
+    if (!question) return;
+
+    const answerEl = document.getElementById("advisorAnswer");
+    const loadingEl = document.getElementById("advisorLoading");
+    answerEl.style.display = "none";
+    loadingEl.style.display = "flex";
+
+    const last30 = sales.filter((s) => new Date(s.timestamp) >= new Date(Date.now() - 30 * 86400000));
+    const totalRevenue = last30.reduce((sum, s) => sum + s.total, 0);
+    const totalProfit = last30.reduce((sum, s) => sum + (s.profit || 0), 0);
+    const productSales = {};
+    last30.forEach((s) => s.items.forEach((i) => (productSales[i.name] = (productSales[i.name] || 0) + i.qty)));
+    const topProducts = Object.entries(productSales).sort((a, b) => b[1] - a[1]).slice(0, 10);
+    const criticalList = products.filter((p) => p.qty <= p.min).map((p) => p.name);
+
+    const dataSummary = [
+      `Son 30 günkü toplam ciro: ${totalRevenue.toFixed(2)} TL`,
+      `Son 30 günkü toplam kâr: ${totalProfit.toFixed(2)} TL`,
+      `En çok satan 10 ürün (adet): ${topProducts.map(([n, q]) => `${n}: ${q}`).join(", ") || "veri yok"}`,
+      `Kritik/tükenmiş ürünler: ${criticalList.join(", ") || "yok"}`,
+      `Toplam ürün sayısı: ${products.length}`
+    ].join("\n");
+
+    const prompt = [
+      "Sen bir bakkal/market için AI danışmanısın. Aşağıdaki gerçek verilere dayanarak kullanıcının sorusunu kısa, net ve Türkçe cevapla.",
+      "Sadece verilen veriye dayan, uydurma sayı verme. Veri yetersizse bunu açıkça söyle.",
+      "",
+      "VERİLER:",
+      dataSummary,
+      "",
+      `SORU: ${question}`
+    ].join("\n");
+
+    callGeminiWithRetry(null, prompt)
+      .then((data) => {
+        const rawText = data && data.candidates && data.candidates[0] && data.candidates[0].content.parts[0].text;
+        loadingEl.style.display = "none";
+        answerEl.style.display = "block";
+        answerEl.textContent = rawText || t("advisorError");
+      })
+      .catch((e) => {
+        console.error("AI danışman hatası", e);
+        loadingEl.style.display = "none";
+        answerEl.style.display = "block";
+        answerEl.textContent = t("advisorError");
+      });
+  }
+
+  function renderAiPanel() {
+    if (!document.getElementById("tab-ai")) return;
+    renderDailyReportAndHealth();
+    renderOrderEngine();
+    renderExpiryTracking();
+    renderAnomalyDetection();
+  }
+
   function applyInvoiceScan() {
     const checks = document.querySelectorAll(".invoice-result-check");
     let appliedCount = 0;
@@ -3789,6 +4062,7 @@
   document.getElementById("downloadBackupBtn").addEventListener("click", downloadBackup);
   document.getElementById("staffAddBtn").addEventListener("click", addStaffMember);
   document.getElementById("staffOwnerBtn").addEventListener("click", enterAsOwner);
+  document.getElementById("advisorAskBtn").addEventListener("click", askAiAdvisor);
   document.getElementById("branchCreateBtn").addEventListener("click", createBranch);
   document.getElementById("catalogAddBtn").addEventListener("click", addCatalogItem);
   document.getElementById("exitBranchViewBtn").addEventListener("click", exitBranchView);
