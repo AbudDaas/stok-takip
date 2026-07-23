@@ -398,6 +398,79 @@
       <p id="priceChangesEmptyState" class="empty-state" data-i18n="priceChangesEmpty">Son 2 günde fiyatı değişen ürün yok.</p>
     </section>
 
+    <!-- SEKME: AI PANEL -->
+    <section id="tab-ai" class="tab-panel">
+
+      <div class="card">
+        <p class="card-title" data-i18n="dailyReportTitle">📋 Günlük Rapor</p>
+        <div class="stats-grid">
+          <div class="stat-card">
+            <p class="stat-label" data-i18n="reportSoldOut">Bugün tükenen</p>
+            <p class="stat-value" id="reportSoldOutCount">0</p>
+          </div>
+          <div class="stat-card">
+            <p class="stat-label" data-i18n="reportCritical">Kritik ürün</p>
+            <p class="stat-value" id="reportCriticalCount">0</p>
+          </div>
+          <div class="stat-card">
+            <p class="stat-label" data-i18n="reportEstProfit">Bugünkü kâr</p>
+            <p class="stat-value" id="reportEstProfit">0,00 ₺</p>
+          </div>
+          <div class="stat-card">
+            <p class="stat-label" data-i18n="reportOrderNeeded">Sipariş önerilen</p>
+            <p class="stat-value" id="reportOrderCount">0</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <p class="card-title" data-i18n="healthScoreTitle">🩺 Market Sağlık Skoru</p>
+        <div class="health-score-row">
+          <div class="health-score-circle" id="healthScoreCircle">
+            <span id="healthScoreValue">100</span>
+          </div>
+          <div id="healthScoreReasons" class="health-score-reasons"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <p class="card-title" data-i18n="orderEngineTitle">📦 Akıllı Sipariş Önerileri</p>
+        <p class="card-subtitle" data-i18n="orderEngineSubtitle">Son 14 günlük satış hızına göre hesaplanır.</p>
+        <div id="orderEngineList" class="list"></div>
+        <p id="orderEngineEmptyState" class="empty-state" data-i18n="orderEngineEmpty">Şu an acil sipariş önerisi yok.</p>
+      </div>
+
+      <div class="card">
+        <p class="card-title" data-i18n="expiryTitle">⏳ Son Kullanma Tarihi Takibi</p>
+        <p class="card-subtitle" data-i18n="expirySubtitle">Ürünlere SKT eklemek için Ürünler sekmesinde ürüne tıkla, "Düzenle" ile SKT gir.</p>
+        <div id="expiryList" class="list"></div>
+        <p id="expiryEmptyState" class="empty-state" data-i18n="expiryEmpty">Yaklaşan bir son kullanma tarihi yok.</p>
+      </div>
+
+      <div class="card">
+        <p class="card-title" data-i18n="anomalyTitle">🚨 Anormal Durum Uyarıları</p>
+        <p class="card-subtitle" data-i18n="anomalySubtitle">Satışla açıklanamayan büyük stok azalmaları burada listelenir.</p>
+        <div id="anomalyList" class="list"></div>
+        <p id="anomalyEmptyState" class="empty-state" data-i18n="anomalyEmpty">Anormal bir durum tespit edilmedi.</p>
+      </div>
+
+      <div class="card">
+        <p class="card-title" data-i18n="advisorTitle">💬 AI Market Danışmanı</p>
+        <p class="card-subtitle" data-i18n="advisorSubtitle">"Bu hafta neden satış düştü?" gibi sorular sorabilirsin.</p>
+        <div id="advisorAnswer" class="advisor-answer" style="display:none;"></div>
+        <div class="form-row">
+          <input id="advisorQuestion" type="text" data-i18n-placeholder="advisorPh" placeholder="Bir soru sor..." />
+        </div>
+        <button id="advisorAskBtn" class="btn btn-primary btn-block">
+          <i class="fa-solid fa-paper-plane" aria-hidden="true"></i> <span data-i18n="advisorAskBtn">Sor</span>
+        </button>
+        <div id="advisorLoading" class="bulk-scan-loading" style="display:none;">
+          <i class="fa-solid fa-spinner spin" aria-hidden="true"></i>
+          <span data-i18n="advisorThinking">Düşünüyor...</span>
+        </div>
+      </div>
+    </section>
+
     <!-- SEKME: AYARLAR -->
     <section id="tab-settings" class="tab-panel">
       <div class="card">
@@ -565,6 +638,19 @@
             <option value="patron" data-i18n="adminAccountTypePatron">Patron (Zincir Sahibi)</option>
           </select>
         </div>
+        <div class="form-row">
+          <label class="field-label" data-i18n="adminBusinessCategoryLabel">İş Kolu</label>
+          <select id="adminBusinessCategory">
+            <option value="bakkal" data-i18n="categoryBakkal">Bakkal</option>
+            <option value="market" data-i18n="categoryMarket">Market</option>
+            <option value="eczane" data-i18n="categoryEczane">Eczane</option>
+            <option value="kirtasiye" data-i18n="categoryKirtasiye">Kırtasiye</option>
+            <option value="kasap" data-i18n="categoryKasap">Kasap</option>
+            <option value="manav" data-i18n="categoryManav">Manav</option>
+            <option value="firin" data-i18n="categoryFirin">Fırın</option>
+            <option value="diger" data-i18n="categoryDiger">Diğer</option>
+          </select>
+        </div>
         <button id="adminCreateBtn" class="btn btn-primary btn-block">
           <i class="fa-solid fa-plus" aria-hidden="true"></i> <span data-i18n="adminCreateBtn">İşletme oluştur</span>
         </button>
@@ -630,6 +716,8 @@
             <option value="adet" data-i18n="unitAdet">Adet (tam sayı)</option>
             <option value="kg" data-i18n="unitKg">Kg (tartılı / açık ürün)</option>
           </select>
+          <label class="field-label" data-i18n="expiryDateLabel">Son Kullanma Tarihi (opsiyonel)</label>
+          <input id="editExpiryDate" type="date" />
           <label class="field-label" data-i18n="barcodeLabel">Barkod</label>
           <div class="form-row barcode-row">
             <input id="editBarcode" type="text" data-i18n-placeholder="barcodePh" placeholder="Barkod (opsiyonel)" />
@@ -816,6 +904,10 @@
     <button class="nav-btn" data-tab="tab-pricechanges">
       <i class="fa-solid fa-arrow-right-arrow-left" aria-hidden="true"></i>
       <span data-i18n="navPriceChanges">Fiyat Değişimi</span>
+    </button>
+    <button class="nav-btn" data-tab="tab-ai">
+      <i class="fa-solid fa-robot" aria-hidden="true"></i>
+      <span data-i18n="navAi">AI Asistan</span>
     </button>
     <button class="nav-btn" data-tab="tab-settings">
       <i class="fa-solid fa-gear" aria-hidden="true"></i>
