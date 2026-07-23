@@ -397,6 +397,16 @@
       advisorAskBtn: "Sor",
       advisorThinking: "Düşünüyor...",
       advisorError: "Şu an cevap veremiyorum, birazdan tekrar dene.",
+      shelfAnalysisTitle: "🗂️ Raf Analizi",
+      shelfAnalysisSubtitle: "Bir raf bölümünün fotoğrafını çek — yapay zeka boş/az dolu alanları ve karışık dizilmiş ürünleri tespit etsin.",
+      shelfAnalysisBtn: "Rafı Fotoğrafla",
+      shelfAnalysisAnalyzing: "Raf analiz ediliyor...",
+      shelfAnalysisError: "Raf analiz edilemedi, tekrar dene.",
+      shelfAnalysisNoIssues: "Dikkat çekici bir durum bulunamadı.",
+      shelfStatusEmpty: "Boş",
+      shelfStatusLow: "Az Dolu",
+      shelfStatusMessy: "Karışık",
+      shelfStatusFull: "Dolu",
     },
 
 
@@ -796,6 +806,16 @@
       advisorAskBtn: "Ask",
       advisorThinking: "Thinking...",
       advisorError: "Can't answer right now, try again shortly.",
+      shelfAnalysisTitle: "🗂️ Shelf Analysis",
+      shelfAnalysisSubtitle: "Take a photo of a shelf section — AI will spot empty/low areas and disorganized products.",
+      shelfAnalysisBtn: "Photograph Shelf",
+      shelfAnalysisAnalyzing: "Analyzing shelf...",
+      shelfAnalysisError: "Couldn't analyze the shelf, try again.",
+      shelfAnalysisNoIssues: "No notable issues found.",
+      shelfStatusEmpty: "Empty",
+      shelfStatusLow: "Low Stock",
+      shelfStatusMessy: "Messy",
+      shelfStatusFull: "Full",
     },
 
 
@@ -1195,6 +1215,16 @@
       advisorAskBtn: "اسأل",
       advisorThinking: "يفكر...",
       advisorError: "لا يمكن الإجابة الآن، حاول مرة أخرى بعد قليل.",
+      shelfAnalysisTitle: "🗂️ تحليل الرف",
+      shelfAnalysisSubtitle: "التقط صورة لقسم من الرف — سيكتشف الذكاء الاصطناعي المناطق الفارغة/المنخفضة والمنتجات غير المرتبة.",
+      shelfAnalysisBtn: "تصوير الرف",
+      shelfAnalysisAnalyzing: "جارٍ تحليل الرف...",
+      shelfAnalysisError: "تعذر تحليل الرف، حاول مرة أخرى.",
+      shelfAnalysisNoIssues: "لم يتم العثور على مشكلات ملحوظة.",
+      shelfStatusEmpty: "فارغ",
+      shelfStatusLow: "منخفض",
+      shelfStatusMessy: "غير مرتب",
+      shelfStatusFull: "ممتلئ",
     }
   };
 
