@@ -9,6 +9,7 @@
       syncConnected: "Senkron",
       syncError: "Hata",
       logoutTitle: "Çıkış yap",
+      switchUserTitle: "Kullanıcı değiştir",
 
       authTitle: "Giriş Yap",
       authEmailPh: "E-posta",
@@ -434,6 +435,7 @@
       syncConnected: "Synced",
       syncError: "Error",
       logoutTitle: "Log out",
+      switchUserTitle: "Switch user",
 
       authTitle: "Log In",
       authEmailPh: "Email",
@@ -857,6 +859,7 @@
       syncConnected: "متزامن",
       syncError: "خطأ",
       logoutTitle: "تسجيل الخروج",
+      switchUserTitle: "تبديل المستخدم",
 
       authTitle: "تسجيل الدخول",
       authEmailPh: "البريد الإلكتروني",
