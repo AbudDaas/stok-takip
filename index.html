@@ -706,6 +706,52 @@
       </div>
 
       <div class="card">
+        <p class="card-title" data-i18n="dataSizeTitle">📊 Veri Kullanımı</p>
+        <p class="card-subtitle" data-i18n="dataSizeSubtitle">Her işletmenin verisi Firestore'da tek bir belgede tutuluyor (limit: 1 MB). Bu, kullanımını gösterir.</p>
+        <div class="data-size-bar-track">
+          <div id="dataSizeBarFill" class="data-size-bar-fill"></div>
+        </div>
+        <p id="dataSizeLabel" class="card-subtitle" style="margin-top:6px;">0 KB / 1024 KB</p>
+      </div>
+
+      <div class="card">
+        <p class="card-title" data-i18n="fiscalTitle">🧾 Resmi Mali Kayıt (E-Fatura/Yazar Kasa)</p>
+        <p class="card-subtitle" data-i18n="fiscalSubtitle">Bu özellik şu an pasif. Aktif edersen, satışlar seçtiğin entegratöre gönderilmeye çalışılır — ama gerçek bağlantı için entegratör firmandan alacağın API bilgilerini girmen gerekir.</p>
+        <label class="checkbox-row">
+          <input id="fiscalEnabledToggle" type="checkbox" />
+          <span data-i18n="fiscalEnableLabel">Resmi mali kayıt entegrasyonunu aktif et</span>
+        </label>
+        <div id="fiscalConfigFields" style="display:none; margin-top:10px;">
+          <label class="field-label" data-i18n="fiscalProviderLabel">Entegratör</label>
+          <select id="fiscalProvider">
+            <option value="foriba">Foriba</option>
+            <option value="uyumsoft">Uyumsoft</option>
+            <option value="logo">Logo</option>
+            <option value="diger" data-i18n="categoryDiger">Diğer</option>
+          </select>
+          <label class="field-label" data-i18n="fiscalApiKeyLabel">API Anahtarı</label>
+          <input id="fiscalApiKey" type="text" data-i18n-placeholder="fiscalApiKeyPh" placeholder="Entegratörden aldığın API anahtarı" />
+          <label class="field-label" data-i18n="fiscalVknLabel">Vergi Kimlik No</label>
+          <input id="fiscalVkn" type="text" data-i18n-placeholder="fiscalVknPh" placeholder="VKN/TCKN" />
+          <button id="fiscalSaveBtn" class="btn btn-primary btn-block" style="margin-top:8px;">
+            <i class="fa-solid fa-floppy-disk" aria-hidden="true"></i> <span data-i18n="fiscalSaveBtn">Ayarları Kaydet</span>
+          </button>
+          <p id="fiscalStatus" class="card-subtitle" style="margin-top:8px;"></p>
+        </div>
+      </div>
+
+      <div class="card">
+        <p class="card-title" data-i18n="feedbackTitle">💬 Geri Bildirim / Sorun Bildir</p>
+        <p class="card-subtitle" data-i18n="feedbackSubtitle">Bir hata mı buldun, bir önerin mi var? Doğrudan geliştiriciye ulaşır.</p>
+        <div class="form-row">
+          <textarea id="feedbackText" rows="4" data-i18n-placeholder="feedbackPh" placeholder="Neyle karşılaştın, ne isterdin?" style="width:100%;border:1px solid var(--border);border-radius:8px;padding:10px;font-family:inherit;font-size:14px;"></textarea>
+        </div>
+        <button id="feedbackSendBtn" class="btn btn-primary btn-block">
+          <i class="fa-solid fa-paper-plane" aria-hidden="true"></i> <span data-i18n="feedbackSendBtn">Gönder</span>
+        </button>
+      </div>
+
+      <div class="card">
         <p class="card-title" data-i18n="settingsAboutTitle">Hakkında</p>
         <p class="settings-about-row"><span data-i18n="settingsAppName">Uygulama</span>: Bakkal Stok Takip</p>
         <p class="settings-about-row"><span data-i18n="settingsVersion">Sürüm</span>: 1.0.0</p>
@@ -856,6 +902,12 @@
       <p class="card-title" data-i18n="adminListTitle">İşletmeler</p>
       <div id="adminBusinessList" class="list"></div>
       <p id="adminEmptyState" class="empty-state" data-i18n="adminEmptyState">Henüz işletme eklenmedi.</p>
+
+      <div class="card">
+        <p class="card-title" data-i18n="feedbackListTitle">💬 Gelen Geri Bildirimler</p>
+        <div id="adminFeedbackList" class="list"></div>
+        <p id="adminFeedbackEmptyState" class="empty-state" data-i18n="feedbackListEmpty">Henüz geri bildirim yok.</p>
+      </div>
     </section>
 
   </main>
