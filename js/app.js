@@ -2895,6 +2895,87 @@
     });
   }
 
+  // ---------- Kamera ile Raf Analizi ----------
+  function handleShelfAnalysisPhoto(file) {
+    if (!isBulkScanConfigured()) {
+      showToast(t("bulkScanNotConfigured"), "error");
+      return;
+    }
+    const loadingEl = document.getElementById("shelfAnalysisLoading");
+    const resultsEl = document.getElementById("shelfAnalysisResults");
+    loadingEl.style.display = "flex";
+    resultsEl.innerHTML = "";
+
+    const prompt = [
+      "Bu bir market/bakkal raf bölümünün fotoğrafı. Rafı DİKKATLE incele.",
+      "Her ürün alanı için şunu değerlendir: raf o üründen yeterince dolu mu, yoksa gözle görülür bir BOŞLUK/eksiklik mi var?",
+      "Ayrıca ürünlerin düzgün/kategorisine uygun dizilip dizilmediğine, yanlış yere konmuş ürün olup olmadığına bak.",
+      "ÖNEMLİ: Elinde bu rafın 'olması gereken normal hali' diye bir referans YOK — sadece fotoğrafta GÖRDÜĞÜN gerçek durumu yorumla. 'Normalde 8 sıra olmalı' gibi uydurma bir karşılaştırma YAPMA, sadece 'bu alan çok boş görünüyor' gibi gözlemsel bir değerlendirme yap.",
+      "",
+      "Tespit ettiğin HER dikkat çekici alan için bir kayıt oluştur (ürün/bölge adı + durum + kısa not).",
+      "Durum değerleri: 'bos' (neredeyse hiç ürün yok), 'az' (belirgin boşluklar var), 'karisik' (düzensiz/yanlış yerde dizilmiş), 'dolu' (sorun yok, sadece iyi durumdaki alanlar için de birkaç tane ekleyebilirsin).",
+      "",
+      "SADECE geçerli bir JSON dizisi döndür, başka hiçbir açıklama ekleme.",
+      'Format: [{"area":"Coca Cola bölümü","status":"az","note":"Belirgin boşluklar var, öne çekilmemiş"}]',
+      "En fazla 10 kayıt döndür, en dikkat çekici alanlara öncelik ver."
+    ].join("\n");
+
+    fileToBase64(file)
+      .then((base64) => callGeminiWithRetry(base64, prompt))
+      .then((data) => {
+        loadingEl.style.display = "none";
+        const rawText = data && data.candidates && data.candidates[0] && data.candidates[0].content.parts[0].text;
+        if (!rawText) {
+          showToast(t("shelfAnalysisError"), "error");
+          return;
+        }
+        let results;
+        try {
+          const cleaned = rawText.replace(/```json|```/g, "").trim();
+          results = JSON.parse(cleaned);
+        } catch (e) {
+          console.error("Raf analizi ayrıştırma hatası", e);
+          showToast(t("shelfAnalysisError"), "error");
+          return;
+        }
+        renderShelfAnalysisResults(results);
+      })
+      .catch((e) => {
+        console.error("Raf analizi hatası", e);
+        loadingEl.style.display = "none";
+        showToast(t("shelfAnalysisError"), "error");
+      });
+  }
+
+  function renderShelfAnalysisResults(results) {
+    const resultsEl = document.getElementById("shelfAnalysisResults");
+    if (!Array.isArray(results) || !results.length) {
+      resultsEl.innerHTML = `<p class="empty-state">${t("shelfAnalysisNoIssues")}</p>`;
+      return;
+    }
+
+    const statusMap = {
+      bos: { cls: "shelf-status-empty", label: t("shelfStatusEmpty") },
+      az: { cls: "shelf-status-low", label: t("shelfStatusLow") },
+      karisik: { cls: "shelf-status-messy", label: t("shelfStatusMessy") },
+      dolu: { cls: "shelf-status-full", label: t("shelfStatusFull") }
+    };
+
+    resultsEl.innerHTML = results
+      .map((r) => {
+        const info = statusMap[r.status] || statusMap.az;
+        return `
+          <div class="shelf-result-row ${info.cls}">
+            <div class="shelf-result-info">
+              <p class="shelf-result-area">${escapeHtml(r.area || "")}</p>
+              <p class="shelf-result-note">${escapeHtml(r.note || "")}</p>
+            </div>
+            <span class="shelf-status-badge">${escapeHtml(info.label)}</span>
+          </div>`;
+      })
+      .join("");
+  }
+
   function productAlreadyExists(name) {
     const normalized = name.trim().toLowerCase();
     return products.some((p) => p.name.trim().toLowerCase() === normalized);
@@ -4063,6 +4144,14 @@
   document.getElementById("staffAddBtn").addEventListener("click", addStaffMember);
   document.getElementById("staffOwnerBtn").addEventListener("click", enterAsOwner);
   document.getElementById("advisorAskBtn").addEventListener("click", askAiAdvisor);
+  document.getElementById("shelfAnalysisBtn").addEventListener("click", () => {
+    document.getElementById("shelfAnalysisInput").click();
+  });
+  document.getElementById("shelfAnalysisInput").addEventListener("change", (e) => {
+    const file = e.target.files[0];
+    if (file) handleShelfAnalysisPhoto(file);
+    e.target.value = "";
+  });
   document.getElementById("branchCreateBtn").addEventListener("click", createBranch);
   document.getElementById("catalogAddBtn").addEventListener("click", addCatalogItem);
   document.getElementById("exitBranchViewBtn").addEventListener("click", exitBranchView);
