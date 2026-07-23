@@ -1579,3 +1579,10 @@ body.font-large{zoom:1.18;}
 .onboarding-dot{width:8px;height:8px;border-radius:50%;background:var(--border);}
 .onboarding-dot.active{background:var(--navy);}
 .onboarding-actions{display:flex;align-items:center;justify-content:space-between;gap:12px;}
+
+.cart-bulk-badge{
+  margin:4px 0 0;
+  font-size:12px;
+  font-weight:700;
+  color:var(--green-text);
+}
