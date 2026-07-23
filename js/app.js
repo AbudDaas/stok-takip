@@ -477,7 +477,15 @@
 
   function applyRoleRestrictionsUI() {
     document.getElementById("staffPickerScreen").style.display = "none";
-    if (!currentStaff || currentStaff.role === "manager") return;
+
+    if (!currentStaff || currentStaff.role === "manager") {
+      // Sahip ya da müdür: önceki kasiyer kısıtlamasından kalmış olabilecek
+      // gizli sekmeleri, hesap türü/basit mod kurallarına göre doğru şekilde geri getir.
+      applyAccountTypeUI();
+      reapplySimpleModeIfSet();
+      updateSwitchUserButtonVisibility();
+      return;
+    }
 
     // Kasiyer: sadece Kasa, Satışlar, Veresiye görünür.
     const cashierBlockedTabs = ["tab-products", "tab-scan", "tab-orders", "tab-pricechanges", "tab-settings", "tab-branches"];
@@ -487,7 +495,22 @@
     });
     const adminBtn = document.getElementById("adminNavBtn");
     if (adminBtn) adminBtn.style.display = "none";
+    updateSwitchUserButtonVisibility();
     switchTab("tab-kasa");
+  }
+
+  function updateSwitchUserButtonVisibility() {
+    const btn = document.getElementById("switchUserBtn");
+    if (!btn) return;
+    btn.style.display = staffMembers.length > 0 ? "inline-flex" : "none";
+  }
+
+  function switchUser() {
+    currentStaff = null;
+    try {
+      sessionStorage.removeItem("bakkal_current_staff_id");
+    } catch (e) {}
+    showStaffPicker();
   }
 
   function save() {
@@ -4077,6 +4100,7 @@
   });
   document.getElementById("forgotPasswordBtn").addEventListener("click", forgotPassword);
   document.getElementById("logoutBtn").addEventListener("click", logout);
+  document.getElementById("switchUserBtn").addEventListener("click", switchUser);
   document.getElementById("adminCreateBtn").addEventListener("click", createAdminBusiness);
   document.getElementById("importBackupBtn").addEventListener("click", importLocalBackup);
 
