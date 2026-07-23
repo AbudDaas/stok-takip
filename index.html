@@ -257,6 +257,22 @@
 
     <!-- SEKME: KASA (SATIŞ) -->
     <section id="tab-kasa" class="tab-panel">
+      <div class="card voice-command-card">
+        <p class="card-title" data-i18n="voiceCommandTitle">🎙️ Sesli Komut</p>
+        <p class="card-subtitle" data-i18n="voiceCommandSubtitle">Konuş, sistem işlemi otomatik yapsın. Örn: "2 pepsi sat", "Ahmet'e 50 lira veresiye yaz", "yeni ürün ekle su 10 lira".</p>
+        <button id="voiceCommandBtn" class="btn btn-primary btn-block">
+          <i class="fa-solid fa-microphone" aria-hidden="true"></i> <span data-i18n="voiceCommandBtn">Konuşmaya Başla</span>
+        </button>
+        <div id="voiceCommandTranscript" class="voice-command-transcript" style="display:none;"></div>
+        <div id="voiceCommandConfirm" class="voice-command-confirm" style="display:none;">
+          <p id="voiceCommandConfirmText"></p>
+          <div class="voice-command-confirm-actions">
+            <button id="voiceCommandConfirmYes" class="btn btn-primary btn-sm"><span data-i18n="voiceConfirmYes">Evet, yap</span></button>
+            <button id="voiceCommandConfirmNo" class="btn btn-sm"><span data-i18n="voiceConfirmNo">Vazgeç</span></button>
+          </div>
+        </div>
+      </div>
+
       <div class="card">
         <p class="card-title" data-i18n="kasaTitle">Kasa — QR okutarak satış</p>
         <p class="card-subtitle" data-i18n="kasaSubtitle">Müşterinin aldığı ürünlerin QR kodunu sırayla okut, sepete otomatik eklensin.</p>
