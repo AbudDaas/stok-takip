@@ -146,6 +146,8 @@
         }
         applyAccountTypeUI();
         checkStaffSelection();
+        reapplySimpleModeIfSet();
+        checkOnboarding();
         setSyncStatus("connected");
         renderAll();
       },
@@ -4116,6 +4118,72 @@
     } catch (e) {}
   }
 
+  function applySimpleMode(mode) {
+    const simpleBtn = document.getElementById("simpleModeBtn");
+    const advancedBtn = document.getElementById("advancedModeBtn");
+    if (simpleBtn) simpleBtn.classList.toggle("active", mode === "simple");
+    if (advancedBtn) advancedBtn.classList.toggle("active", mode === "advanced");
+    try {
+      localStorage.setItem("bakkal_simple_mode", mode);
+    } catch (e) {}
+
+    const advancedOnlyTabs = ["tab-scan", "tab-orders", "tab-pricechanges", "tab-ai"];
+    advancedOnlyTabs.forEach((tabId) => {
+      const btn = document.querySelector(`.nav-btn[data-tab="${tabId}"]`);
+      if (btn) btn.style.display = mode === "simple" ? "none" : "flex";
+    });
+  }
+
+  function reapplySimpleModeIfSet() {
+    let mode = "advanced";
+    try {
+      mode = localStorage.getItem("bakkal_simple_mode") || "advanced";
+    } catch (e) {}
+    applySimpleMode(mode);
+  }
+
+  // ---------- İlk Kullanım Rehberi (Onboarding) ----------
+  let onboardingSlideIndex = 0;
+  const ONBOARDING_SLIDE_COUNT = 4;
+
+  function checkOnboarding() {
+    let seen = false;
+    try {
+      seen = localStorage.getItem("bakkal_onboarding_seen") === "true";
+    } catch (e) {}
+    if (seen) return;
+    onboardingSlideIndex = 0;
+    showOnboardingSlide(0);
+    document.getElementById("onboardingModal").style.display = "flex";
+  }
+
+  function showOnboardingSlide(index) {
+    document.querySelectorAll(".onboarding-slide").forEach((slide) => {
+      slide.style.display = Number(slide.dataset.slide) === index ? "block" : "none";
+    });
+    document.querySelectorAll(".onboarding-dot").forEach((dot) => {
+      dot.classList.toggle("active", Number(dot.dataset.dot) === index);
+    });
+    const nextBtn = document.getElementById("onboardingNextBtn");
+    nextBtn.textContent = index === ONBOARDING_SLIDE_COUNT - 1 ? t("onboardFinish") : t("onboardNext");
+  }
+
+  function onboardingNext() {
+    if (onboardingSlideIndex >= ONBOARDING_SLIDE_COUNT - 1) {
+      finishOnboarding();
+      return;
+    }
+    onboardingSlideIndex++;
+    showOnboardingSlide(onboardingSlideIndex);
+  }
+
+  function finishOnboarding() {
+    try {
+      localStorage.setItem("bakkal_onboarding_seen", "true");
+    } catch (e) {}
+    document.getElementById("onboardingModal").style.display = "none";
+  }
+
   function downloadBackup() {
     const backup = {
       exportedAt: new Date().toISOString(),
@@ -4144,14 +4212,17 @@
     let theme = "light";
     let navPosition = "bottom";
     let fontSize = "normal";
+    let simpleMode = "advanced";
     try {
       theme = localStorage.getItem("bakkal_theme") || "light";
       navPosition = localStorage.getItem("bakkal_nav_position") || "bottom";
       fontSize = localStorage.getItem("bakkal_font_size") || "normal";
+      simpleMode = localStorage.getItem("bakkal_simple_mode") || "advanced";
     } catch (e) {}
     applyTheme(theme);
     applyNavPosition(navPosition);
     applyFontSize(fontSize);
+    applySimpleMode(simpleMode);
   }
 
   window.onLangChanged = function () {
@@ -4167,6 +4238,10 @@
   document.getElementById("navSideBtn").addEventListener("click", () => applyNavPosition("side"));
   document.getElementById("fontNormalBtn").addEventListener("click", () => applyFontSize("normal"));
   document.getElementById("fontLargeBtn").addEventListener("click", () => applyFontSize("large"));
+  document.getElementById("simpleModeBtn").addEventListener("click", () => applySimpleMode("simple"));
+  document.getElementById("advancedModeBtn").addEventListener("click", () => applySimpleMode("advanced"));
+  document.getElementById("onboardingNextBtn").addEventListener("click", onboardingNext);
+  document.getElementById("onboardingSkipBtn").addEventListener("click", finishOnboarding);
   document.getElementById("downloadBackupBtn").addEventListener("click", downloadBackup);
   document.getElementById("staffAddBtn").addEventListener("click", addStaffMember);
   document.getElementById("staffOwnerBtn").addEventListener("click", enterAsOwner);
