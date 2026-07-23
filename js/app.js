@@ -1960,6 +1960,9 @@
     p.barcode = document.getElementById("editBarcode").value.trim();
     p.unit = document.getElementById("editUnit").value;
     p.expiryDate = document.getElementById("editExpiryDate").value || null;
+    p.bulkDiscountQty = Number(document.getElementById("editBulkQty").value) || 0;
+    p.bulkDiscountType = document.getElementById("editBulkType").value;
+    p.bulkDiscountValue = Number(document.getElementById("editBulkValue").value) || 0;
     logAudit("Ürün düzenlendi", `${name} (${formatTL(p.price)})`);
     save();
     renderAll();
@@ -2111,6 +2114,9 @@
     document.getElementById("editBarcode").value = p.barcode || "";
     document.getElementById("editUnit").value = p.unit || "adet";
     document.getElementById("editExpiryDate").value = p.expiryDate || "";
+    document.getElementById("editBulkQty").value = p.bulkDiscountQty || "";
+    document.getElementById("editBulkType").value = p.bulkDiscountType || "percent";
+    document.getElementById("editBulkValue").value = p.bulkDiscountValue || "";
     updateModalContent(p);
     document.getElementById("detailModal").style.display = "flex";
     renderQrCode(p.id);
@@ -2529,6 +2535,28 @@
   }
 
   // ---------- Kasa: Sepet ----------
+  // ---------- Toplu Alım İndirimi ----------
+  function getBulkDiscountForItem(item) {
+    const p = products.find((x) => x.id === item.productId);
+    if (!p || !p.bulkDiscountQty || !p.bulkDiscountValue) return null;
+    if (item.qty < p.bulkDiscountQty) return null;
+
+    let perUnitDiscount;
+    if (p.bulkDiscountType === "amount") {
+      perUnitDiscount = p.bulkDiscountValue;
+    } else {
+      perUnitDiscount = item.price * (p.bulkDiscountValue / 100);
+    }
+    perUnitDiscount = Math.min(perUnitDiscount, item.price);
+    return { perUnitDiscount, totalDiscount: perUnitDiscount * item.qty };
+  }
+
+  function calcLineTotal(item) {
+    const base = item.price * item.qty;
+    const bulkDiscount = getBulkDiscountForItem(item);
+    return bulkDiscount ? base - bulkDiscount.totalDiscount : base;
+  }
+
   function addToCart(p, amount) {
     amount = amount || 1;
     const existing = cart.find((c) => c.productId === p.id);
@@ -2575,7 +2603,8 @@
   }
 
   function cartRowHtml(item) {
-    const lineTotal = item.price * item.qty;
+    const lineTotal = calcLineTotal(item);
+    const bulkDiscount = getBulkDiscountForItem(item);
     const isKg = item.unit === "kg";
     const qtyDisplay = isKg
       ? (Math.round(item.qty * 1000) / 1000).toLocaleString(locale(), { maximumFractionDigits: 3 }) + " " + t("unitKgShort")
@@ -2590,11 +2619,15 @@
           <button class="cart-qty-btn cart-plus" data-id="${item.productId}" aria-label="${t('increaseAria')}"><i class="fa-solid fa-plus" aria-hidden="true"></i></button>`;
     const p = products.find((x) => x.id === item.productId);
     const displayName = p ? getDisplayName(p) : item.name;
+    const bulkBadgeHtml = bulkDiscount
+      ? `<p class="cart-bulk-badge">🎉 ${t("bulkDiscountApplied")}: -${formatTL(bulkDiscount.totalDiscount)}</p>`
+      : "";
     return `
       <div class="cart-row" data-id="${item.productId}">
         <div class="cart-info">
           <p class="cart-name">${escapeHtml(displayName)}</p>
           <p class="cart-meta">${formatTL(item.price)} / ${isKg ? t("unitKgShort") : t("unitAdetShort")}</p>
+          ${bulkBadgeHtml}
         </div>
         <div class="cart-controls">
           ${controlsHtml}
@@ -2630,7 +2663,7 @@
       btn.addEventListener("click", () => removeCartItem(btn.dataset.id));
     });
 
-    const subtotal = cart.reduce((sum, c) => sum + c.price * c.qty, 0);
+    const subtotal = cart.reduce((sum, c) => sum + calcLineTotal(c), 0);
     const discountInput = document.getElementById("cartDiscount");
     const discount = Math.min(Number(discountInput.value) || 0, subtotal);
     const total = Math.max(0, subtotal - discount);
@@ -2668,7 +2701,7 @@
       customerName = c.name;
     }
 
-    const subtotal = cart.reduce((sum, c) => sum + c.price * c.qty, 0);
+    const subtotal = cart.reduce((sum, c) => sum + calcLineTotal(c), 0);
     const discountInput = document.getElementById("cartDiscount");
     const discount = Math.min(Number(discountInput.value) || 0, subtotal);
     const total = Math.max(0, subtotal - discount);
@@ -2678,7 +2711,8 @@
       const p = products.find((x) => x.id === c.productId);
       const costPrice = p ? p.costPrice || 0 : 0;
       totalCost += costPrice * c.qty;
-      return { name: c.name, qty: c.qty, price: c.price, unit: c.unit || "adet", costPrice };
+      const effectivePrice = c.qty > 0 ? calcLineTotal(c) / c.qty : c.price;
+      return { name: c.name, qty: c.qty, price: effectivePrice, unit: c.unit || "adet", costPrice };
     });
     const profit = total - totalCost;
 
