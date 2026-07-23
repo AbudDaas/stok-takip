@@ -67,6 +67,42 @@
     </div>
   </div>
 
+  <!-- İLK KULLANIM REHBERİ -->
+  <div id="onboardingModal" class="modal-overlay" style="display:none;">
+    <div class="modal onboarding-modal">
+      <div class="onboarding-slide" data-slide="0">
+        <div class="onboarding-icon"><i class="fa-solid fa-cash-register" aria-hidden="true"></i></div>
+        <p class="onboarding-title" data-i18n="onboard1Title">Satış yapmak için Kasa'yı kullan</p>
+        <p class="onboarding-text" data-i18n="onboard1Text">Alt menüden "Kasa"ya bas, ürünün barkodunu okut ya da arayarak sepete ekle, "Satışı Tamamla" de.</p>
+      </div>
+      <div class="onboarding-slide" data-slide="1" style="display:none;">
+        <div class="onboarding-icon"><i class="fa-solid fa-boxes-stacked" aria-hidden="true"></i></div>
+        <p class="onboarding-title" data-i18n="onboard2Title">Ürünleri Ürünler sekmesinden yönet</p>
+        <p class="onboarding-text" data-i18n="onboard2Text">Yeni ürün ekle, stok miktarını değiştir. Fatura fotoğrafı çekerek de toplu ürün ekleyebilirsin.</p>
+      </div>
+      <div class="onboarding-slide" data-slide="2" style="display:none;">
+        <div class="onboarding-icon"><i class="fa-solid fa-book" aria-hidden="true"></i></div>
+        <p class="onboarding-title" data-i18n="onboard3Title">Veresiye ile müşteri borcunu takip et</p>
+        <p class="onboarding-text" data-i18n="onboard3Text">Kasada satış yaparken müşteri seçip "veresiye" işaretleyebilir, borcunu buradan takip edebilirsin.</p>
+      </div>
+      <div class="onboarding-slide" data-slide="3" style="display:none;">
+        <div class="onboarding-icon"><i class="fa-solid fa-gear" aria-hidden="true"></i></div>
+        <p class="onboarding-title" data-i18n="onboard4Title">Karmaşık geldiyse "Basit Mod" aç</p>
+        <p class="onboarding-text" data-i18n="onboard4Text">Ayarlar sekmesinden "Basit" modu seçersen, sadece temel sekmeler görünür — istediğin zaman "Gelişmiş"e geri dönebilirsin.</p>
+      </div>
+      <div class="onboarding-dots">
+        <span class="onboarding-dot active" data-dot="0"></span>
+        <span class="onboarding-dot" data-dot="1"></span>
+        <span class="onboarding-dot" data-dot="2"></span>
+        <span class="onboarding-dot" data-dot="3"></span>
+      </div>
+      <div class="onboarding-actions">
+        <button id="onboardingSkipBtn" class="link-btn" data-i18n="onboardSkip">Atla</button>
+        <button id="onboardingNextBtn" class="btn btn-primary" data-i18n="onboardNext">İleri</button>
+      </div>
+    </div>
+  </div>
+
   <div id="toastContainer" class="toast-container"></div>
 
   <main id="app">
@@ -455,17 +491,10 @@
       </div>
 
       <div class="card">
-        <p class="card-title" data-i18n="shelfAnalysisTitle">🗂️ Raf Analizi</p>
-        <p class="card-subtitle" data-i18n="shelfAnalysisSubtitle">Bir raf bölümünün fotoğrafını çek — yapay zeka boş/az dolu alanları ve karışık dizilmiş ürünleri tespit etsin.</p>
-        <input id="shelfAnalysisInput" type="file" accept="image/*" capture="environment" style="display:none;" />
-        <button id="shelfAnalysisBtn" class="btn btn-primary btn-block">
-          <i class="fa-solid fa-camera" aria-hidden="true"></i> <span data-i18n="shelfAnalysisBtn">Rafı Fotoğrafla</span>
-        </button>
-        <div id="shelfAnalysisLoading" class="bulk-scan-loading" style="display:none;">
-          <i class="fa-solid fa-spinner spin" aria-hidden="true"></i>
-          <span data-i18n="shelfAnalysisAnalyzing">Raf analiz ediliyor...</span>
-        </div>
-        <div id="shelfAnalysisResults" class="list" style="margin-top:10px;"></div>
+        <p class="card-title" data-i18n="shelfCheckTitle">🔔 Raf Kontrol Uyarısı</p>
+        <p class="card-subtitle" data-i18n="shelfCheckSubtitle">Bir ürün bugün normalden çok satıyorsa, rafta azalmış olabilir — kontrol etmen için burada listelenir.</p>
+        <div id="shelfCheckList" class="list"></div>
+        <p id="shelfCheckEmptyState" class="empty-state" data-i18n="shelfCheckEmpty">Şu an hızlı satan bir ürün yok.</p>
       </div>
 
       <div class="card">
@@ -509,6 +538,19 @@
           </button>
           <button class="settings-toggle-btn" id="navSideBtn" data-value="side">
             <i class="fa-solid fa-table-cells" aria-hidden="true"></i> <span data-i18n="settingsNavSide">Yandan</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="card">
+        <p class="card-title" data-i18n="simpleModeTitle">Görünüm Karmaşıklığı</p>
+        <p class="card-subtitle" data-i18n="simpleModeSubtitle">Basit modda sadece temel sekmeler (Kasa, Ürünler, Satışlar, Veresiye) görünür.</p>
+        <div class="settings-toggle-row">
+          <button class="settings-toggle-btn" id="simpleModeBtn" data-value="simple">
+            <i class="fa-solid fa-leaf" aria-hidden="true"></i> <span data-i18n="simpleModeSimple">Basit</span>
+          </button>
+          <button class="settings-toggle-btn" id="advancedModeBtn" data-value="advanced">
+            <i class="fa-solid fa-layer-group" aria-hidden="true"></i> <span data-i18n="simpleModeAdvanced">Gelişmiş</span>
           </button>
         </div>
       </div>
