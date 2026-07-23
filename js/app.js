@@ -28,6 +28,7 @@
   let auditLog = [];
   let staffMembers = [];
   let currentStaff = null;
+  let ownerPin = "";
   let masterCatalog = [];
   let cart = []; // { productId, name, price, qty }
   let activeProductId = null;
@@ -131,6 +132,7 @@
           accountType = data.accountType || "standalone";
           auditLog = data.auditLog || [];
           staffMembers = data.staffMembers || [];
+          ownerPin = data.ownerPin || "";
           masterCatalog = data.masterCatalog || [];
         } else {
           const initial = { products: seedData(), sales: [], customers: [], payments: [] };
@@ -349,6 +351,30 @@
   }
 
   // ---------- Personel Yönetimi (Kasiyer / Müdür rolleri) ----------
+  // ---------- Sahip PIN'i ----------
+  function saveOwnerPin() {
+    const value = document.getElementById("ownerPinInput").value.trim();
+    if (!/^\d{4,6}$/.test(value)) {
+      showToast(t("ownerPinInvalid"), "error");
+      return;
+    }
+    ownerPin = value;
+    const targetRef = originalDocRef || docRef;
+    if (targetRef) {
+      targetRef.set({ ownerPin: value }, { merge: true }).catch((e) => console.error("Sahip PIN'i kaydedilemedi", e));
+    }
+    document.getElementById("ownerPinInput").value = "";
+    renderOwnerPinStatus();
+    showToast(t("ownerPinSaved"), "success");
+  }
+
+  function renderOwnerPinStatus() {
+    const statusEl = document.getElementById("ownerPinStatus");
+    if (!statusEl) return;
+    statusEl.textContent = ownerPin ? t("ownerPinIsSet") : t("ownerPinNotSet");
+    statusEl.style.color = ownerPin ? "var(--green-text)" : "var(--red-text)";
+  }
+
   function renderStaffList() {
     const listEl = document.getElementById("staffList");
     const emptyEl = document.getElementById("staffEmptyState");
@@ -468,6 +494,21 @@
   }
 
   function enterAsOwner() {
+    if (ownerPin) {
+      showPrompt(t("ownerPinPrompt"), "").then((entered) => {
+        if (entered === null) return;
+        if (entered !== ownerPin) {
+          showToast(t("ownerPinWrong"), "error");
+          return;
+        }
+        grantOwnerAccess();
+      });
+      return;
+    }
+    grantOwnerAccess();
+  }
+
+  function grantOwnerAccess() {
     currentStaff = null;
     try {
       sessionStorage.setItem("bakkal_current_staff_id", "__owner__");
@@ -2097,6 +2138,7 @@
     renderPriceChanges();
     renderAuditLog();
     renderStaffList();
+    renderOwnerPinStatus();
     renderAiPanel();
     translateMissingProductNames();
   }
@@ -4302,6 +4344,7 @@
   document.getElementById("onboardingSkipBtn").addEventListener("click", finishOnboarding);
   document.getElementById("downloadBackupBtn").addEventListener("click", downloadBackup);
   document.getElementById("staffAddBtn").addEventListener("click", addStaffMember);
+  document.getElementById("ownerPinSaveBtn").addEventListener("click", saveOwnerPin);
   document.getElementById("staffOwnerBtn").addEventListener("click", enterAsOwner);
   document.getElementById("advisorAskBtn").addEventListener("click", askAiAdvisor);
   document.getElementById("branchCreateBtn").addEventListener("click", createBranch);
