@@ -455,6 +455,20 @@
       </div>
 
       <div class="card">
+        <p class="card-title" data-i18n="shelfAnalysisTitle">🗂️ Raf Analizi</p>
+        <p class="card-subtitle" data-i18n="shelfAnalysisSubtitle">Bir raf bölümünün fotoğrafını çek — yapay zeka boş/az dolu alanları ve karışık dizilmiş ürünleri tespit etsin.</p>
+        <input id="shelfAnalysisInput" type="file" accept="image/*" capture="environment" style="display:none;" />
+        <button id="shelfAnalysisBtn" class="btn btn-primary btn-block">
+          <i class="fa-solid fa-camera" aria-hidden="true"></i> <span data-i18n="shelfAnalysisBtn">Rafı Fotoğrafla</span>
+        </button>
+        <div id="shelfAnalysisLoading" class="bulk-scan-loading" style="display:none;">
+          <i class="fa-solid fa-spinner spin" aria-hidden="true"></i>
+          <span data-i18n="shelfAnalysisAnalyzing">Raf analiz ediliyor...</span>
+        </div>
+        <div id="shelfAnalysisResults" class="list" style="margin-top:10px;"></div>
+      </div>
+
+      <div class="card">
         <p class="card-title" data-i18n="advisorTitle">💬 AI Market Danışmanı</p>
         <p class="card-subtitle" data-i18n="advisorSubtitle">"Bu hafta neden satış düştü?" gibi sorular sorabilirsin.</p>
         <div id="advisorAnswer" class="advisor-answer" style="display:none;"></div>
