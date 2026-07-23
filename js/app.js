@@ -884,12 +884,15 @@
         const statusLabel = b.active ? t("adminActiveLabel") : t("adminInactiveLabel");
         const toggleLabel = b.active ? t("adminInactiveLabel") : t("adminActiveLabel");
         const dateStr = new Date(b.createdAt).toLocaleDateString(locale());
+        const categoryKey = "category" + (b.businessCategory || "diger").charAt(0).toUpperCase() + (b.businessCategory || "diger").slice(1);
+        const categoryLabel = t(categoryKey);
         return `
           <div class="admin-business-row">
             <div class="admin-business-info">
               <p class="admin-business-name">${escapeHtml(b.businessName)}</p>
               <p class="admin-business-meta">${escapeHtml(b.email)} · ${dateStr}</p>
               <span class="admin-status-badge ${statusClass}">${statusLabel}</span>
+              <span class="admin-category-badge">${escapeHtml(categoryLabel)}</span>
               <div class="admin-branch-limit-row">
                 <label>${t("adminMaxBranchesLabel")}</label>
                 <input type="number" min="0" class="admin-branch-limit-input" data-uid="${b.uid}" placeholder="∞" />
@@ -966,6 +969,7 @@
     const email = document.getElementById("adminBusinessEmail").value.trim();
     const password = document.getElementById("adminBusinessPassword").value;
     const accountType = document.getElementById("adminAccountType").value;
+    const businessCategory = document.getElementById("adminBusinessCategory").value;
 
     if (!businessName || !email || !password) {
       showToast(t("adminFieldsRequired"), "error");
@@ -978,7 +982,7 @@
         fetch(`${adminConfig.workerUrl}/create-business`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ idToken, businessName, email, password, accountType })
+          body: JSON.stringify({ idToken, businessName, email, password, accountType, businessCategory })
         })
       )
       .then((r) => r.json())
