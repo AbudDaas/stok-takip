@@ -2002,6 +2002,12 @@
   }
 
   // ==================== SESLİ KOMUT SİSTEMİ ====================
+  function getVoiceCommandLang() {
+    const container = document.getElementById("voiceCommandLangToggle");
+    const activeBtn = container ? container.querySelector(".voice-lang-btn.active") : null;
+    return activeBtn ? activeBtn.dataset.lang : "tr-TR";
+  }
+
   function startVoiceCommand() {
     const SpeechRecognitionClass = getSpeechRecognitionClass();
     const btn = document.getElementById("voiceCommandBtn");
@@ -2015,7 +2021,7 @@
     }
 
     const recognition = new SpeechRecognitionClass();
-    recognition.lang = "tr-TR";
+    recognition.lang = getVoiceCommandLang();
     recognition.interimResults = false;
     recognition.maxAlternatives = 1;
 
@@ -2054,7 +2060,7 @@
     if (!("speechSynthesis" in window)) return;
     try {
       const utterance = new SpeechSynthesisUtterance(text);
-      utterance.lang = "tr-TR";
+      utterance.lang = getVoiceCommandLang();
       window.speechSynthesis.speak(utterance);
     } catch (e) {}
   }
@@ -2070,7 +2076,8 @@
 
     const prompt = [
       "Sen bir bakkal/market uygulamasının sesli komut yorumlayıcısısın.",
-      "Kullanıcının söylediği Türkçe cümleyi analiz et ve hangi işlemi yapmak istediğini belirle.",
+      "Kullanıcının cümlesi Türkçe, İngilizce ya da Arapça olabilir — hangi dilde olursa olsun anla ve aşağıdaki İngilizce alan adlarıyla JSON döndür.",
+      "Kullanıcının söylediği cümleyi analiz et ve hangi işlemi yapmak istediğini belirle.",
       "",
       "Mevcut işlemler ve parametreleri:",
       '1. "add_to_cart" - Kasaya ürün ekleme. params: {productName, qty (belirtilmemişse 1)}',
