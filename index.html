@@ -587,6 +587,18 @@
       </div>
 
       <div class="card">
+        <p class="card-title" data-i18n="ownerPinTitle">🔒 Sahip PIN'i</p>
+        <p class="card-subtitle" data-i18n="ownerPinSubtitle">Personel eklediysen, bunu MUTLAKA belirle — yoksa herhangi bir çalışan "İşletme sahibiyim" deyip şifresiz tam yetki alabilir.</p>
+        <div class="form-row">
+          <input id="ownerPinInput" type="text" inputmode="numeric" maxlength="6" data-i18n-placeholder="ownerPinPh" placeholder="4-6 haneli PIN belirle" />
+        </div>
+        <button id="ownerPinSaveBtn" class="btn btn-primary btn-block">
+          <i class="fa-solid fa-lock" aria-hidden="true"></i> <span data-i18n="ownerPinSaveBtn">PIN'i kaydet</span>
+        </button>
+        <p id="ownerPinStatus" class="card-subtitle" style="margin-top:8px;"></p>
+      </div>
+
+      <div class="card">
         <p class="card-title" data-i18n="staffMgmtTitle">Personel Yönetimi</p>
         <p class="card-subtitle" data-i18n="staffMgmtSubtitle">Kasiyer eklersen, o kişi sadece Kasa/Satış/Veresiye görür — ürün, ayar ve stok bilgilerine erişemez.</p>
         <div class="form-row">
