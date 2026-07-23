@@ -61,14 +61,30 @@
   <!-- KİM ÇALIŞIYOR? (Personel Seçimi) -->
   <div id="staffPickerScreen" class="auth-screen" style="display:none;">
     <div class="auth-box">
-      <div class="auth-logo">
-        <i class="fa-solid fa-users" aria-hidden="true"></i>
-        <span data-i18n="staffPickerTitle">Kim çalışıyor?</span>
+      <div id="staffPickerListView">
+        <div class="auth-logo">
+          <i class="fa-solid fa-users" aria-hidden="true"></i>
+          <span data-i18n="staffPickerTitle">Kim çalışıyor?</span>
+        </div>
+        <div id="staffPickerList" class="staff-picker-list"></div>
+        <button id="staffOwnerBtn" class="link-btn" data-i18n="staffOwnerBtn">Ben işletme sahibiyim, tam yetkiyle gir</button>
       </div>
-      <div id="staffPickerList" class="staff-picker-list"></div>
-      <button id="staffOwnerBtn" class="link-btn" data-i18n="staffOwnerBtn">Ben işletme sahibiyim, tam yetkiyle gir</button>
+
+      <div id="staffPickerPinView" style="display:none;">
+        <div class="auth-logo">
+          <i class="fa-solid fa-user-lock" aria-hidden="true"></i>
+          <span id="staffPickerSelectedName">—</span>
+        </div>
+        <div class="form-row">
+          <input id="staffPickerPinInput" type="password" inputmode="numeric" maxlength="6" data-i18n-placeholder="staffPinEnterPh" placeholder="PIN gir" autofocus />
+        </div>
+        <p id="staffPickerPinError" class="auth-error" style="display:none;"></p>
+        <button id="staffPickerPinSubmitBtn" class="btn btn-primary btn-block" data-i18n="staffPinSubmitBtn">Giriş</button>
+        <button id="staffPickerBackBtn" class="link-btn" data-i18n="staffPinBackBtn">← Geri</button>
+      </div>
     </div>
   </div>
+
 
   <!-- İLK KULLANIM REHBERİ -->
   <div id="onboardingModal" class="modal-overlay" style="display:none;">
