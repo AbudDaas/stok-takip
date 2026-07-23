@@ -777,6 +777,16 @@
           </select>
           <label class="field-label" data-i18n="expiryDateLabel">Son Kullanma Tarihi (opsiyonel)</label>
           <input id="editExpiryDate" type="date" />
+          <label class="field-label" data-i18n="bulkDiscountLabel">Toplu Alım İndirimi (opsiyonel)</label>
+          <p class="card-subtitle" data-i18n="bulkDiscountSubtitle" style="margin-top:0;">Örn. 24 adet ve üzeri alımda otomatik indirim uygula.</p>
+          <div class="form-row two-col">
+            <input id="editBulkQty" type="number" min="0" data-i18n-placeholder="bulkDiscountQtyPh" placeholder="Min. adet (örn. 24)" />
+            <select id="editBulkType">
+              <option value="percent" data-i18n="bulkDiscountPercent">Yüzde (%)</option>
+              <option value="amount" data-i18n="bulkDiscountAmount">Adet başı TL</option>
+            </select>
+          </div>
+          <input id="editBulkValue" type="number" min="0" step="0.01" data-i18n-placeholder="bulkDiscountValuePh" placeholder="İndirim değeri (örn. 10)" />
           <label class="field-label" data-i18n="barcodeLabel">Barkod</label>
           <div class="form-row barcode-row">
             <input id="editBarcode" type="text" data-i18n-placeholder="barcodePh" placeholder="Barkod (opsiyonel)" />
