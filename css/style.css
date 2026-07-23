@@ -1586,3 +1586,43 @@ body.font-large{zoom:1.18;}
   font-weight:700;
   color:var(--green-text);
 }
+
+/* Ödeme Türü Dağılımı */
+.payment-breakdown-row{display:flex;gap:10px;}
+.payment-breakdown-item{
+  flex:1;text-align:center;
+  background:var(--bg);border-radius:var(--radius);padding:12px 8px;
+}
+.payment-breakdown-item i{font-size:18px;color:var(--navy);margin-bottom:6px;}
+.payment-breakdown-label{margin:0;font-size:11px;color:var(--text-muted);}
+.payment-breakdown-value{margin:2px 0 0;font-size:14px;font-weight:700;}
+.sale-payment-kart{background:var(--navy);color:#fff;}
+
+/* Tedarikçi Hareket Geçmişi */
+.supplier-history-row{
+  display:flex;align-items:center;justify-content:space-between;gap:10px;
+  background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
+  padding:10px 12px;margin-bottom:6px;font-weight:700;font-size:14px;
+}
+.supplier-history-note{margin:0;font-size:13px;font-weight:600;}
+.supplier-history-date{margin:2px 0 0;font-size:12px;color:var(--text-muted);font-weight:400;}
+
+/* Sipariş önerisi onay kutusu */
+.order-engine-row{cursor:pointer;}
+.order-engine-check{flex-shrink:0;margin-right:4px;}
+
+/* İade Yönetimi */
+.return-item-row{
+  display:flex;align-items:center;justify-content:space-between;gap:10px;
+  background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
+  padding:10px 12px;margin-bottom:6px;
+}
+.return-item-name{margin:0;font-size:13px;font-weight:600;}
+.return-item-meta{margin:2px 0 0;font-size:12px;color:var(--text-muted);}
+.return-qty-input{width:70px;height:36px;text-align:center;flex-shrink:0;}
+.sale-return-btn{
+  background:none;border:1px solid var(--amber);color:var(--amber-text);
+  border-radius:8px;padding:6px 10px;font-size:12px;font-weight:600;cursor:pointer;
+  margin-right:6px;
+}
+.sale-returned-note{margin:2px 0 0;font-size:12px;font-weight:600;color:var(--red-text);}
