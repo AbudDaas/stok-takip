@@ -457,6 +457,8 @@
     showStaffPicker();
   }
 
+  let staffPickerPendingSelection = null;
+
   function showStaffPicker() {
     const listEl = document.getElementById("staffPickerList");
     listEl.innerHTML = staffMembers
@@ -474,35 +476,73 @@
       btn.addEventListener("click", () => {
         const staff = staffMembers.find((s) => s.id === btn.dataset.id);
         if (!staff) return;
-        showPrompt(t("staffPinPrompt"), "").then((enteredPin) => {
-          if (enteredPin === null) return;
-          if (enteredPin !== staff.pin) {
-            showToast(t("staffPinWrong"), "error");
-            return;
-          }
-          currentStaff = staff;
-          try {
-            sessionStorage.setItem("bakkal_current_staff_id", staff.id);
-          } catch (e) {}
-          document.getElementById("staffPickerScreen").style.display = "none";
-          applyRoleRestrictionsUI();
-        });
+        openStaffPinView({ type: "staff", staff });
       });
     });
 
+    document.getElementById("staffPickerListView").style.display = "block";
+    document.getElementById("staffPickerPinView").style.display = "none";
     document.getElementById("staffPickerScreen").style.display = "flex";
+  }
+
+  function openStaffPinView(selection) {
+    staffPickerPendingSelection = selection;
+    document.getElementById("staffPickerListView").style.display = "none";
+    document.getElementById("staffPickerPinView").style.display = "block";
+
+    const nameEl = document.getElementById("staffPickerSelectedName");
+    if (selection.type === "owner") {
+      nameEl.textContent = t("staffOwnerSelectedLabel");
+    } else {
+      const roleLabel = selection.staff.role === "manager" ? t("staffRoleManager") : t("staffRoleCashier");
+      nameEl.textContent = `${selection.staff.name} (${roleLabel})`;
+    }
+
+    const pinInput = document.getElementById("staffPickerPinInput");
+    const errorEl = document.getElementById("staffPickerPinError");
+    pinInput.value = "";
+    errorEl.style.display = "none";
+    setTimeout(() => pinInput.focus(), 50);
+  }
+
+  function staffPickerGoBack() {
+    staffPickerPendingSelection = null;
+    document.getElementById("staffPickerListView").style.display = "block";
+    document.getElementById("staffPickerPinView").style.display = "none";
+  }
+
+  function submitStaffPickerPin() {
+    if (!staffPickerPendingSelection) return;
+    const entered = document.getElementById("staffPickerPinInput").value.trim();
+    const errorEl = document.getElementById("staffPickerPinError");
+
+    if (staffPickerPendingSelection.type === "owner") {
+      if (ownerPin && entered !== ownerPin) {
+        errorEl.textContent = t("ownerPinWrong");
+        errorEl.style.display = "block";
+        return;
+      }
+      grantOwnerAccess();
+      return;
+    }
+
+    const staff = staffPickerPendingSelection.staff;
+    if (entered !== staff.pin) {
+      errorEl.textContent = t("staffPinWrong");
+      errorEl.style.display = "block";
+      return;
+    }
+    currentStaff = staff;
+    try {
+      sessionStorage.setItem("bakkal_current_staff_id", staff.id);
+    } catch (e) {}
+    document.getElementById("staffPickerScreen").style.display = "none";
+    applyRoleRestrictionsUI();
   }
 
   function enterAsOwner() {
     if (ownerPin) {
-      showPrompt(t("ownerPinPrompt"), "").then((entered) => {
-        if (entered === null) return;
-        if (entered !== ownerPin) {
-          showToast(t("ownerPinWrong"), "error");
-          return;
-        }
-        grantOwnerAccess();
-      });
+      openStaffPinView({ type: "owner" });
       return;
     }
     grantOwnerAccess();
@@ -1637,7 +1677,7 @@
   }
 
   // ---------- Özel miktar/ağırlık sorma penceresi (native prompt() yerine) ----------
-  function showPrompt(title, defaultValue) {
+  function showPrompt(title, defaultValue, isPassword) {
     return new Promise((resolve) => {
       const modal = document.getElementById("promptModal");
       const titleEl = document.getElementById("promptModalTitle");
@@ -1645,6 +1685,8 @@
       const okBtn = document.getElementById("promptModalOkBtn");
       const cancelBtn = document.getElementById("promptModalCancelBtn");
 
+      input.type = isPassword ? "password" : "text";
+      input.inputMode = isPassword ? "numeric" : "decimal";
       titleEl.textContent = title;
       input.value = defaultValue != null ? defaultValue : "";
       modal.style.display = "flex";
@@ -4346,6 +4388,11 @@
   document.getElementById("staffAddBtn").addEventListener("click", addStaffMember);
   document.getElementById("ownerPinSaveBtn").addEventListener("click", saveOwnerPin);
   document.getElementById("staffOwnerBtn").addEventListener("click", enterAsOwner);
+  document.getElementById("staffPickerBackBtn").addEventListener("click", staffPickerGoBack);
+  document.getElementById("staffPickerPinSubmitBtn").addEventListener("click", submitStaffPickerPin);
+  document.getElementById("staffPickerPinInput").addEventListener("keydown", (e) => {
+    if (e.key === "Enter") submitStaffPickerPin();
+  });
   document.getElementById("advisorAskBtn").addEventListener("click", askAiAdvisor);
   document.getElementById("branchCreateBtn").addEventListener("click", createBranch);
   document.getElementById("catalogAddBtn").addEventListener("click", addCatalogItem);
