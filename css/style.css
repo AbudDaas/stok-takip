@@ -1534,3 +1534,20 @@ body.font-large{zoom:1.18;}
   background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);
   padding:12px 14px;margin-bottom:10px;font-size:14px;line-height:1.5;white-space:pre-wrap;
 }
+
+/* Raf Analizi sonuçları */
+.shelf-result-row{
+  display:flex;align-items:center;justify-content:space-between;gap:10px;
+  border-radius:var(--radius);padding:10px 12px;margin-bottom:6px;
+}
+.shelf-result-area{margin:0;font-size:13px;font-weight:600;}
+.shelf-result-note{margin:2px 0 0;font-size:12px;color:var(--text-muted);}
+.shelf-status-badge{font-size:11px;font-weight:700;padding:3px 9px;border-radius:10px;flex-shrink:0;}
+.shelf-status-empty{background:var(--red-bg);}
+.shelf-status-empty .shelf-status-badge{background:var(--red);color:#fff;}
+.shelf-status-low{background:var(--amber-bg);}
+.shelf-status-low .shelf-status-badge{background:var(--amber);color:#fff;}
+.shelf-status-messy{background:var(--amber-bg);}
+.shelf-status-messy .shelf-status-badge{background:#8B6F1F;color:#fff;}
+.shelf-status-full{background:var(--green-bg);}
+.shelf-status-full .shelf-status-badge{background:var(--green);color:#fff;}
