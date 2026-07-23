@@ -305,6 +305,9 @@
           <button id="payNakitBtn" class="payment-type-btn active" data-type="nakit">
             <i class="fa-solid fa-money-bill" aria-hidden="true"></i> <span data-i18n="payNakit">Nakit</span>
           </button>
+          <button id="payKartBtn" class="payment-type-btn" data-type="kart">
+            <i class="fa-solid fa-credit-card" aria-hidden="true"></i> <span data-i18n="payKart">Kart</span>
+          </button>
           <button id="payVeresiyeBtn" class="payment-type-btn" data-type="veresiye">
             <i class="fa-solid fa-book" aria-hidden="true"></i> <span data-i18n="payVeresiye">Veresiye</span>
           </button>
@@ -346,6 +349,27 @@
       <div class="profit-highlight-card">
         <p class="stat-label" data-i18n="statNetProfit">Net kâr</p>
         <p class="stat-value" id="statNetProfit">0,00 ₺</p>
+      </div>
+
+      <div class="card">
+        <p class="card-title" data-i18n="paymentBreakdownTitle">Ödeme Türü Dağılımı</p>
+        <div class="payment-breakdown-row">
+          <div class="payment-breakdown-item">
+            <i class="fa-solid fa-money-bill" aria-hidden="true"></i>
+            <p class="payment-breakdown-label" data-i18n="payNakit">Nakit</p>
+            <p class="payment-breakdown-value" id="breakdownNakit">0,00 ₺</p>
+          </div>
+          <div class="payment-breakdown-item">
+            <i class="fa-solid fa-credit-card" aria-hidden="true"></i>
+            <p class="payment-breakdown-label" data-i18n="payKart">Kart</p>
+            <p class="payment-breakdown-value" id="breakdownKart">0,00 ₺</p>
+          </div>
+          <div class="payment-breakdown-item">
+            <i class="fa-solid fa-book" aria-hidden="true"></i>
+            <p class="payment-breakdown-label" data-i18n="payVeresiye">Veresiye</p>
+            <p class="payment-breakdown-value" id="breakdownVeresiye">0,00 ₺</p>
+          </div>
+        </div>
       </div>
 
       <p class="card-title" data-i18n="topProductsTitle">En çok satan ürünler</p>
@@ -442,6 +466,65 @@
       <p id="orderEmptyState" class="empty-state" data-i18n="emptyOrders">Şu anda sipariş edilmesi gereken ürün yok.</p>
     </section>
 
+    <!-- SEKME: TEDARİKÇİLER -->
+    <section id="tab-suppliers" class="tab-panel">
+      <div class="card">
+        <p class="card-title" data-i18n="supplierAddTitle">Yeni tedarikçi ekle</p>
+        <div class="form-row">
+          <input id="supplierName" type="text" data-i18n-placeholder="supplierNamePh" placeholder="Tedarikçi/firma adı" />
+        </div>
+        <div class="form-row">
+          <input id="supplierPhone" type="tel" data-i18n-placeholder="supplierPhonePh" placeholder="Telefon (opsiyonel, WhatsApp için)" />
+        </div>
+        <button id="supplierAddBtn" class="btn btn-primary btn-block">
+          <i class="fa-solid fa-plus" aria-hidden="true"></i> <span data-i18n="supplierAddBtn">Tedarikçi ekle</span>
+        </button>
+      </div>
+
+      <p class="card-title" data-i18n="supplierListTitle">Tedarikçiler</p>
+      <div id="supplierList" class="list"></div>
+      <p id="supplierEmptyState" class="empty-state" data-i18n="supplierEmptyState">Henüz tedarikçi eklenmedi.</p>
+    </section>
+
+    <!-- TEDARİKÇİ DETAY MODAL -->
+    <!-- İADE ALMA MODAL -->
+    <div id="returnModal" class="modal-overlay" style="display:none;">
+      <div class="modal">
+        <div class="modal-header">
+          <p class="modal-title" data-i18n="returnModalTitle">İade Al</p>
+          <button id="closeReturnModalBtn" class="icon-btn" aria-label="Kapat"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button>
+        </div>
+        <div class="modal-body">
+          <p class="card-subtitle" data-i18n="returnModalSubtitle">İade edilecek ürünün adedini gir, gerekmiyorsa 0 bırak.</p>
+          <div id="returnItemsList" class="list"></div>
+          <button id="confirmReturnBtn" class="btn btn-primary btn-block" style="margin-top:12px;">
+            <i class="fa-solid fa-rotate-left" aria-hidden="true"></i> <span data-i18n="confirmReturnBtn">İadeyi Onayla</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div id="supplierModal" class="modal-overlay" style="display:none;">
+      <div class="modal">
+        <div class="modal-header">
+          <p id="supplierModalName" class="modal-title"></p>
+          <button id="closeSupplierModalBtn" class="icon-btn" aria-label="Kapat"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button>
+        </div>
+        <div class="modal-body">
+          <p class="card-subtitle"><span data-i18n="supplierDebtLabel">Güncel borç</span>: <strong id="supplierModalDebt">0,00 ₺</strong></p>
+          <div class="form-row two-col">
+            <button id="supplierAddDebtBtn" class="btn btn-sm"><i class="fa-solid fa-plus" aria-hidden="true"></i> <span data-i18n="supplierAddDebtBtn">Fatura/Borç Ekle</span></button>
+            <button id="supplierAddPaymentBtn" class="btn btn-sm btn-primary"><i class="fa-solid fa-hand-holding-dollar" aria-hidden="true"></i> <span data-i18n="supplierAddPaymentBtn">Ödeme Yap</span></button>
+          </div>
+          <p class="card-title" style="margin-top:14px;" data-i18n="supplierHistoryTitle">Hareket Geçmişi</p>
+          <div id="supplierHistoryList" class="list"></div>
+          <button id="deleteSupplierBtn" class="btn btn-danger btn-block" style="margin-top:14px;">
+            <i class="fa-solid fa-trash" aria-hidden="true"></i> <span data-i18n="deleteSupplierBtn">Tedarikçiyi sil</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
     <!-- SEKME: YÖNETİM (sadece yönetici hesabıyla görünür) -->
     <!-- SEKME: FİYAT DEĞİŞİMİ -->
     <section id="tab-pricechanges" class="tab-panel">
@@ -493,6 +576,12 @@
         <p class="card-subtitle" data-i18n="orderEngineSubtitle">Son 14 günlük satış hızına göre hesaplanır.</p>
         <div id="orderEngineList" class="list"></div>
         <p id="orderEngineEmptyState" class="empty-state" data-i18n="orderEngineEmpty">Şu an acil sipariş önerisi yok.</p>
+        <div class="form-row" style="margin-top:10px;">
+          <select id="orderEngineSupplierSelect"></select>
+        </div>
+        <button id="orderEngineCreateBtn" class="btn btn-primary btn-block">
+          <i class="fa-brands fa-whatsapp" aria-hidden="true"></i> <span data-i18n="orderEngineCreateBtn">Sipariş Oluştur</span>
+        </button>
       </div>
 
       <div class="card">
@@ -997,6 +1086,10 @@
     <button class="nav-btn" data-tab="tab-orders">
       <i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>
       <span data-i18n="navOrders">Sipariş</span>
+    </button>
+    <button class="nav-btn" data-tab="tab-suppliers">
+      <i class="fa-solid fa-truck" aria-hidden="true"></i>
+      <span data-i18n="navSuppliers">Tedarikçiler</span>
     </button>
     <button class="nav-btn" data-tab="tab-pricechanges">
       <i class="fa-solid fa-arrow-right-arrow-left" aria-hidden="true"></i>
