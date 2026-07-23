@@ -24,6 +24,11 @@
   let dailyResetConfig = [];
   let breadWhatsAppNumber = "";
   let priceChangeLog = [];
+  let suppliers = [];
+  let supplierTransactions = [];
+  let returns = [];
+  let activeReturnSaleId = null;
+  let activeSupplierId = null;
   let accountType = "standalone";
   let auditLog = [];
   let staffMembers = [];
@@ -129,6 +134,9 @@
           dailyResetConfig = data.dailyResetConfig || [];
           breadWhatsAppNumber = data.breadWhatsAppNumber || "";
           priceChangeLog = data.priceChangeLog || [];
+          suppliers = data.suppliers || [];
+          supplierTransactions = data.supplierTransactions || [];
+          returns = data.returns || [];
           accountType = data.accountType || "standalone";
           auditLog = data.auditLog || [];
           staffMembers = data.staffMembers || [];
@@ -569,7 +577,7 @@
     }
 
     // Kasiyer: sadece Kasa, Satışlar, Veresiye görünür.
-    const cashierBlockedTabs = ["tab-products", "tab-scan", "tab-orders", "tab-pricechanges", "tab-settings", "tab-branches"];
+    const cashierBlockedTabs = ["tab-products", "tab-scan", "tab-orders", "tab-pricechanges", "tab-settings", "tab-branches", "tab-suppliers"];
     cashierBlockedTabs.forEach((tabId) => {
       const btn = document.querySelector(`.nav-btn[data-tab="${tabId}"]`);
       if (btn) btn.style.display = "none";
@@ -598,14 +606,14 @@
     if (cloudEnabled) {
       if (!docRef) return;
       suppressNextSnapshot = true;
-      docRef.set({ products, sales, customers, payments, dailyResetConfig, breadWhatsAppNumber, priceChangeLog, auditLog, staffMembers }, { merge: true }).catch((e) => {
+      docRef.set({ products, sales, customers, payments, dailyResetConfig, breadWhatsAppNumber, priceChangeLog, auditLog, staffMembers, suppliers, supplierTransactions, returns }, { merge: true }).catch((e) => {
         console.error("Bulut kaydetme hatası", e);
         setSyncStatus("error");
         registerBackgroundSync();
       });
     } else {
       try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify({ products, sales, customers, payments, dailyResetConfig, breadWhatsAppNumber, priceChangeLog, auditLog, staffMembers }));
+        localStorage.setItem(STORAGE_KEY, JSON.stringify({ products, sales, customers, payments, dailyResetConfig, breadWhatsAppNumber, priceChangeLog, auditLog, staffMembers, suppliers, supplierTransactions, returns }));
       } catch (e) {
         console.error("Yerel kaydetme hatası", e);
       }
@@ -1157,6 +1165,162 @@
       });
   }
 
+
+  // ---------- Tedarikçi Borç Takibi ----------
+  function getSupplierBalance(supplierId) {
+    return supplierTransactions
+      .filter((t) => t.supplierId === supplierId)
+      .reduce((sum, t) => sum + (t.type === "debt" ? t.amount : -t.amount), 0);
+  }
+
+  function renderSuppliers() {
+    const listEl = document.getElementById("supplierList");
+    const emptyEl = document.getElementById("supplierEmptyState");
+    if (!listEl) return;
+
+    if (!suppliers.length) {
+      listEl.innerHTML = "";
+      emptyEl.style.display = "block";
+      return;
+    }
+    emptyEl.style.display = "none";
+
+    listEl.innerHTML = suppliers
+      .map((s) => {
+        const balance = getSupplierBalance(s.id);
+        const balanceClass = balance > 0 ? "has-debt" : "no-debt";
+        return `
+          <div class="customer-row" data-id="${s.id}">
+            <div class="customer-info">
+              <p class="customer-name">${escapeHtml(s.name)}</p>
+              <p class="customer-phone">${escapeHtml(s.phone || "—")}</p>
+            </div>
+            <span class="customer-debt ${balanceClass}">${formatTL(balance)}</span>
+          </div>`;
+      })
+      .join("");
+
+    listEl.querySelectorAll(".customer-row").forEach((row) => {
+      row.addEventListener("click", () => openSupplierModal(row.dataset.id));
+    });
+  }
+
+  function addSupplier() {
+    const name = document.getElementById("supplierName").value.trim();
+    const phone = document.getElementById("supplierPhone").value.trim();
+    if (!name) {
+      showToast(t("supplierNameRequired"), "error");
+      return;
+    }
+    suppliers.push({ id: genId(), name, phone });
+    save();
+    renderSuppliers();
+    document.getElementById("supplierName").value = "";
+    document.getElementById("supplierPhone").value = "";
+    showToast(t("supplierAdded"), "success");
+  }
+
+  function openSupplierModal(supplierId) {
+    const s = suppliers.find((x) => x.id === supplierId);
+    if (!s) return;
+    activeSupplierId = supplierId;
+    document.getElementById("supplierModalName").textContent = s.name;
+    document.getElementById("supplierModalDebt").textContent = formatTL(getSupplierBalance(supplierId));
+    renderSupplierHistory(supplierId);
+    document.getElementById("supplierModal").style.display = "flex";
+  }
+
+  function closeSupplierModal() {
+    document.getElementById("supplierModal").style.display = "none";
+    activeSupplierId = null;
+  }
+
+  function renderSupplierHistory(supplierId) {
+    const listEl = document.getElementById("supplierHistoryList");
+    const history = supplierTransactions
+      .filter((t) => t.supplierId === supplierId)
+      .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+    if (!history.length) {
+      listEl.innerHTML = `<p class="empty-state">${t("supplierNoHistory")}</p>`;
+      return;
+    }
+
+    listEl.innerHTML = history
+      .map((tx) => {
+        const d = new Date(tx.timestamp);
+        const dateStr = d.toLocaleDateString(locale());
+        const isDebt = tx.type === "debt";
+        return `
+          <div class="supplier-history-row">
+            <div>
+              <p class="supplier-history-note">${escapeHtml(tx.note || (isDebt ? t("supplierDebtEntry") : t("supplierPaymentEntry")))}</p>
+              <p class="supplier-history-date">${dateStr}</p>
+            </div>
+            <span class="${isDebt ? "price-change-up" : "price-change-down"}">${isDebt ? "+" : "-"}${formatTL(tx.amount)}</span>
+          </div>`;
+      })
+      .join("");
+  }
+
+  function addSupplierDebt() {
+    if (!activeSupplierId) return;
+    showPrompt(t("supplierDebtPrompt"), "").then((amountStr) => {
+      if (amountStr === null) return;
+      const amount = Number(amountStr);
+      if (!amount || amount <= 0) {
+        showToast(t("alertInvalidAmount"), "error");
+        return;
+      }
+      showPrompt(t("supplierNotePrompt"), "").then((note) => {
+        supplierTransactions.push({
+          id: genId(),
+          supplierId: activeSupplierId,
+          type: "debt",
+          amount,
+          note: note || "",
+          timestamp: new Date().toISOString()
+        });
+        save();
+        openSupplierModal(activeSupplierId);
+        renderSuppliers();
+      });
+    });
+  }
+
+  function addSupplierPayment() {
+    if (!activeSupplierId) return;
+    showPrompt(t("supplierPaymentPrompt"), "").then((amountStr) => {
+      if (amountStr === null) return;
+      const amount = Number(amountStr);
+      if (!amount || amount <= 0) {
+        showToast(t("alertInvalidAmount"), "error");
+        return;
+      }
+      supplierTransactions.push({
+        id: genId(),
+        supplierId: activeSupplierId,
+        type: "payment",
+        amount,
+        note: "",
+        timestamp: new Date().toISOString()
+      });
+      save();
+      openSupplierModal(activeSupplierId);
+      renderSuppliers();
+      showToast(t("supplierPaymentRecorded"), "success");
+    });
+  }
+
+  function deleteSupplier() {
+    if (!activeSupplierId) return;
+    if (!confirm(t("confirmDeleteSupplier"))) return;
+    suppliers = suppliers.filter((s) => s.id !== activeSupplierId);
+    supplierTransactions = supplierTransactions.filter((t) => t.supplierId !== activeSupplierId);
+    save();
+    renderSuppliers();
+    closeSupplierModal();
+  }
 
   function renderCustomers() {
     const list = document.getElementById("customerList");
@@ -2176,6 +2340,7 @@
     renderCart();
     renderSales();
     renderCustomers();
+    renderSuppliers();
     renderBreadStatus();
     renderPriceChanges();
     renderAuditLog();
@@ -2759,6 +2924,7 @@
   function setPaymentType(type) {
     selectedPaymentType = type;
     document.getElementById("payNakitBtn").classList.toggle("active", type === "nakit");
+    document.getElementById("payKartBtn").classList.toggle("active", type === "kart");
     document.getElementById("payVeresiyeBtn").classList.toggle("active", type === "veresiye");
     document.getElementById("veresiyeCustomerRow").style.display = type === "veresiye" ? "block" : "none";
   }
@@ -2829,6 +2995,85 @@
     showToast(`${t("alertSaleComplete")} ${formatTL(total)}${customerName ? " (" + t("veresiyeLabel") + ": " + customerName + ")" : ""}`, "success");
   }
 
+  // ---------- İade Yönetimi ----------
+  function getReturnedQtyForItem(saleId, itemName) {
+    return returns
+      .filter((r) => r.saleId === saleId)
+      .reduce((sum, r) => {
+        const item = r.items.find((i) => i.name === itemName);
+        return sum + (item ? item.qty : 0);
+      }, 0);
+  }
+
+  function openReturnModal(saleId) {
+    const sale = sales.find((s) => s.id === saleId);
+    if (!sale) return;
+    activeReturnSaleId = saleId;
+
+    const listEl = document.getElementById("returnItemsList");
+    listEl.innerHTML = sale.items
+      .map((item, i) => {
+        const alreadyReturned = getReturnedQtyForItem(saleId, item.name);
+        const maxQty = Math.max(0, item.qty - alreadyReturned);
+        return `
+          <div class="return-item-row">
+            <div class="return-item-info">
+              <p class="return-item-name">${escapeHtml(item.name)}</p>
+              <p class="return-item-meta">${t("returnMaxLabel")}: ${maxQty} ${item.unit === "kg" ? t("unitKgShort") : t("unitAdetShort")}</p>
+            </div>
+            <input type="number" class="return-qty-input" data-index="${i}" min="0" max="${maxQty}" step="${item.unit === "kg" ? "0.001" : "1"}" value="0" ${maxQty <= 0 ? "disabled" : ""} />
+          </div>`;
+      })
+      .join("");
+
+    document.getElementById("returnModal").style.display = "flex";
+  }
+
+  function closeReturnModal() {
+    document.getElementById("returnModal").style.display = "none";
+    activeReturnSaleId = null;
+  }
+
+  function confirmReturn() {
+    const sale = sales.find((s) => s.id === activeReturnSaleId);
+    if (!sale) return;
+
+    const inputs = document.querySelectorAll(".return-qty-input");
+    const returnItems = [];
+    let totalRefund = 0;
+
+    inputs.forEach((input) => {
+      const qty = Number(input.value) || 0;
+      if (qty <= 0) return;
+      const item = sale.items[Number(input.dataset.index)];
+      if (!item) return;
+      returnItems.push({ name: item.name, qty, price: item.price });
+      totalRefund += qty * item.price;
+
+      const p = products.find((x) => x.name === item.name);
+      if (p) p.qty = Math.round((p.qty + qty) * 1000) / 1000;
+    });
+
+    if (!returnItems.length) {
+      showToast(t("returnNoneSelected"), "error");
+      return;
+    }
+
+    returns.push({
+      id: genId(),
+      saleId: sale.id,
+      timestamp: new Date().toISOString(),
+      items: returnItems,
+      totalRefund
+    });
+
+    logAudit("İade alındı", `${formatTL(totalRefund)} (${returnItems.length} ürün)`);
+    save();
+    renderAll();
+    closeReturnModal();
+    showToast(t("returnSuccess"), "success");
+  }
+
   function cancelSale(saleId) {
     const sale = sales.find((s) => s.id === saleId);
     if (!sale) return;
@@ -2871,7 +3116,15 @@
     const itemsSummary = sale.items
       .map((i) => `${escapeHtml(i.name)} x${i.unit === "kg" ? i.qty + t("unitKgShort") : i.qty}`)
       .join(", ");
-    const paymentBadge = sale.paymentType === "veresiye" ? `<span class="sale-payment-badge">${t("veresiyeLabel")}${sale.customerName ? ": " + escapeHtml(sale.customerName) : ""}</span>` : "";
+    const saleReturns = returns.filter((r) => r.saleId === sale.id);
+    const totalReturned = saleReturns.reduce((sum, r) => sum + r.totalRefund, 0);
+    const returnedNote = totalReturned > 0 ? `<p class="sale-returned-note">${t("returnedLabel")}: -${formatTL(totalReturned)}</p>` : "";
+    const paymentBadge =
+      sale.paymentType === "veresiye"
+        ? `<span class="sale-payment-badge sale-payment-veresiye">${t("veresiyeLabel")}${sale.customerName ? ": " + escapeHtml(sale.customerName) : ""}</span>`
+        : sale.paymentType === "kart"
+        ? `<span class="sale-payment-badge sale-payment-kart">${t("payKart")}</span>`
+        : "";
     const profitValue = sale.profit != null ? sale.profit : sale.total;
     return `
       <div class="sale-row">
@@ -2881,10 +3134,14 @@
         </div>
         <p class="sale-items">${itemsSummary}</p>
         <p class="sale-profit">${t("profitLabel")}: ${formatTL(profitValue)}</p>
+        ${returnedNote}
         <div class="sale-row-bottom">
           ${paymentBadge}
+          <button class="sale-return-btn" data-id="${sale.id}">
+            <i class="fa-solid fa-rotate-left" aria-hidden="true"></i> ${t("returnBtn")}
+          </button>
           <button class="sale-cancel-btn" data-id="${sale.id}">
-            <i class="fa-solid fa-rotate-left" aria-hidden="true"></i> ${t("cancelSaleBtn")}
+            <i class="fa-solid fa-xmark" aria-hidden="true"></i> ${t("cancelSaleBtn")}
           </button>
         </div>
       </div>`;
@@ -2920,6 +3177,9 @@
       list.querySelectorAll(".sale-cancel-btn").forEach((btn) => {
         btn.addEventListener("click", () => cancelSale(btn.dataset.id));
       });
+      list.querySelectorAll(".sale-return-btn").forEach((btn) => {
+        btn.addEventListener("click", () => openReturnModal(btn.dataset.id));
+      });
     }
 
     // En çok satan ürünler
@@ -2953,6 +3213,16 @@
       const profitCard = profitEl.closest(".profit-highlight-card");
       if (profitCard) profitCard.classList.toggle("negative", periodProfit < 0);
     }
+
+    const nakitTotal = periodSales.filter((s) => s.paymentType === "nakit" || !s.paymentType).reduce((sum, s) => sum + s.total, 0);
+    const kartTotal = periodSales.filter((s) => s.paymentType === "kart").reduce((sum, s) => sum + s.total, 0);
+    const veresiyeTotal = periodSales.filter((s) => s.paymentType === "veresiye").reduce((sum, s) => sum + s.total, 0);
+    const breakdownNakitEl = document.getElementById("breakdownNakit");
+    const breakdownKartEl = document.getElementById("breakdownKart");
+    const breakdownVeresiyeEl = document.getElementById("breakdownVeresiye");
+    if (breakdownNakitEl) breakdownNakitEl.textContent = formatTL(nakitTotal);
+    if (breakdownKartEl) breakdownKartEl.textContent = formatTL(kartTotal);
+    if (breakdownVeresiyeEl) breakdownVeresiyeEl.textContent = formatTL(veresiyeTotal);
   }
 
   // ---------- Hızlı barkod tarama (ürün ekle/düzenle formları için) ----------
@@ -3855,10 +4125,11 @@
     emptyEl.style.display = "none";
 
     listEl.innerHTML = suggestions
-      .map((s) => {
+      .map((s, i) => {
         const daysLabel = s.daysLeft <= 0 ? t("orderEngineToday") : `${Math.ceil(s.daysLeft)} ${t("orderEngineDaysLeft")}`;
         return `
-          <div class="order-engine-row">
+          <label class="order-engine-row">
+            <input type="checkbox" class="order-engine-check" data-index="${i}" checked />
             <div class="order-engine-info">
               <p class="order-engine-name">${escapeHtml(s.name)}</p>
               <p class="order-engine-meta">${t("orderEngineRunsOut")}: ${daysLabel}</p>
@@ -3867,9 +4138,52 @@
               <span class="order-engine-qty">${s.suggestedOrder}</span>
               <span class="order-engine-unit">${s.unit === "kg" ? t("unitKgShort") : t("unitAdetShort")}</span>
             </div>
-          </div>`;
+          </label>`;
       })
       .join("");
+
+    orderEngineSuggestionsCache = suggestions;
+    renderOrderEngineSupplierSelect();
+  }
+
+  let orderEngineSuggestionsCache = [];
+
+  function renderOrderEngineSupplierSelect() {
+    const selectEl = document.getElementById("orderEngineSupplierSelect");
+    if (!selectEl) return;
+    selectEl.innerHTML =
+      `<option value="">${t("orderEngineNoSupplier")}</option>` +
+      suppliers.map((s) => `<option value="${s.id}">${escapeHtml(s.name)}</option>`).join("");
+  }
+
+  function createOrderFromEngine() {
+    const checks = document.querySelectorAll(".order-engine-check");
+    const selected = [];
+    checks.forEach((chk) => {
+      if (chk.checked) selected.push(orderEngineSuggestionsCache[Number(chk.dataset.index)]);
+    });
+    if (!selected.length) {
+      showToast(t("orderEngineNoneSelected"), "error");
+      return;
+    }
+
+    const lines = selected.map((s) => `- ${s.name}: ${s.suggestedOrder} ${s.unit === "kg" ? t("unitKgShort") : t("unitAdetShort")}`);
+    const message = `${t("orderEngineMessageTitle")}\n\n${lines.join("\n")}`;
+
+    const supplierId = document.getElementById("orderEngineSupplierSelect").value;
+    const supplier = suppliers.find((s) => s.id === supplierId);
+
+    if (supplier && supplier.phone) {
+      const cleanPhone = supplier.phone.replace(/[^\d]/g, "");
+      const url = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`;
+      window.open(url, "_blank");
+    } else {
+      navigator.clipboard
+        .writeText(message)
+        .then(() => showToast(t("orderEngineCopied"), "success"))
+        .catch(() => showToast(message, "info"));
+    }
+    logAudit("Sipariş oluşturuldu", `${selected.length} ürün${supplier ? " · " + supplier.name : ""}`);
   }
 
   // ---------- 3) Son Kullanma Tarihi Takibi ----------
@@ -4172,6 +4486,7 @@
   document.getElementById("completeSaleBtn").addEventListener("click", completeSale);
   document.getElementById("cartDiscount").addEventListener("input", renderCart);
   document.getElementById("payNakitBtn").addEventListener("click", () => setPaymentType("nakit"));
+  document.getElementById("payKartBtn").addEventListener("click", () => setPaymentType("kart"));
   document.getElementById("payVeresiyeBtn").addEventListener("click", () => setPaymentType("veresiye"));
 
   document.getElementById("veresiyeCustomerSearch").addEventListener("input", (e) => {
@@ -4269,7 +4584,7 @@
       localStorage.setItem("bakkal_simple_mode", mode);
     } catch (e) {}
 
-    const advancedOnlyTabs = ["tab-scan", "tab-orders", "tab-pricechanges", "tab-ai"];
+    const advancedOnlyTabs = ["tab-scan", "tab-orders", "tab-pricechanges", "tab-ai", "tab-suppliers"];
     advancedOnlyTabs.forEach((tabId) => {
       const btn = document.querySelector(`.nav-btn[data-tab="${tabId}"]`);
       if (btn) btn.style.display = mode === "simple" ? "none" : "flex";
@@ -4398,6 +4713,20 @@
   document.getElementById("catalogAddBtn").addEventListener("click", addCatalogItem);
   document.getElementById("exitBranchViewBtn").addEventListener("click", exitBranchView);
   document.getElementById("closeBranchEditModalBtn").addEventListener("click", closeBranchEditModal);
+  document.getElementById("supplierAddBtn").addEventListener("click", addSupplier);
+  document.getElementById("closeSupplierModalBtn").addEventListener("click", closeSupplierModal);
+  document.getElementById("supplierModal").addEventListener("click", (e) => {
+    if (e.target.id === "supplierModal") closeSupplierModal();
+  });
+  document.getElementById("supplierAddDebtBtn").addEventListener("click", addSupplierDebt);
+  document.getElementById("supplierAddPaymentBtn").addEventListener("click", addSupplierPayment);
+  document.getElementById("deleteSupplierBtn").addEventListener("click", deleteSupplier);
+  document.getElementById("closeReturnModalBtn").addEventListener("click", closeReturnModal);
+  document.getElementById("returnModal").addEventListener("click", (e) => {
+    if (e.target.id === "returnModal") closeReturnModal();
+  });
+  document.getElementById("confirmReturnBtn").addEventListener("click", confirmReturn);
+  document.getElementById("orderEngineCreateBtn").addEventListener("click", createOrderFromEngine);
   document.getElementById("branchEditModal").addEventListener("click", (e) => {
     if (e.target.id === "branchEditModal") closeBranchEditModal();
   });
