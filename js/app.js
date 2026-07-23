@@ -2895,85 +2895,111 @@
     });
   }
 
-  // ---------- Kamera ile Raf Analizi ----------
-  function handleShelfAnalysisPhoto(file) {
-    if (!isBulkScanConfigured()) {
-      showToast(t("bulkScanNotConfigured"), "error");
-      return;
-    }
-    const loadingEl = document.getElementById("shelfAnalysisLoading");
-    const resultsEl = document.getElementById("shelfAnalysisResults");
-    loadingEl.style.display = "flex";
-    resultsEl.innerHTML = "";
+  // ---------- Raf Kontrol Uyarısı (satış hızına dayalı) ----------
+  function renderShelfCheckAlert() {
+    const listEl = document.getElementById("shelfCheckList");
+    const emptyEl = document.getElementById("shelfCheckEmptyState");
+    if (!listEl) return;
 
-    const prompt = [
-      "Bu bir market/bakkal raf bölümünün fotoğrafı. Rafı DİKKATLE incele.",
-      "Her ürün alanı için şunu değerlendir: raf o üründen yeterince dolu mu, yoksa gözle görülür bir BOŞLUK/eksiklik mi var?",
-      "Ayrıca ürünlerin düzgün/kategorisine uygun dizilip dizilmediğine, yanlış yere konmuş ürün olup olmadığına bak.",
-      "ÖNEMLİ: Elinde bu rafın 'olması gereken normal hali' diye bir referans YOK — sadece fotoğrafta GÖRDÜĞÜN gerçek durumu yorumla. 'Normalde 8 sıra olmalı' gibi uydurma bir karşılaştırma YAPMA, sadece 'bu alan çok boş görünüyor' gibi gözlemsel bir değerlendirme yap.",
-      "",
-      "Tespit ettiğin HER dikkat çekici alan için bir kayıt oluştur (ürün/bölge adı + durum + kısa not).",
-      "Durum değerleri: 'bos' (neredeyse hiç ürün yok), 'az' (belirgin boşluklar var), 'karisik' (düzensiz/yanlış yerde dizilmiş), 'dolu' (sorun yok, sadece iyi durumdaki alanlar için de birkaç tane ekleyebilirsin).",
-      "",
-      "SADECE geçerli bir JSON dizisi döndür, başka hiçbir açıklama ekleme.",
-      'Format: [{"area":"Coca Cola bölümü","status":"az","note":"Belirgin boşluklar var, öne çekilmemiş"}]',
-      "En fazla 10 kayıt döndür, en dikkat çekici alanlara öncelik ver."
-    ].join("\n");
-
-    fileToBase64(file)
-      .then((base64) => callGeminiWithRetry(base64, prompt))
-      .then((data) => {
-        loadingEl.style.display = "none";
-        const rawText = data && data.candidates && data.candidates[0] && data.candidates[0].content.parts[0].text;
-        if (!rawText) {
-          showToast(t("shelfAnalysisError"), "error");
-          return;
-        }
-        let results;
-        try {
-          const cleaned = rawText.replace(/```json|```/g, "").trim();
-          results = JSON.parse(cleaned);
-        } catch (e) {
-          console.error("Raf analizi ayrıştırma hatası", e);
-          showToast(t("shelfAnalysisError"), "error");
-          return;
-        }
-        renderShelfAnalysisResults(results);
-      })
-      .catch((e) => {
-        console.error("Raf analizi hatası", e);
-        loadingEl.style.display = "none";
-        showToast(t("shelfAnalysisError"), "error");
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const todaySales = sales.filter((s) => new Date(s.timestamp) >= today);
+    const soldTodayByProduct = {};
+    todaySales.forEach((s) => {
+      s.items.forEach((item) => {
+        soldTodayByProduct[item.name] = (soldTodayByProduct[item.name] || 0) + item.qty;
       });
-  }
+    });
 
-  function renderShelfAnalysisResults(results) {
-    const resultsEl = document.getElementById("shelfAnalysisResults");
-    if (!Array.isArray(results) || !results.length) {
-      resultsEl.innerHTML = `<p class="empty-state">${t("shelfAnalysisNoIssues")}</p>`;
+    const cutoff14 = new Date(Date.now() - 14 * 86400000);
+    const recentSales = sales.filter((s) => new Date(s.timestamp) >= cutoff14 && new Date(s.timestamp) < today);
+    const salesByProduct14 = {};
+    recentSales.forEach((s) => {
+      s.items.forEach((item) => {
+        salesByProduct14[item.name] = (salesByProduct14[item.name] || 0) + item.qty;
+      });
+    });
+
+    const alerts = Object.keys(soldTodayByProduct)
+      .map((name) => {
+        const soldToday = soldTodayByProduct[name];
+        const avgDaily = (salesByProduct14[name] || 0) / 14;
+        if (soldToday < 3) return null; // çok küçük hacimlerde gürültü yaratmasın
+        if (avgDaily > 0 && soldToday < avgDaily * 1.5) return null; // normalin çok üstünde değilse alarm verme
+        if (avgDaily === 0 && soldToday < 5) return null; // geçmiş veri yoksa daha yüksek bir eşik kullan
+        return { name, soldToday, avgDaily };
+      })
+      .filter(Boolean)
+      .sort((a, b) => b.soldToday - a.soldToday);
+
+    if (!alerts.length) {
+      listEl.innerHTML = "";
+      emptyEl.style.display = "block";
       return;
     }
+    emptyEl.style.display = "none";
 
-    const statusMap = {
-      bos: { cls: "shelf-status-empty", label: t("shelfStatusEmpty") },
-      az: { cls: "shelf-status-low", label: t("shelfStatusLow") },
-      karisik: { cls: "shelf-status-messy", label: t("shelfStatusMessy") },
-      dolu: { cls: "shelf-status-full", label: t("shelfStatusFull") }
-    };
-
-    resultsEl.innerHTML = results
-      .map((r) => {
-        const info = statusMap[r.status] || statusMap.az;
+    listEl.innerHTML = alerts
+      .map((a) => {
+        const avgLabel = a.avgDaily > 0 ? `${t("shelfCheckUsualAvg")}: ${a.avgDaily.toFixed(1)}` : t("shelfCheckNoHistory");
         return `
-          <div class="shelf-result-row ${info.cls}">
-            <div class="shelf-result-info">
-              <p class="shelf-result-area">${escapeHtml(r.area || "")}</p>
-              <p class="shelf-result-note">${escapeHtml(r.note || "")}</p>
+          <div class="shelf-check-row">
+            <div class="shelf-check-info">
+              <p class="shelf-check-name">${escapeHtml(a.name)}</p>
+              <p class="shelf-check-meta">${t("shelfCheckSoldToday")}: ${a.soldToday} · ${avgLabel}</p>
             </div>
-            <span class="shelf-status-badge">${escapeHtml(info.label)}</span>
+            <span class="shelf-check-badge">${t("shelfCheckAction")}</span>
           </div>`;
       })
       .join("");
+
+    // Daha önce bugün bildirilmemiş ürünler için tarayıcı bildirimi gönder
+    alerts.forEach((a) => notifyShelfCheckOnce(a.name));
+  }
+
+  function notifyShelfCheckOnce(productName) {
+    const todayKey = new Date().toISOString().slice(0, 10);
+    let notified = {};
+    try {
+      notified = JSON.parse(sessionStorage.getItem("bakkal_shelf_notified") || "{}");
+    } catch (e) {}
+    const key = `${todayKey}_${productName}`;
+    if (notified[key]) return;
+    notified[key] = true;
+    try {
+      sessionStorage.setItem("bakkal_shelf_notified", JSON.stringify(notified));
+    } catch (e) {}
+
+    // Yerel tarayıcı bildirimi (uygulama o an açıksa anında görünür)
+    if ("Notification" in window && Notification.permission === "granted") {
+      try {
+        new Notification(t("shelfCheckNotifTitle"), {
+          body: `${productName} ${t("shelfCheckNotifBody")}`,
+          icon: "./icons/icon-192.png"
+        });
+      } catch (e) {}
+    }
+
+    // Gerçek push bildirimi (telefon/uygulama kapalıyken de ulaşır)
+    sendShelfCheckPush(productName);
+  }
+
+  function sendShelfCheckPush(productName) {
+    if (!isChainConfigured() || !currentUser) return;
+    currentUser
+      .getIdToken()
+      .then((idToken) =>
+        fetch(`${chainConfig.workerUrl}/send-self-notification`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            idToken,
+            title: t("shelfCheckNotifTitle"),
+            message: `${productName} ${t("shelfCheckNotifBody")}`
+          })
+        })
+      )
+      .catch((e) => console.error("Raf kontrolü bildirimi gönderilemedi", e));
   }
 
   function productAlreadyExists(name) {
@@ -3839,6 +3865,7 @@
     renderOrderEngine();
     renderExpiryTracking();
     renderAnomalyDetection();
+    renderShelfCheckAlert();
   }
 
   function applyInvoiceScan() {
@@ -4144,14 +4171,6 @@
   document.getElementById("staffAddBtn").addEventListener("click", addStaffMember);
   document.getElementById("staffOwnerBtn").addEventListener("click", enterAsOwner);
   document.getElementById("advisorAskBtn").addEventListener("click", askAiAdvisor);
-  document.getElementById("shelfAnalysisBtn").addEventListener("click", () => {
-    document.getElementById("shelfAnalysisInput").click();
-  });
-  document.getElementById("shelfAnalysisInput").addEventListener("change", (e) => {
-    const file = e.target.files[0];
-    if (file) handleShelfAnalysisPhoto(file);
-    e.target.value = "";
-  });
   document.getElementById("branchCreateBtn").addEventListener("click", createBranch);
   document.getElementById("catalogAddBtn").addEventListener("click", addCatalogItem);
   document.getElementById("exitBranchViewBtn").addEventListener("click", exitBranchView);
