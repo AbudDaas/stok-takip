@@ -706,6 +706,13 @@
       </div>
 
       <div class="card">
+        <p class="card-title" data-i18n="autoBackupTitle">🛡️ Otomatik Bulut Yedekleri</p>
+        <p class="card-subtitle" data-i18n="autoBackupSubtitle">Sistem her gün otomatik olarak ayrı bir yedek alıyor. Bir sorun olursa buradan geri yükleyebilirsin.</p>
+        <div id="autoBackupList" class="list"></div>
+        <p id="autoBackupEmptyState" class="empty-state" data-i18n="autoBackupEmpty">Henüz otomatik yedek oluşmadı.</p>
+      </div>
+
+      <div class="card">
         <p class="card-title" data-i18n="dataSizeTitle">📊 Veri Kullanımı</p>
         <p class="card-subtitle" data-i18n="dataSizeSubtitle">Her işletmenin verisi Firestore'da tek bir belgede tutuluyor (limit: 1 MB). Bu, kullanımını gösterir.</p>
         <div class="data-size-bar-track">
@@ -731,6 +738,8 @@
           </select>
           <label class="field-label" data-i18n="fiscalApiKeyLabel">API Anahtarı</label>
           <input id="fiscalApiKey" type="text" data-i18n-placeholder="fiscalApiKeyPh" placeholder="Entegratörden aldığın API anahtarı" />
+          <label class="field-label" data-i18n="fiscalEndpointLabel">API Adresi (Endpoint URL)</label>
+          <input id="fiscalEndpoint" type="text" data-i18n-placeholder="fiscalEndpointPh" placeholder="https://api.entegrator.com/fatura/gonder" />
           <label class="field-label" data-i18n="fiscalVknLabel">Vergi Kimlik No</label>
           <input id="fiscalVkn" type="text" data-i18n-placeholder="fiscalVknPh" placeholder="VKN/TCKN" />
           <button id="fiscalSaveBtn" class="btn btn-primary btn-block" style="margin-top:8px;">
