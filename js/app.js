@@ -27,6 +27,7 @@
   let fiscalEnabled = false;
   let fiscalProvider = "foriba";
   let fiscalApiKey = "";
+  let fiscalEndpoint = "";
   let fiscalVkn = "";
   let suppliers = [];
   let supplierTransactions = [];
@@ -144,6 +145,7 @@
           fiscalEnabled = data.fiscalEnabled || false;
           fiscalProvider = data.fiscalProvider || "foriba";
           fiscalApiKey = data.fiscalApiKey || "";
+          fiscalEndpoint = data.fiscalEndpoint || "";
           fiscalVkn = data.fiscalVkn || "";
           suppliers = data.suppliers || [];
           supplierTransactions = data.supplierTransactions || [];
@@ -153,6 +155,14 @@
           staffMembers = data.staffMembers || [];
           ownerPin = data.ownerPin || "";
           masterCatalog = data.masterCatalog || [];
+        } else if (snap.metadata.fromCache) {
+          // KRİTİK GÜVENLİK KONTROLÜ: Bu anlık görüntü henüz sunucudan değil,
+          // cihazın YEREL ÖNBELLEĞİNDEN geliyor (örn. telefon ilk kez açıldığında,
+          // internet henüz tam bağlanmadan). Belge "yok" gibi görünse bile bu
+          // GERÇEK olmayabilir — sunucudan gelecek asıl veriyi bekle, ASLA bu
+          // durumda örnek veriyle üzerine yazma (gerçek veriyi silme riski var).
+          console.warn("Önbellekten boş/eksik anlık görüntü geldi, sunucu onayı bekleniyor — üzerine yazılmadı.");
+          return;
         } else {
           const initial = { products: seedData(), sales: [], customers: [], payments: [] };
           docRef.set(initial);
@@ -420,17 +430,21 @@
   function saveFiscalSettings() {
     fiscalProvider = document.getElementById("fiscalProvider").value;
     fiscalApiKey = document.getElementById("fiscalApiKey").value.trim();
+    fiscalEndpoint = document.getElementById("fiscalEndpoint").value.trim();
     fiscalVkn = document.getElementById("fiscalVkn").value.trim();
 
     const targetRef = originalDocRef || docRef;
     if (targetRef) {
       targetRef
-        .set({ fiscalProvider, fiscalApiKey, fiscalVkn }, { merge: true })
+        .set({ fiscalProvider, fiscalApiKey, fiscalEndpoint, fiscalVkn }, { merge: true })
         .catch((e) => console.error("Mali kayıt ayarları kaydedilemedi", e));
     }
 
     const statusEl = document.getElementById("fiscalStatus");
-    if (fiscalApiKey) {
+    if (fiscalApiKey && fiscalEndpoint) {
+      statusEl.textContent = t("fiscalReadyToTry");
+      statusEl.style.color = "var(--green-text)";
+    } else if (fiscalApiKey || fiscalEndpoint) {
       statusEl.textContent = t("fiscalNotConnectedYet");
       statusEl.style.color = "var(--amber-text)";
     } else {
@@ -446,13 +460,57 @@
     document.getElementById("fiscalConfigFields").style.display = fiscalEnabled ? "block" : "none";
     document.getElementById("fiscalProvider").value = fiscalProvider;
     document.getElementById("fiscalApiKey").value = fiscalApiKey;
+    document.getElementById("fiscalEndpoint").value = fiscalEndpoint;
     document.getElementById("fiscalVkn").value = fiscalVkn;
   }
 
-  // Gerçek bir entegratöre bağlanmıyor — sadece altyapı hazır olduğunda buradan devam edilir.
+  // NOT: Bu, GENEL bir veri yapısı gönderiyor — gerçek entegratörün (Foriba/Uyumsoft/Logo)
+  // beklediği tam alan adları/format farklı olabilir. Gerçek API dokümantasyonu geldiğinde
+  // invoicePayload yapısı ona göre güncellenmeli. Şu an: adres ve anahtar girilmemişse
+  // hiçbir şey yapmaz (sessizce atlar), girilmişse worker üzerinden sunucu tarafında
+  // gönderim DENER ve sonucu işlem geçmişine kaydeder.
   function attemptSendToFiscalProvider(sale) {
-    if (!fiscalEnabled || !fiscalApiKey) return;
-    console.log("Mali kayıt gönderimi (henüz gerçek entegratör bağlantısı yok):", sale.id, fiscalProvider);
+    if (!fiscalEnabled || !fiscalApiKey || !fiscalEndpoint) return;
+    if (!isChainConfigured() || !currentUser) return;
+
+    const invoicePayload = {
+      vkn: fiscalVkn,
+      faturaTarihi: sale.timestamp,
+      faturaNo: sale.id,
+      kalemler: sale.items.map((item) => ({
+        urunAdi: item.name,
+        miktar: item.qty,
+        birimFiyat: item.price,
+        toplam: Math.round(item.qty * item.price * 100) / 100
+      })),
+      araToplam: sale.subtotal,
+      indirim: sale.discount || 0,
+      genelToplam: sale.total,
+      odemeTuru: sale.paymentType
+    };
+
+    currentUser
+      .getIdToken()
+      .then((idToken) =>
+        fetch(`${chainConfig.workerUrl}/relay-fiscal-invoice`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ idToken, fiscalEndpoint, fiscalApiKey, invoicePayload })
+        })
+      )
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.success) {
+          logAudit("Mali kayıt gönderildi", `Satış #${sale.id}`);
+        } else {
+          console.error("Mali kayıt gönderimi başarısız:", data);
+          logAudit("Mali kayıt gönderimi BAŞARISIZ", `Satış #${sale.id} — ${data.error || "entegratör " + data.providerStatus + " döndürdü"}`);
+        }
+      })
+      .catch((e) => {
+        console.error("Mali kayıt gönderim hatası:", e);
+        logAudit("Mali kayıt gönderimi BAŞARISIZ", `Satış #${sale.id} (bağlantı hatası)`);
+      });
   }
 
   function saveOwnerPin() {
