@@ -179,6 +179,7 @@
         checkStaffSelection();
         reapplySimpleModeIfSet();
         checkOnboarding();
+        maybeCreateDailyBackup();
         setSyncStatus("connected");
         renderAll();
       },
@@ -4880,6 +4881,9 @@
       loadBranches();
       renderCatalogList();
     }
+    if (tabId === "tab-settings") {
+      loadAutoBackups();
+    }
   }
 
   // ---------- Event wiring ----------
@@ -5171,6 +5175,120 @@
     fillEl.classList.toggle("data-size-danger", percent >= 85);
 
     labelEl.textContent = `${sizeKB} KB / ${limitKB} KB (%${percent})`;
+  }
+
+  // ---------- Otomatik Günlük Yedekleme (ayrı bir alt koleksiyona, ana veriden bağımsız) ----------
+  function maybeCreateDailyBackup() {
+    if (viewingBranchUid) return; // bir şubeyi görüntülerken yedek almıyoruz, sadece kendi hesabında
+    if (!products.length && !sales.length) return; // gerçekten veri yoksa boş bir yedek almaya gerek yok
+    if (!docRef) return;
+
+    const todayKey = new Date().toISOString().slice(0, 10);
+    let lastBackupDate = null;
+    const storageKey = "bakkal_last_auto_backup_" + (currentUser ? currentUser.uid : "");
+    try {
+      lastBackupDate = localStorage.getItem(storageKey);
+    } catch (e) {}
+    if (lastBackupDate === todayKey) return; // bu cihazda bugün zaten yedek alındı
+
+    const backupData = {
+      products,
+      sales,
+      customers,
+      payments,
+      dailyResetConfig,
+      breadLog,
+      priceChangeLog,
+      auditLog,
+      staffMembers,
+      suppliers,
+      supplierTransactions,
+      returns,
+      savedAt: new Date().toISOString()
+    };
+
+    docRef
+      .collection("backups")
+      .doc(todayKey)
+      .set(backupData)
+      .then(() => {
+        try {
+          localStorage.setItem(storageKey, todayKey);
+        } catch (e) {}
+      })
+      .catch((e) => console.error("Otomatik yedek oluşturulamadı", e));
+  }
+
+  function loadAutoBackups() {
+    if (!docRef) return;
+    docRef
+      .collection("backups")
+      .get()
+      .then((snap) => {
+        const backups = [];
+        snap.forEach((doc) => backups.push({ id: doc.id, ...doc.data() }));
+        renderAutoBackups(backups);
+      })
+      .catch((e) => {
+        console.error("Yedekler okunamadı", e);
+        renderAutoBackups([]);
+      });
+  }
+
+  function renderAutoBackups(backups) {
+    const listEl = document.getElementById("autoBackupList");
+    const emptyEl = document.getElementById("autoBackupEmptyState");
+    if (!listEl) return;
+
+    if (!backups.length) {
+      listEl.innerHTML = "";
+      emptyEl.style.display = "block";
+      return;
+    }
+    emptyEl.style.display = "none";
+
+    const sorted = backups.sort((a, b) => (a.id < b.id ? 1 : -1));
+    listEl.innerHTML = sorted
+      .map((b) => {
+        const productCount = (b.products || []).length;
+        return `
+          <div class="branch-row">
+            <div class="branch-info">
+              <p class="branch-name">${escapeHtml(b.id)}</p>
+              <p class="branch-meta">${productCount} ürün</p>
+            </div>
+            <button class="branch-view-btn" data-id="${b.id}">${t("autoBackupRestoreBtn")}</button>
+          </div>`;
+      })
+      .join("");
+
+    listEl.querySelectorAll(".branch-view-btn").forEach((btn) => {
+      btn.addEventListener("click", () => restoreFromAutoBackup(btn.dataset.id, backups));
+    });
+  }
+
+  function restoreFromAutoBackup(backupId, backups) {
+    const backup = backups.find((b) => b.id === backupId);
+    if (!backup) return;
+    if (!confirm(`${t("autoBackupConfirmRestore")} (${backupId})`)) return;
+
+    products = backup.products || [];
+    sales = backup.sales || [];
+    customers = backup.customers || [];
+    payments = backup.payments || [];
+    dailyResetConfig = backup.dailyResetConfig || [];
+    breadLog = backup.breadLog || [];
+    priceChangeLog = backup.priceChangeLog || [];
+    auditLog = backup.auditLog || [];
+    staffMembers = backup.staffMembers || [];
+    suppliers = backup.suppliers || [];
+    supplierTransactions = backup.supplierTransactions || [];
+    returns = backup.returns || [];
+
+    logAudit("Yedekten geri yüklendi", backupId);
+    save();
+    renderAll();
+    showToast(t("autoBackupRestoreSuccess"), "success");
   }
 
   function downloadBackup() {
