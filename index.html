@@ -428,6 +428,16 @@
         </div>
       </div>
 
+      <div class="card">
+        <p class="card-title" data-i18n="reminderTitle">📱 Hatırlatma / Pazarlama Gönder</p>
+        <p class="card-subtitle" data-i18n="reminderSubtitle">Borcu olan ya da uzun süredir gelmeyen müşterilere tek tıkla WhatsApp mesajı gönder.</p>
+        <div id="reminderDebtList" class="list"></div>
+        <p id="reminderDebtEmptyState" class="empty-state" data-i18n="reminderDebtEmpty">Hatırlatılacak borç yok.</p>
+        <p class="card-subtitle" style="margin-top:12px;" data-i18n="reminderInactiveTitle">Uzun süredir gelmeyen müşteriler</p>
+        <div id="reminderInactiveList" class="list"></div>
+        <p id="reminderInactiveEmptyState" class="empty-state" data-i18n="reminderInactiveEmpty">Herkes düzenli geliyor, harika!</p>
+      </div>
+
       <p class="card-title" data-i18n="customersTitle">Müşteriler</p>
       <div id="customerList" class="list"></div>
       <p id="customerEmptyState" class="empty-state" data-i18n="emptyCustomers">Henüz müşteri yok.</p>
@@ -606,10 +616,28 @@
       </div>
 
       <div class="card">
+        <p class="card-title" data-i18n="lostSalesTitle">💸 Kayıp Satış Hesaplayıcısı</p>
+        <p class="card-subtitle" data-i18n="lostSalesSubtitle">Tükenen ürünlerin, tükendiği süre boyunca kaçırdığı tahmini satış tutarı.</p>
+        <div class="lost-sales-total">
+          <span data-i18n="lostSalesTotalLabel">Tahmini toplam kayıp</span>
+          <span id="lostSalesTotalValue">0,00 ₺</span>
+        </div>
+        <div id="lostSalesList" class="list"></div>
+        <p id="lostSalesEmptyState" class="empty-state" data-i18n="lostSalesEmpty">Şu an tükenmiş ürün yok, harika!</p>
+      </div>
+
+      <div class="card">
         <p class="card-title" data-i18n="expiryTitle">⏳ Son Kullanma Tarihi Takibi</p>
         <p class="card-subtitle" data-i18n="expirySubtitle">Ürünlere SKT eklemek için Ürünler sekmesinde ürüne tıkla, "Düzenle" ile SKT gir.</p>
         <div id="expiryList" class="list"></div>
         <p id="expiryEmptyState" class="empty-state" data-i18n="expiryEmpty">Yaklaşan bir son kullanma tarihi yok.</p>
+      </div>
+
+      <div class="card">
+        <p class="card-title" data-i18n="priceSuggestTitle">📊 Akıllı Fiyat Önerisi</p>
+        <p class="card-subtitle" data-i18n="priceSuggestSubtitle">Satış hızı ve stok durumuna göre, kâr marjını artırabilecek fiyat önerileri.</p>
+        <div id="priceSuggestList" class="list"></div>
+        <p id="priceSuggestEmptyState" class="empty-state" data-i18n="priceSuggestEmpty">Şu an bir fiyat önerisi yok.</p>
       </div>
 
       <div class="card">
@@ -624,6 +652,33 @@
         <p class="card-subtitle" data-i18n="shelfCheckSubtitle">Bir ürün bugün normalden çok satıyorsa, rafta azalmış olabilir — kontrol etmen için burada listelenir.</p>
         <div id="shelfCheckList" class="list"></div>
         <p id="shelfCheckEmptyState" class="empty-state" data-i18n="shelfCheckEmpty">Şu an hızlı satan bir ürün yok.</p>
+      </div>
+
+      <div class="card">
+        <p class="card-title" data-i18n="lostSalesTitle">💸 Kayıp Satış Hesaplayıcısı</p>
+        <p class="card-subtitle" data-i18n="lostSalesSubtitle">Tükenen ürünlerin, stoksuz geçen süre boyunca kaybettirdiği tahmini ciro.</p>
+        <div class="lost-sales-total" id="lostSalesTotalValue">0,00 ₺</div>
+        <p class="card-subtitle" style="margin-top:2px;" data-i18n="lostSalesTotalLabel">Bu ay tahmini toplam kayıp</p>
+        <div id="lostSalesList" class="list" style="margin-top:10px;"></div>
+        <p id="lostSalesEmptyState" class="empty-state" data-i18n="lostSalesEmpty">Şu an tükenmiş ürün yok, harika!</p>
+      </div>
+
+      <div class="card">
+        <p class="card-title" data-i18n="reminderTitle">📱 Müşteri Hatırlatma</p>
+        <p class="card-subtitle" data-i18n="reminderSubtitle">Veresiye borcu olan ya da uzun süredir gelmeyen müşterilere tek tıkla WhatsApp mesajı gönder.</p>
+        <p class="card-subtitle" style="font-weight:700;color:var(--text-primary);margin-top:10px;" data-i18n="reminderTabDebt">Borçlular</p>
+        <div id="reminderDebtList" class="list"></div>
+        <p id="reminderDebtEmptyState" class="empty-state" data-i18n="reminderDebtEmpty">Telefonu kayıtlı, borcu olan müşteri yok.</p>
+        <p class="card-subtitle" style="font-weight:700;color:var(--text-primary);margin-top:14px;" data-i18n="reminderTabInactive">30+ Gündür Gelmeyenler</p>
+        <div id="reminderInactiveList" class="list"></div>
+        <p id="reminderInactiveEmptyState" class="empty-state" data-i18n="reminderInactiveEmpty">30 günden uzun süredir gelmeyen müşteri yok.</p>
+      </div>
+
+      <div class="card">
+        <p class="card-title" data-i18n="smartPriceTitle">📊 Akıllı Fiyat Önerisi</p>
+        <p class="card-subtitle" data-i18n="smartPriceSubtitle">Satış hızı ve stok durumuna göre fiyat artırma/azaltma önerileri.</p>
+        <div id="priceSuggestList" class="list"></div>
+        <p id="priceSuggestEmptyState" class="empty-state" data-i18n="smartPriceEmpty">Şu an bir fiyat önerisi yok.</p>
       </div>
 
       <div class="card">
