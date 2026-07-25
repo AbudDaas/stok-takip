@@ -1658,3 +1658,69 @@ body.font-large{zoom:1.18;}
 .data-size-bar-fill{height:100%;width:0%;background:var(--green);transition:width 0.3s, background 0.3s;}
 .data-size-bar-fill.data-size-warn{background:var(--amber);}
 .data-size-bar-fill.data-size-danger{background:var(--red);}
+
+/* Kayıp Satış Hesaplayıcısı */
+.lost-sales-total{
+  display:flex;align-items:center;justify-content:space-between;
+  background:var(--red-bg);border-radius:var(--radius);padding:12px 14px;margin-bottom:10px;
+  font-size:14px;font-weight:700;color:var(--red-text);
+}
+.lost-sales-total span:last-child{font-size:20px;}
+.lost-sales-row{
+  display:flex;align-items:center;justify-content:space-between;
+  background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
+  padding:10px 12px;margin-bottom:6px;
+}
+.lost-sales-name{margin:0;font-size:13px;font-weight:600;}
+.lost-sales-meta{margin:2px 0 0;font-size:12px;color:var(--text-muted);}
+.lost-sales-amount{font-size:16px;font-weight:800;color:var(--red-text);flex-shrink:0;}
+
+/* Hatırlatma / Pazarlama */
+.reminder-row{
+  display:flex;align-items:center;justify-content:space-between;gap:10px;
+  background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
+  padding:10px 12px;margin-bottom:6px;
+}
+.reminder-name{margin:0;font-size:13px;font-weight:600;}
+.reminder-meta{margin:2px 0 0;font-size:12px;color:var(--text-muted);}
+.reminder-send-btn{
+  background:#25D366;color:#fff;border:none;border-radius:8px;
+  padding:8px 12px;font-size:12px;font-weight:700;cursor:pointer;flex-shrink:0;
+  display:flex;align-items:center;gap:6px;
+}
+
+/* Akıllı Fiyat Önerisi */
+.price-suggest-row{
+  display:flex;align-items:center;justify-content:space-between;gap:10px;
+  background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
+  padding:10px 12px;margin-bottom:6px;
+}
+.price-suggest-name{margin:0;font-size:13px;font-weight:600;}
+.price-suggest-reason{margin:2px 0 0;font-size:12px;color:var(--text-muted);}
+.price-suggest-prices{display:flex;align-items:baseline;gap:6px;flex-shrink:0;}
+.price-suggest-old{font-size:12px;color:var(--text-muted);text-decoration:line-through;}
+.price-suggest-new{font-size:15px;font-weight:800;}
+.price-suggest-up{color:var(--green-text);}
+.price-suggest-down{color:var(--amber-text);}
+
+/* Kayıp Satış, Hatırlatma, Akıllı Fiyat kartları */
+.lost-sales-total{font-size:28px;font-weight:800;color:var(--red-text);}
+.lost-sales-row{
+  display:flex;align-items:center;justify-content:space-between;gap:10px;
+  background:var(--red-bg);border-radius:var(--radius);padding:10px 12px;margin-bottom:6px;
+}
+.lost-sales-name{margin:0;font-size:13px;font-weight:600;}
+.lost-sales-meta{margin:2px 0 0;font-size:12px;color:var(--text-secondary);}
+.lost-sales-amount{font-size:15px;font-weight:800;color:var(--red-text);flex-shrink:0;}
+
+.reminder-row{
+  display:flex;align-items:center;justify-content:space-between;gap:10px;
+  background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
+  padding:10px 12px;margin-bottom:6px;
+}
+.reminder-name{margin:0;font-size:13px;font-weight:600;}
+.reminder-meta{margin:2px 0 0;font-size:12px;color:var(--text-muted);}
+.reminder-send-btn{
+  background:#25D366;color:#fff;border:none;border-radius:8px;
+  padding:8px 12px;font-size:12px;font-weight:600;cursor:pointer;flex-shrink:0;
+}
