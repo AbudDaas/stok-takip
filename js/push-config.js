@@ -4,5 +4,5 @@
 // görünmesi güvenlik riski oluşturmaz, herkese açık kullanım için tasarlanmış.
 
 const pushConfig = {
-  vapidKey: "BURAYA_VAPID_KEY"
+  vapidKey: "M9lyLZBS1JwcbHHt84WQqVssW1U-sXC3ICdXKXeaOoE"
 };
