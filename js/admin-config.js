@@ -6,5 +6,5 @@
 // Kurulum adımları README.md'de anlatılıyor.
 
 const adminConfig = {
-  workerUrl: "BURAYA_ADMIN_WORKER_URL"
+  workerUrl: "https://bakkal-admin-api.abdulrazakdaas0.workers.dev"
 };
