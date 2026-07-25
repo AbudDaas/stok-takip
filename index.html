@@ -549,6 +549,15 @@
           </div>
           <p class="card-title" style="margin-top:14px;" data-i18n="supplierHistoryTitle">Hareket Geçmişi</p>
           <div id="supplierHistoryList" class="list"></div>
+
+          <p class="card-title" style="margin-top:14px;" data-i18n="supplierOrderListTitle">📦 Sipariş Listesi</p>
+          <p class="card-subtitle" data-i18n="supplierOrderListSubtitle">Bu tedarikçiye ait ürünlerden, satış hızına göre sipariş edilmesi gerekenler.</p>
+          <div id="supplierOrderList" class="list"></div>
+          <p id="supplierOrderListEmptyState" class="empty-state" data-i18n="supplierOrderListEmpty">Bu tedarikçiye bağlı, şu an sipariş edilmesi gereken ürün yok.</p>
+          <button id="supplierOrderSendBtn" class="btn btn-primary btn-block" style="display:none;">
+            <i class="fa-brands fa-whatsapp" aria-hidden="true"></i> <span data-i18n="supplierOrderSendBtn">WhatsApp'tan Gönder</span>
+          </button>
+
           <button id="deleteSupplierBtn" class="btn btn-danger btn-block" style="margin-top:14px;">
             <i class="fa-solid fa-trash" aria-hidden="true"></i> <span data-i18n="deleteSupplierBtn">Tedarikçiyi sil</span>
           </button>
@@ -1041,6 +1050,10 @@
             </select>
           </div>
           <input id="editBulkValue" type="number" min="0" step="0.01" data-i18n-placeholder="bulkDiscountValuePh" placeholder="İndirim değeri (örn. 10)" />
+          <label class="field-label" data-i18n="editSupplierLabel">Tedarikçi (opsiyonel)</label>
+          <select id="editSupplierId">
+            <option value="" data-i18n="editSupplierNone">Tedarikçi seçilmedi</option>
+          </select>
           <label class="field-label" data-i18n="barcodeLabel">Barkod</label>
           <div class="form-row barcode-row">
             <input id="editBarcode" type="text" data-i18n-placeholder="barcodePh" placeholder="Barkod (opsiyonel)" />
