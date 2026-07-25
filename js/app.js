@@ -3966,9 +3966,10 @@
       "- category: genel kategori (örn. içecekler, atıştırmalık, temizlik)",
       "- price: fiyat etiketinde açıkça görünüyorsa sayı olarak, görünmüyorsa null",
       "- qty: RAFTA GÖRÜNEN bu üründen kaç adet olduğunu dikkatlice SAY (üst üste/yan yana duran aynı ürünleri tek tek say). Kısmen görünen ya da arkada gizlenmiş olabilecekleri de makul şekilde tahmin et. Sayamıyorsan 1 yaz, ASLA 0 yazma.",
+      "- barcode: Ürünün üzerinde bir barkod (çizgili kod, altında rakamlar) ya da QR kod NET olarak görünüyor ve okunabiliyorsa, altındaki rakamları oku ve buraya yaz. Net görünmüyorsa ya da emin değilsen boş string (\"\") bırak — ASLA rakam uydurma.",
       "",
       "SADECE geçerli bir JSON dizisi döndür, başka hiçbir açıklama veya metin ekleme.",
-      'Format: [{"name":"...","brand":"...","category":"...","price":12.5,"qty":5}]',
+      'Format: [{"name":"...","brand":"...","category":"...","price":12.5,"qty":5,"barcode":""}]',
       "Aynı üründen birden fazla varsa listede BİR KEZ yaz, gördüğün toplam adedi qty alanına yaz (ayrı ayrı satırlar olarak tekrarlama)."
     ].join("\n");
 
@@ -4185,12 +4186,13 @@
         const metaParts = [p.brand, p.category].filter(Boolean).join(" · ");
         const priceStr = p.price ? formatTL(p.price) : "";
         const qtyStr = `${p.qty || 1} ${t("unitAdetShort")}`;
+        const barcodeStr = p.barcode ? ` · ${t("barcodeDetectedLabel")}: ${escapeHtml(p.barcode)}` : "";
         return `
           <label class="bulk-result-row">
             <input type="checkbox" class="bulk-result-check" data-index="${i}" checked />
             <div class="bulk-result-info">
               <p class="bulk-result-name">${escapeHtml(p.name)}</p>
-              <p class="bulk-result-meta">${escapeHtml(metaParts)}${priceStr ? " · " + priceStr : ""} · ${qtyStr}</p>
+              <p class="bulk-result-meta">${escapeHtml(metaParts)}${priceStr ? " · " + priceStr : ""} · ${qtyStr}${barcodeStr}</p>
             </div>
           </label>`;
       })
@@ -4218,7 +4220,7 @@
           candidate.qty || 1,
           5,
           candidate.price || 0,
-          "",
+          candidate.barcode || "",
           "adet"
         )
       );
@@ -4264,9 +4266,10 @@
       "- qty: yukarıdaki mantığa göre hesapladığın GERÇEK TEKİL ADET sayısı (sayı olarak)",
       "- unitCost: TEKİL ADET başına alış fiyatı (sayı olarak). Faturada kutu/koli fiyatı yazıyorsa, bunu senin hesapladığın gerçek adet sayısına bölerek adet başı fiyatı bul.",
       "- unitNote: emin olamadığın durumlar için kısa bir not (varsa), yoksa boş bırak",
+      "- barcode: Bu ürün satırının yanında bir barkod (çizgili kod ya da altındaki rakamlar) ya da QR kod NET olarak basılıysa oku ve buraya yaz. Görünmüyorsa ya da emin değilsen boş string (\"\") bırak — ASLA rakam uydurma.",
       "",
       "SADECE geçerli bir JSON dizisi döndür, başka hiçbir açıklama veya metin ekleme.",
-      'Format: [{"name":"...","qty":24,"unitCost":16.5,"unitNote":""}]',
+      'Format: [{"name":"...","qty":24,"unitCost":16.5,"unitNote":"","barcode":""}]',
       "Ürün satırı olmayan (toplam, KDV, tarih gibi) satırları dahil etme."
     ].join("\n");
 
@@ -4358,11 +4361,12 @@
           if (!line.name) return;
           const key = line.name.trim().toLowerCase();
           if (!merged[key]) {
-            merged[key] = { name: line.name, qty: 0, unitCost: line.unitCost || 0, unitNote: line.unitNote || "" };
+            merged[key] = { name: line.name, qty: 0, unitCost: line.unitCost || 0, unitNote: line.unitNote || "", barcode: line.barcode || "" };
           }
           merged[key].qty += Number(line.qty) || 0;
           if (line.unitCost) merged[key].unitCost = line.unitCost;
           if (line.unitNote) merged[key].unitNote = line.unitNote;
+          if (line.barcode) merged[key].barcode = line.barcode;
         });
 
         // Not: Gerçek adet hesabı artık yapay zekanın kendisi tarafından
@@ -4376,6 +4380,7 @@
             qty: line.qty,
             unitCost: line.unitCost,
             unitNote: line.unitNote,
+            barcode: line.barcode,
             matchedProductId: existing ? existing.id : null,
             matchedProductName: existing ? existing.name : null,
             markupPercent: 20
@@ -4424,6 +4429,7 @@
             </div>`
           : "";
         const noteHtml = item.unitNote ? `<p class="invoice-uncertainty-note">⚠️ ${escapeHtml(item.unitNote)}</p>` : "";
+        const barcodeHtml = item.barcode ? `<p class="invoice-uncertainty-note" style="color:var(--green-text);">✓ ${t("barcodeDetectedLabel")}: ${escapeHtml(item.barcode)}</p>` : "";
         return `
           <label class="bulk-result-row">
             <input type="checkbox" class="invoice-result-check" data-index="${i}" checked />
@@ -4431,6 +4437,7 @@
               <p class="bulk-result-name">${escapeHtml(item.name)}</p>
               <p class="bulk-result-meta">${item.qty} adet${costStr ? " · Geliş: " + costStr : ""}${priceStr ? " · Satış: <span class=\"invoice-price-preview\" data-index=\"" + i + "\">" + priceStr + "</span>" : ""}</p>
               ${noteHtml}
+              ${barcodeHtml}
               ${markupHtml}
               ${statusHtml}
             </div>
@@ -4838,6 +4845,7 @@
         const p = products.find((x) => x.id === item.matchedProductId);
         if (p) {
           p.qty = Math.round((p.qty + item.qty) * 1000) / 1000;
+          if (item.barcode && !p.barcode) p.barcode = item.barcode;
           if (item.unitCost) {
             const oldPrice = p.price;
             const newPrice = calcSellingPrice(item.unitCost, item.markupPercent);
@@ -4857,7 +4865,7 @@
       } else {
         const costPrice = item.unitCost || 0;
         const price = costPrice ? calcSellingPrice(costPrice, item.markupPercent) : 0;
-        products.push(mkProduct(item.name, t("categoryOtherDefault"), item.qty, 5, price, "", "adet", costPrice));
+        products.push(mkProduct(item.name, t("categoryOtherDefault"), item.qty, 5, price, item.barcode || "", "adet", costPrice));
       }
       appliedCount++;
     });
