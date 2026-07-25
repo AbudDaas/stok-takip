@@ -10,5 +10,5 @@
 // kalanı sorunsuz çalışmaya devam eder.
 
 const bulkScanConfig = {
-  workerUrl: "BURAYA_CLOUDFLARE_WORKER_URL"
+  workerUrl: "https://sparkling-resonance-931c.abdulrazakdaas0.workers.dev/"
 };
