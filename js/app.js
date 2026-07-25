@@ -1,68 +1,181 @@
 (function () {
-  "use strict";
 
-  // Service worker'ı mümkün olduğunca ERKEN kaydet (sayfa tam yüklenmeyi
-  // beklemeden) — bazı PWA analiz araçları kaydı geç fark edebiliyor.
-  if ("serviceWorker" in navigator) {
+  // ==================== 00-header.js ====================
+/**
+ * 00-header.js
+ * Sıkı mod (strict mode) direktifi ve mümkün olduğunca erken servis çalışanı kaydı. Bu dosya HER ZAMAN derlenen çıktının en başında olmalıdır.
+ */
+
+"use strict";
+
+if ("serviceWorker" in navigator) {
     navigator.serviceWorker.register("service-worker.js").catch(() => {});
   }
 
-  const t = (key) => window.i18n.t(key);
-  function locale() {
+  // ==================== 00-state.js ====================
+/**
+ * 00-state.js
+ * Uygulamanın tüm paylaşılan durumu (state). Tüm modüller bu değişkenleri okuyup yazabilir çünkü hepsi aynı IIFE kapsamı içinde derleniyor.
+ */
+
+const t = (key) => window.i18n.t(key);
+
+const STORAGE_KEY = "bakkal_urunler_v2";
+
+let products = [];
+
+let sales = [];
+
+let customers = [];
+
+let payments = [];
+
+let breadLog = [];
+
+let dailyResetConfig = [];
+
+let breadWhatsAppNumber = "";
+
+let priceChangeLog = [];
+
+let fiscalEnabled = false;
+
+let fiscalProvider = "foriba";
+
+let fiscalApiKey = "";
+
+let fiscalEndpoint = "";
+
+let fiscalVkn = "";
+
+let suppliers = [];
+
+let supplierTransactions = [];
+
+let returns = [];
+
+let activeReturnSaleId = null;
+
+let activeSupplierId = null;
+
+let accountType = "standalone";
+
+let auditLog = [];
+
+let staffMembers = [];
+
+let currentStaff = null;
+
+let ownerPin = "";
+
+let masterCatalog = [];
+
+let cart = [];
+
+let activeProductId = null;
+
+let activeCustomerId = null;
+
+let selectedPaymentType = "nakit";
+
+let currentSalesPeriod = "today";
+
+let html5QrCode = null;
+
+let scanning = false;
+
+let html5QrCodeKasa = null;
+
+let scanningKasa = false;
+
+let stokScanCooldown = false;
+
+let kasaScanCooldown = false;
+
+let db = null;
+
+let auth = null;
+
+let docRef = null;
+
+let cloudEnabled = false;
+
+let suppressNextSnapshot = false;
+
+let firestoreUnsubscribe = null;
+
+let currentUser = null;
+
+const ADMIN_UID = "NaVl26qq6kXas90Qm9e2kCZDaIp2";
+
+let staffPickerPendingSelection = null;
+
+let selectedVeresiyeCustomerId = null;
+
+let originalDocRef = null;
+
+let viewingBranchUid = null;
+
+let loadedBranches = [];
+
+let editingBranchUid = null;
+
+const STATUS_CLASS = { tukendi: "status-tukendi", kritik: "status-kritik", yeterli: "status-yeterli" };
+
+const TOAST_ICONS = {
+    success: "fa-solid fa-circle-check",
+    error: "fa-solid fa-circle-exclamation",
+    info: "fa-solid fa-circle-info"
+  };
+
+let activeRecognition = null;
+
+let pendingVoiceAction = null;
+
+const TURKISH_NUMBER_WORDS = {
+    bir: 1, iki: 2, üç: 3, uc: 3, dört: 4, dort: 4, beş: 5, bes: 5,
+    altı: 6, alti: 6, yedi: 7, sekiz: 8, dokuz: 9, on: 10
+  };
+
+const VOICE_STOPWORDS = [
+    "sat", "satıyorum", "satiyorum", "sattım", "sattim", "ekle", "ekliyorum", "ekledim",
+    "al", "alıyorum", "aliyorum", "tane", "adet", "lütfen", "lutfen"
+  ];
+
+let translationInFlight = false;
+
+let beepAudioCtx = null;
+
+let quickScanCode = null;
+
+let quickScanTargetInputId = null;
+
+let bulkScanCandidates = [];
+
+let invoiceScanCandidates = [];
+
+let orderEngineSuggestionsCache = [];
+
+let onboardingSlideIndex = 0;
+
+const ONBOARDING_SLIDE_COUNT = 4;
+
+const requestedTab = new URLSearchParams(window.location.search).get("tab");
+
+  // ==================== 01-firebase-core.js ====================
+/**
+ * 01-firebase-core.js
+ * Firebase başlatma, kimlik doğrulama (giriş/çıkış), Firestore dinleyicisi ve temel kaydetme/yükleme mantığı.
+ */
+
+function locale() {
     const lang = window.i18n.getLang();
     if (lang === "en") return "en-US";
     if (lang === "ar") return "ar-SA";
     return "tr-TR";
   }
 
-  const STORAGE_KEY = "bakkal_urunler_v2";
-  let products = [];
-  let sales = [];
-  let customers = [];
-  let payments = [];
-  let breadLog = [];
-  let dailyResetConfig = [];
-  let breadWhatsAppNumber = "";
-  let priceChangeLog = [];
-  let fiscalEnabled = false;
-  let fiscalProvider = "foriba";
-  let fiscalApiKey = "";
-  let fiscalEndpoint = "";
-  let fiscalVkn = "";
-  let suppliers = [];
-  let supplierTransactions = [];
-  let returns = [];
-  let activeReturnSaleId = null;
-  let activeSupplierId = null;
-  let accountType = "standalone";
-  let auditLog = [];
-  let staffMembers = [];
-  let currentStaff = null;
-  let ownerPin = "";
-  let masterCatalog = [];
-  let cart = []; // { productId, name, price, qty }
-  let activeProductId = null;
-  let activeCustomerId = null;
-  let selectedPaymentType = "nakit";
-  let currentSalesPeriod = "today";
-
-  let html5QrCode = null;
-  let scanning = false;
-  let html5QrCodeKasa = null;
-  let scanningKasa = false;
-  let stokScanCooldown = false;
-  let kasaScanCooldown = false;
-
-  let db = null;
-  let auth = null;
-  let docRef = null;
-  let cloudEnabled = false;
-  let suppressNextSnapshot = false;
-  let firestoreUnsubscribe = null;
-  let currentUser = null;
-
-  // ---------- Firebase setup ----------
-  function initFirebaseIfConfigured() {
+function initFirebaseIfConfigured() {
     try {
       if (typeof firebaseConfig === "undefined") return false;
       if (!firebaseConfig.apiKey || firebaseConfig.apiKey.indexOf("BURAYA") === 0) return false;
@@ -77,14 +190,12 @@
     }
   }
 
-  function showApp(show) {
+function showApp(show) {
     document.getElementById("app").style.display = show ? "block" : "none";
     document.querySelector(".bottom-nav").style.display = show ? "flex" : "none";
   }
 
-  const ADMIN_UID = "NaVl26qq6kXas90Qm9e2kCZDaIp2";
-
-  function handleAuthChange(user) {
+function handleAuthChange(user) {
     if (firestoreUnsubscribe) {
       firestoreUnsubscribe();
       firestoreUnsubscribe = null;
@@ -125,7 +236,7 @@
     }
   }
 
-  function attachFirestoreListener() {
+function attachFirestoreListener() {
     firestoreUnsubscribe = docRef.onSnapshot(
       (snap) => {
         if (suppressNextSnapshot) {
@@ -190,7 +301,7 @@
     );
   }
 
-  function setSyncStatus(state) {
+function setSyncStatus(state) {
     const icon = document.getElementById("syncIcon");
     const text = document.getElementById("syncText");
     if (!icon || !text) return;
@@ -209,14 +320,13 @@
     }
   }
 
-  // ---------- Giriş / Kayıt ----------
-  function showAuthError(message) {
+function showAuthError(message) {
     const el = document.getElementById("authError");
     el.textContent = message;
     el.style.display = "block";
   }
 
-  function mapAuthError(code) {
+function mapAuthError(code) {
     const messages = {
       "auth/invalid-email": t("authErrInvalidEmail"),
       "auth/user-not-found": t("authErrUserNotFound"),
@@ -227,7 +337,7 @@
     return messages[code] || t("authErrGeneric");
   }
 
-  function submitAuth() {
+function submitAuth() {
     const email = document.getElementById("authEmail").value.trim();
     const password = document.getElementById("authPassword").value;
     if (!email || !password) {
@@ -238,7 +348,7 @@
     auth.signInWithEmailAndPassword(email, password).catch((e) => showAuthError(mapAuthError(e.code)));
   }
 
-  function forgotPassword() {
+function forgotPassword() {
     const email = document.getElementById("authEmail").value.trim();
     if (!email) {
       showAuthError(t("authErrForgotNeedsEmail"));
@@ -251,14 +361,13 @@
       .catch((e) => showAuthError(mapAuthError(e.code)));
   }
 
-  function logout() {
+function logout() {
     if (confirm(t("confirmLogout"))) {
       auth.signOut();
     }
   }
 
-  // ---------- Persistence ----------
-  function load() {
+function load() {
     const cloudReady = initFirebaseIfConfigured();
 
     if (!cloudReady) {
@@ -294,469 +403,7 @@
     }
   }
 
-  function applyAccountTypeUI() {
-    const isAdminUser = currentUser && currentUser.uid === ADMIN_UID;
-    const isPatron = accountType === "patron";
-    const operationalTabs = ["tab-products", "tab-kasa", "tab-scan", "tab-sales", "tab-veresiye", "tab-orders", "tab-pricechanges"];
-
-    // Yönetici (sen) her zaman her şeyi görür.
-    if (isAdminUser) {
-      operationalTabs.forEach((tabId) => {
-        const btn = document.querySelector(`.nav-btn[data-tab="${tabId}"]`);
-        if (btn) btn.style.display = "flex";
-      });
-      const branchesBtn = document.getElementById("branchesNavBtn");
-      if (branchesBtn) branchesBtn.style.display = "flex";
-      return;
-    }
-
-    // Bir şubeyi görüntülerken, o şubenin tam ekranını göster (kısıtlama uygulama).
-    if (viewingBranchUid) {
-      operationalTabs.forEach((tabId) => {
-        const btn = document.querySelector(`.nav-btn[data-tab="${tabId}"]`);
-        if (btn) btn.style.display = "flex";
-      });
-      return;
-    }
-
-    // Patron hesabı: sadece Ayarlar + Şubelerim görünür.
-    if (isPatron) {
-      operationalTabs.forEach((tabId) => {
-        const btn = document.querySelector(`.nav-btn[data-tab="${tabId}"]`);
-        if (btn) btn.style.display = "none";
-      });
-      const branchesBtn = document.getElementById("branchesNavBtn");
-      if (branchesBtn) branchesBtn.style.display = "flex";
-      switchTab("tab-branches");
-      return;
-    }
-
-    // Şube ya da tekil bakkal/market hesabı: normal sekmeler görünür, Şubelerim gizli.
-    operationalTabs.forEach((tabId) => {
-      const btn = document.querySelector(`.nav-btn[data-tab="${tabId}"]`);
-      if (btn) btn.style.display = "flex";
-    });
-    const branchesBtn = document.getElementById("branchesNavBtn");
-    if (branchesBtn) branchesBtn.style.display = "none";
-  }
-
-  // ---------- İşlem Geçmişi (Audit Log) ----------
-  function logAudit(action, details) {
-    const actorName = currentStaff ? `${currentStaff.name} (${currentStaff.role === "manager" ? t("staffRoleManager") : t("staffRoleCashier")})` : (currentUser && currentUser.email) || "?";
-    auditLog.push({
-      timestamp: new Date().toISOString(),
-      actor: actorName,
-      action,
-      details: details || ""
-    });
-    if (auditLog.length > 300) {
-      auditLog = auditLog.slice(auditLog.length - 300);
-    }
-  }
-
-  function renderAuditLog() {
-    const listEl = document.getElementById("auditLogList");
-    const emptyEl = document.getElementById("auditLogEmptyState");
-    if (!listEl) return;
-
-    const sorted = [...auditLog].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp)).slice(0, 100);
-    if (!sorted.length) {
-      listEl.innerHTML = "";
-      emptyEl.style.display = "block";
-      return;
-    }
-    emptyEl.style.display = "none";
-
-    listEl.innerHTML = sorted
-      .map((entry) => {
-        const d = new Date(entry.timestamp);
-        const dateStr = d.toLocaleString(locale(), { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
-        return `
-          <div class="audit-log-row">
-            <p class="audit-log-action">${escapeHtml(entry.action)}</p>
-            <p class="audit-log-meta">${dateStr} · ${escapeHtml(entry.actor)}${entry.details ? " · " + escapeHtml(entry.details) : ""}</p>
-          </div>`;
-      })
-      .join("");
-  }
-
-  // ---------- Personel Yönetimi (Kasiyer / Müdür rolleri) ----------
-  // ---------- Sahip PIN'i ----------
-  // ---------- Resmi Mali Kayıt (E-Fatura/Yazar Kasa) — pasif, istenince aktif edilebilir ----------
-  function toggleFiscalEnabled(checked) {
-    fiscalEnabled = checked;
-    document.getElementById("fiscalConfigFields").style.display = checked ? "block" : "none";
-    const targetRef = originalDocRef || docRef;
-    if (targetRef) {
-      targetRef.set({ fiscalEnabled: checked }, { merge: true }).catch((e) => console.error("Mali kayıt ayarı kaydedilemedi", e));
-    }
-  }
-
-  // ---------- Geri Bildirim / Sorun Bildir ----------
-  function sendFeedback() {
-    const textEl = document.getElementById("feedbackText");
-    const message = textEl.value.trim();
-    if (!message) {
-      showToast(t("feedbackEmptyError"), "error");
-      return;
-    }
-    if (!isChainConfigured()) {
-      showToast(t("feedbackNotConfigured"), "error");
-      return;
-    }
-    currentUser
-      .getIdToken()
-      .then((idToken) =>
-        fetch(`${chainConfig.workerUrl}/submit-feedback`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ idToken, message })
-        })
-      )
-      .then((r) => r.json())
-      .then((data) => {
-        if (data.error) {
-          showToast(data.error, "error");
-          return;
-        }
-        textEl.value = "";
-        showToast(t("feedbackSentSuccess"), "success");
-      })
-      .catch((e) => {
-        console.error(e);
-        showToast(t("feedbackSendError"), "error");
-      });
-  }
-
-  function saveFiscalSettings() {
-    fiscalProvider = document.getElementById("fiscalProvider").value;
-    fiscalApiKey = document.getElementById("fiscalApiKey").value.trim();
-    fiscalEndpoint = document.getElementById("fiscalEndpoint").value.trim();
-    fiscalVkn = document.getElementById("fiscalVkn").value.trim();
-
-    const targetRef = originalDocRef || docRef;
-    if (targetRef) {
-      targetRef
-        .set({ fiscalProvider, fiscalApiKey, fiscalEndpoint, fiscalVkn }, { merge: true })
-        .catch((e) => console.error("Mali kayıt ayarları kaydedilemedi", e));
-    }
-
-    const statusEl = document.getElementById("fiscalStatus");
-    if (fiscalApiKey && fiscalEndpoint) {
-      statusEl.textContent = t("fiscalReadyToTry");
-      statusEl.style.color = "var(--green-text)";
-    } else if (fiscalApiKey || fiscalEndpoint) {
-      statusEl.textContent = t("fiscalNotConnectedYet");
-      statusEl.style.color = "var(--amber-text)";
-    } else {
-      statusEl.textContent = "";
-    }
-    showToast(t("fiscalSettingsSaved"), "success");
-  }
-
-  function renderFiscalSettings() {
-    const toggle = document.getElementById("fiscalEnabledToggle");
-    if (!toggle) return;
-    toggle.checked = fiscalEnabled;
-    document.getElementById("fiscalConfigFields").style.display = fiscalEnabled ? "block" : "none";
-    document.getElementById("fiscalProvider").value = fiscalProvider;
-    document.getElementById("fiscalApiKey").value = fiscalApiKey;
-    document.getElementById("fiscalEndpoint").value = fiscalEndpoint;
-    document.getElementById("fiscalVkn").value = fiscalVkn;
-  }
-
-  // NOT: Bu, GENEL bir veri yapısı gönderiyor — gerçek entegratörün (Foriba/Uyumsoft/Logo)
-  // beklediği tam alan adları/format farklı olabilir. Gerçek API dokümantasyonu geldiğinde
-  // invoicePayload yapısı ona göre güncellenmeli. Şu an: adres ve anahtar girilmemişse
-  // hiçbir şey yapmaz (sessizce atlar), girilmişse worker üzerinden sunucu tarafında
-  // gönderim DENER ve sonucu işlem geçmişine kaydeder.
-  function attemptSendToFiscalProvider(sale) {
-    if (!fiscalEnabled || !fiscalApiKey || !fiscalEndpoint) return;
-    if (!isChainConfigured() || !currentUser) return;
-
-    const invoicePayload = {
-      vkn: fiscalVkn,
-      faturaTarihi: sale.timestamp,
-      faturaNo: sale.id,
-      kalemler: sale.items.map((item) => ({
-        urunAdi: item.name,
-        miktar: item.qty,
-        birimFiyat: item.price,
-        toplam: Math.round(item.qty * item.price * 100) / 100
-      })),
-      araToplam: sale.subtotal,
-      indirim: sale.discount || 0,
-      genelToplam: sale.total,
-      odemeTuru: sale.paymentType
-    };
-
-    currentUser
-      .getIdToken()
-      .then((idToken) =>
-        fetch(`${chainConfig.workerUrl}/relay-fiscal-invoice`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ idToken, fiscalEndpoint, fiscalApiKey, invoicePayload })
-        })
-      )
-      .then((r) => r.json())
-      .then((data) => {
-        if (data.success) {
-          logAudit("Mali kayıt gönderildi", `Satış #${sale.id}`);
-        } else {
-          console.error("Mali kayıt gönderimi başarısız:", data);
-          logAudit("Mali kayıt gönderimi BAŞARISIZ", `Satış #${sale.id} — ${data.error || "entegratör " + data.providerStatus + " döndürdü"}`);
-        }
-      })
-      .catch((e) => {
-        console.error("Mali kayıt gönderim hatası:", e);
-        logAudit("Mali kayıt gönderimi BAŞARISIZ", `Satış #${sale.id} (bağlantı hatası)`);
-      });
-  }
-
-  function saveOwnerPin() {
-    const value = document.getElementById("ownerPinInput").value.trim();
-    if (!/^\d{4,6}$/.test(value)) {
-      showToast(t("ownerPinInvalid"), "error");
-      return;
-    }
-    ownerPin = value;
-    const targetRef = originalDocRef || docRef;
-    if (targetRef) {
-      targetRef.set({ ownerPin: value }, { merge: true }).catch((e) => console.error("Sahip PIN'i kaydedilemedi", e));
-    }
-    document.getElementById("ownerPinInput").value = "";
-    renderOwnerPinStatus();
-    showToast(t("ownerPinSaved"), "success");
-  }
-
-  function renderOwnerPinStatus() {
-    const statusEl = document.getElementById("ownerPinStatus");
-    if (!statusEl) return;
-    statusEl.textContent = ownerPin ? t("ownerPinIsSet") : t("ownerPinNotSet");
-    statusEl.style.color = ownerPin ? "var(--green-text)" : "var(--red-text)";
-  }
-
-  function renderStaffList() {
-    const listEl = document.getElementById("staffList");
-    const emptyEl = document.getElementById("staffEmptyState");
-    if (!listEl) return;
-
-    if (!staffMembers.length) {
-      listEl.innerHTML = "";
-      emptyEl.style.display = "block";
-      return;
-    }
-    emptyEl.style.display = "none";
-
-    listEl.innerHTML = staffMembers
-      .map((s, i) => {
-        const roleLabel = s.role === "manager" ? t("staffRoleManager") : t("staffRoleCashier");
-        return `
-          <div class="staff-row">
-            <div>
-              <p class="staff-row-name">${escapeHtml(s.name)}</p>
-              <p class="staff-row-role">${roleLabel}</p>
-            </div>
-            <button class="staff-remove-btn" data-index="${i}" aria-label="Kaldır"><i class="fa-solid fa-trash" aria-hidden="true"></i></button>
-          </div>`;
-      })
-      .join("");
-
-    listEl.querySelectorAll(".staff-remove-btn").forEach((btn) => {
-      btn.addEventListener("click", () => {
-        staffMembers.splice(Number(btn.dataset.index), 1);
-        save();
-        renderStaffList();
-        showToast(t("staffRemoved"), "success");
-      });
-    });
-  }
-
-  function addStaffMember() {
-    const name = document.getElementById("staffName").value.trim();
-    const pin = document.getElementById("staffPin").value.trim();
-    const role = document.getElementById("staffRole").value;
-
-    if (!name || !pin) {
-      showToast(t("staffFieldsRequired"), "error");
-      return;
-    }
-    if (!/^\d{4}$/.test(pin)) {
-      showToast(t("staffPinInvalid"), "error");
-      return;
-    }
-
-    staffMembers.push({ id: genId(), name, pin, role });
-    save();
-    renderStaffList();
-    document.getElementById("staffName").value = "";
-    document.getElementById("staffPin").value = "";
-    showToast(t("staffAdded"), "success");
-  }
-
-  function checkStaffSelection() {
-    if (!staffMembers.length) {
-      currentStaff = null;
-      applyRoleRestrictionsUI();
-      return;
-    }
-    let savedStaffId = null;
-    try {
-      savedStaffId = sessionStorage.getItem("bakkal_current_staff_id");
-    } catch (e) {}
-    if (savedStaffId === "__owner__") {
-      currentStaff = null;
-      applyRoleRestrictionsUI();
-      return;
-    }
-    const savedStaff = staffMembers.find((s) => s.id === savedStaffId);
-    if (savedStaff) {
-      currentStaff = savedStaff;
-      applyRoleRestrictionsUI();
-      return;
-    }
-    showStaffPicker();
-  }
-
-  let staffPickerPendingSelection = null;
-
-  function showStaffPicker() {
-    const listEl = document.getElementById("staffPickerList");
-    listEl.innerHTML = staffMembers
-      .map((s) => {
-        const roleLabel = s.role === "manager" ? t("staffRoleManager") : t("staffRoleCashier");
-        return `
-          <button class="staff-picker-btn" data-id="${s.id}">
-            <span>${escapeHtml(s.name)}</span>
-            <span class="staff-picker-role">${roleLabel}</span>
-          </button>`;
-      })
-      .join("");
-
-    listEl.querySelectorAll(".staff-picker-btn").forEach((btn) => {
-      btn.addEventListener("click", () => {
-        const staff = staffMembers.find((s) => s.id === btn.dataset.id);
-        if (!staff) return;
-        openStaffPinView({ type: "staff", staff });
-      });
-    });
-
-    document.getElementById("staffPickerListView").style.display = "block";
-    document.getElementById("staffPickerPinView").style.display = "none";
-    document.getElementById("staffPickerScreen").style.display = "flex";
-  }
-
-  function openStaffPinView(selection) {
-    staffPickerPendingSelection = selection;
-    document.getElementById("staffPickerListView").style.display = "none";
-    document.getElementById("staffPickerPinView").style.display = "block";
-
-    const nameEl = document.getElementById("staffPickerSelectedName");
-    if (selection.type === "owner") {
-      nameEl.textContent = t("staffOwnerSelectedLabel");
-    } else {
-      const roleLabel = selection.staff.role === "manager" ? t("staffRoleManager") : t("staffRoleCashier");
-      nameEl.textContent = `${selection.staff.name} (${roleLabel})`;
-    }
-
-    const pinInput = document.getElementById("staffPickerPinInput");
-    const errorEl = document.getElementById("staffPickerPinError");
-    pinInput.value = "";
-    errorEl.style.display = "none";
-    setTimeout(() => pinInput.focus(), 50);
-  }
-
-  function staffPickerGoBack() {
-    staffPickerPendingSelection = null;
-    document.getElementById("staffPickerListView").style.display = "block";
-    document.getElementById("staffPickerPinView").style.display = "none";
-  }
-
-  function submitStaffPickerPin() {
-    if (!staffPickerPendingSelection) return;
-    const entered = document.getElementById("staffPickerPinInput").value.trim();
-    const errorEl = document.getElementById("staffPickerPinError");
-
-    if (staffPickerPendingSelection.type === "owner") {
-      if (ownerPin && entered !== ownerPin) {
-        errorEl.textContent = t("ownerPinWrong");
-        errorEl.style.display = "block";
-        return;
-      }
-      grantOwnerAccess();
-      return;
-    }
-
-    const staff = staffPickerPendingSelection.staff;
-    if (entered !== staff.pin) {
-      errorEl.textContent = t("staffPinWrong");
-      errorEl.style.display = "block";
-      return;
-    }
-    currentStaff = staff;
-    try {
-      sessionStorage.setItem("bakkal_current_staff_id", staff.id);
-    } catch (e) {}
-    document.getElementById("staffPickerScreen").style.display = "none";
-    applyRoleRestrictionsUI();
-  }
-
-  function enterAsOwner() {
-    if (ownerPin) {
-      openStaffPinView({ type: "owner" });
-      return;
-    }
-    grantOwnerAccess();
-  }
-
-  function grantOwnerAccess() {
-    currentStaff = null;
-    try {
-      sessionStorage.setItem("bakkal_current_staff_id", "__owner__");
-    } catch (e) {}
-    applyRoleRestrictionsUI();
-  }
-
-  function applyRoleRestrictionsUI() {
-    document.getElementById("staffPickerScreen").style.display = "none";
-
-    if (!currentStaff || currentStaff.role === "manager") {
-      // Sahip ya da müdür: önceki kasiyer kısıtlamasından kalmış olabilecek
-      // gizli sekmeleri, hesap türü/basit mod kurallarına göre doğru şekilde geri getir.
-      applyAccountTypeUI();
-      reapplySimpleModeIfSet();
-      updateSwitchUserButtonVisibility();
-      return;
-    }
-
-    // Kasiyer: sadece Kasa, Satışlar, Veresiye görünür.
-    const cashierBlockedTabs = ["tab-products", "tab-scan", "tab-orders", "tab-pricechanges", "tab-settings", "tab-branches", "tab-suppliers"];
-    cashierBlockedTabs.forEach((tabId) => {
-      const btn = document.querySelector(`.nav-btn[data-tab="${tabId}"]`);
-      if (btn) btn.style.display = "none";
-    });
-    const adminBtn = document.getElementById("adminNavBtn");
-    if (adminBtn) adminBtn.style.display = "none";
-    updateSwitchUserButtonVisibility();
-    switchTab("tab-kasa");
-  }
-
-  function updateSwitchUserButtonVisibility() {
-    const btn = document.getElementById("switchUserBtn");
-    if (!btn) return;
-    btn.style.display = staffMembers.length > 0 ? "inline-flex" : "none";
-  }
-
-  function switchUser() {
-    currentStaff = null;
-    try {
-      sessionStorage.removeItem("bakkal_current_staff_id");
-    } catch (e) {}
-    showStaffPicker();
-  }
-
-  function save() {
+function save() {
     if (cloudEnabled) {
       if (!docRef) return;
       suppressNextSnapshot = true;
@@ -774,14 +421,14 @@
     }
   }
 
-  function registerBackgroundSync() {
+function registerBackgroundSync() {
     if (!("serviceWorker" in navigator) || !("SyncManager" in window)) return;
     navigator.serviceWorker.ready
       .then((reg) => reg.sync.register("bakkal-sync"))
       .catch(() => {});
   }
 
-  function registerPeriodicSync() {
+function registerPeriodicSync() {
     if (!("serviceWorker" in navigator) || !("permissions" in navigator)) return;
     navigator.permissions
       .query({ name: "periodic-background-sync" })
@@ -796,15 +443,7 @@
       .catch(() => {});
   }
 
-  if ("serviceWorker" in navigator) {
-    navigator.serviceWorker.addEventListener("message", (event) => {
-      if (event.data && event.data.type === "BAKKAL_SYNC_RECONNECTED") {
-        showToast(t("syncReconnected"), "success");
-      }
-    });
-  }
-
-  function seedData() {
+function seedData() {
     return [
       mkProduct("pepsi 1 lt", "içecekler", 12, 10, 22, "", "adet", 16),
       mkProduct("pepsi 2.5 lt", "içecekler", 3, 5, 45, "", "adet", 34),
@@ -814,7 +453,71 @@
     ];
   }
 
-  function mkProduct(name, category, qty, min, price, barcode, unit, costPrice) {
+function hasImportableLocalBackup() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return false;
+      const parsed = JSON.parse(raw);
+      return Array.isArray(parsed.products) && parsed.products.length > 0;
+    } catch (e) {
+      return false;
+    }
+  }
+
+function importLocalBackup() {
+    let parsed;
+    try {
+      parsed = JSON.parse(localStorage.getItem(STORAGE_KEY));
+    } catch (e) {
+      showToast(t("importParseError"), "error");
+      return;
+    }
+    const localProducts = (parsed && parsed.products) || [];
+    if (!localProducts.length) {
+      showToast(t("importNoLocalBackup"), "info");
+      return;
+    }
+    if (!confirm(t("importConfirm").replace("{n}", localProducts.length))) return;
+
+    let addedCount = 0;
+    localProducts.forEach((lp) => {
+      if (!productAlreadyExists(lp.name)) {
+        products.push(lp);
+        addedCount++;
+      }
+    });
+    if (Array.isArray(parsed.sales)) {
+      const existingSaleIds = new Set(sales.map((s) => s.id));
+      parsed.sales.forEach((s) => {
+        if (!existingSaleIds.has(s.id)) sales.push(s);
+      });
+    }
+    if (Array.isArray(parsed.customers)) {
+      const existingCustomerIds = new Set(customers.map((c) => c.id));
+      parsed.customers.forEach((c) => {
+        if (!existingCustomerIds.has(c.id)) customers.push(c);
+      });
+    }
+    if (Array.isArray(parsed.payments)) {
+      const existingPaymentIds = new Set(payments.map((p) => p.id));
+      parsed.payments.forEach((p) => {
+        if (!existingPaymentIds.has(p.id)) payments.push(p);
+      });
+    }
+
+    save();
+    renderAll();
+    document.getElementById("importBackupBtn").style.display = "none";
+    showToast(t("importSuccess").replace("{n}", addedCount), "success");
+  }
+
+  // ==================== 02-utils.js ====================
+/**
+ * 02-utils.js
+ * Genel amaçlı, tekrar kullanılan yardımcı fonksiyonlar: biçimlendirme, HTML kaçışı, bildirimler, temel yapılandırma kontrolleri.
+ */
+
+function mkProduct(name, category, qty, min, price, barcode, unit, costPrice) {
     return {
       id: genId(),
       name,
@@ -828,1277 +531,39 @@
     };
   }
 
-  function genId() {
+function genId() {
     return "p" + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
   }
 
-  // ---------- Müşteri (Veresiye) ----------
-  function mkCustomer(name, phone) {
-    return { id: genId(), name, phone: phone || "" };
-  }
-
-  function addCustomer() {
-    const nameInput = document.getElementById("newCustomerName");
-    const phoneInput = document.getElementById("newCustomerPhone");
-    const name = nameInput.value.trim();
-    if (!name) {
-      nameInput.focus();
-      return;
-    }
-    customers.push(mkCustomer(name, phoneInput.value.trim()));
-    nameInput.value = "";
-    phoneInput.value = "";
-    save();
-    renderCustomers();
-  }
-
-  function deleteCustomer(id) {
-    const debt = getCustomerDebt(id);
-    if (debt > 0 && !confirm(`${t("confirmDeleteCustomerWithDebt")} ${formatTL(debt)} ${t("confirmDeleteCustomerWithDebtSuffix")}`)) {
-      return;
-    }
-    customers = customers.filter((c) => c.id !== id);
-    closeCustomerModal();
-    save();
-    renderCustomers();
-  }
-
-  function saveCustomerEdit() {
-    const c = customers.find((x) => x.id === activeCustomerId);
-    if (!c) return;
-    const name = document.getElementById("editCustomerName").value.trim();
-    if (!name) return;
-    c.name = name;
-    c.phone = document.getElementById("editCustomerPhone").value.trim();
-    save();
-    renderCustomers();
-    openCustomerModal(c.id);
-  }
-
-  function getCustomerDebt(customerId) {
-    const debtFromSales = sales
-      .filter((s) => s.paymentType === "veresiye" && s.customerId === customerId)
-      .reduce((sum, s) => sum + s.total, 0);
-    const paid = payments.filter((p) => p.customerId === customerId).reduce((sum, p) => sum + p.amount, 0);
-    return Math.max(0, debtFromSales - paid);
-  }
-
-  function recordPayment() {
-    const c = customers.find((x) => x.id === activeCustomerId);
-    if (!c) return;
-    const input = document.getElementById("paymentAmountInput");
-    const amount = Number(input.value);
-    if (!amount || amount <= 0) {
-      input.focus();
-      return;
-    }
-    payments.push({
-      id: genId(),
-      customerId: c.id,
-      customerName: c.name,
-      amount,
-      timestamp: new Date().toISOString()
-    });
-    input.value = "";
-    save();
-    renderCustomers();
-    openCustomerModal(c.id);
-  }
-
-  function customerRowHtml(c) {
-    const debt = getCustomerDebt(c.id);
-    const debtClass = debt > 0 ? "has-debt" : "no-debt";
-    return `
-      <div class="customer-row" data-id="${c.id}">
-        <div class="customer-info">
-          <p class="customer-name">${escapeHtml(c.name)}</p>
-          <p class="customer-phone">${escapeHtml(c.phone || "—")}</p>
-        </div>
-        <span class="customer-debt ${debtClass}">${formatTL(debt)}</span>
-      </div>`;
-  }
-
-  // ---------- Günlük Ürün Takibi (her işletme kendi ayarlayabilir) ----------
-
-  function findProductByExactName(name) {
-    const normalized = name.trim().toLowerCase();
-    return products.find((p) => p.name.trim().toLowerCase() === normalized);
-  }
-
-  function addBreadConfig() {
-    const nameInput = document.getElementById("breadConfigName");
-    const qtyInput = document.getElementById("breadConfigQty");
-    const staleInput = document.getElementById("breadConfigStaleName");
-    const autoResetInput = document.getElementById("breadConfigAutoReset");
-
-    const productName = nameInput.value.trim();
-    if (!productName) {
-      showToast(t("breadConfigNameRequired"), "error");
-      return;
-    }
-
-    dailyResetConfig.push({
-      productName,
-      dailyQty: Number(qtyInput.value) || 0,
-      autoReset: autoResetInput.checked,
-      staleProductName: staleInput.value.trim()
-    });
-
-    nameInput.value = "";
-    qtyInput.value = "";
-    staleInput.value = "";
-    autoResetInput.checked = true;
-
-    save();
-    renderBreadStatus();
-    showToast(t("breadConfigAdded"), "success");
-  }
-
-  function removeBreadConfig(index) {
-    dailyResetConfig.splice(index, 1);
-    save();
-    renderBreadStatus();
-    showToast(t("breadConfigRemoved"), "success");
-  }
-
-  function renderBreadConfigList() {
-    const listEl = document.getElementById("breadConfigList");
-    if (!listEl) return;
-
-    if (!dailyResetConfig.length) {
-      listEl.innerHTML = `<p class="empty-state" style="display:block;">${t("breadConfigEmpty")}</p>`;
-      return;
-    }
-
-    listEl.innerHTML = dailyResetConfig
-      .map((cfg, i) => {
-        const autoResetLabel = cfg.autoReset ? t("breadAutoResetYes") : t("breadAutoResetNo");
-        const staleStr = cfg.staleProductName ? ` · ${escapeHtml(cfg.staleProductName)}` : "";
-        return `
-          <div class="bread-config-row">
-            <div class="bread-config-info">
-              <p class="bread-config-name">${escapeHtml(cfg.productName)}</p>
-              <p class="bread-config-meta">${cfg.dailyQty} adet · ${autoResetLabel}${staleStr}</p>
-            </div>
-            <button class="bread-config-remove-btn" data-index="${i}" aria-label="Kaldır"><i class="fa-solid fa-trash" aria-hidden="true"></i></button>
-          </div>`;
-      })
-      .join("");
-
-    listEl.querySelectorAll(".bread-config-remove-btn").forEach((btn) => {
-      btn.addEventListener("click", () => removeBreadConfig(Number(btn.dataset.index)));
-    });
-  }
-
-  function renderBreadStatus() {
-    const currentEl = document.getElementById("breadCurrentList");
-    const logListEl = document.getElementById("breadLogList");
-    const logEmptyEl = document.getElementById("breadLogEmptyState");
-    const numberInput = document.getElementById("breadWhatsAppNumber");
-    if (!currentEl) return;
-
-    if (numberInput && document.activeElement !== numberInput) {
-      numberInput.value = breadWhatsAppNumber || "";
-    }
-
-    renderBreadConfigList();
-    updateNotifButtonState();
-
-    if (!dailyResetConfig.length) {
-      currentEl.innerHTML = `<p class="empty-state" style="display:block;">${t("breadConfigEmpty")}</p>`;
-    } else {
-      currentEl.innerHTML = dailyResetConfig
-        .map((cfg) => {
-          const p = findProductByExactName(cfg.productName);
-          return `
-            <div class="bread-current-row">
-              <span>${escapeHtml(cfg.productName)}</span>
-              <span class="bread-current-qty">${p ? formatQty(p) : "—"}</span>
-            </div>`;
-        })
-        .join("");
-    }
-
-    const sorted = [...breadLog].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp)).slice(0, 14);
-    if (!sorted.length) {
-      logListEl.innerHTML = "";
-      logEmptyEl.style.display = "block";
-    } else {
-      logEmptyEl.style.display = "none";
-      logListEl.innerHTML = sorted
-        .map((entry) => {
-          const d = new Date(entry.timestamp);
-          const dateStr = d.toLocaleString(locale(), { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
-          const items = Array.isArray(entry.items) ? entry.items : [];
-          const itemsStr = items.map((it) => `${escapeHtml(it.name)}: ${it.qty}`).join(" · ");
-          return `
-            <div class="bread-log-row">
-              <span class="bread-log-date">${dateStr} · ${escapeHtml(entry.note || "")}</span>
-              <span class="bread-log-qty">${itemsStr}</span>
-            </div>`;
-        })
-        .join("");
-    }
-  }
-
-  function sendBreadWhatsApp() {
-    const number = (document.getElementById("breadWhatsAppNumber").value || "").trim();
-    if (!number) {
-      showToast(t("breadNoWhatsAppNumber"), "error");
-      return;
-    }
-    breadWhatsAppNumber = number;
-    save();
-
-    const today = new Date().toLocaleDateString(locale());
-    const lines = dailyResetConfig.map((cfg) => {
-      const p = findProductByExactName(cfg.productName);
-      return `${cfg.productName}: ${p ? formatQty(p) : "0 adet"}`;
-    });
-    const message = `🍞 ${t("breadStatusTitle").replace("🍞 ", "")} (${today})\n${lines.join("\n")}`;
-    const url = `https://wa.me/${number}?text=${encodeURIComponent(message)}`;
-    window.open(url, "_blank");
-  }
-
-  // ---------- Bildirimler (Firebase Cloud Messaging) ----------
-  function isPushConfigured() {
+function isPushConfigured() {
     return typeof pushConfig !== "undefined" && pushConfig.vapidKey && pushConfig.vapidKey.indexOf("BURAYA") !== 0;
   }
 
-  function updateNotifButtonState() {
-    const btn = document.getElementById("notifEnableBtn");
-    if (!btn) return;
-    const span = btn.querySelector("span");
-    if (typeof Notification !== "undefined" && Notification.permission === "granted") {
-      span.textContent = t("notifDisableBtn");
-      btn.disabled = true;
-    } else {
-      span.textContent = t("notifEnableBtn");
-      btn.disabled = false;
-    }
-  }
-
-  function enableNotifications() {
-    if (!isPushConfigured()) {
-      showToast(t("notifError"), "error");
-      return;
-    }
-    if (!("Notification" in window) || !("serviceWorker" in navigator) || !cloudEnabled || !currentUser) {
-      showToast(t("notifError"), "error");
-      return;
-    }
-
-    Notification.requestPermission()
-      .then((permission) => {
-        if (permission !== "granted") {
-          showToast(t("notifPermissionDenied"), "error");
-          return;
-        }
-        return navigator.serviceWorker.ready.then((registration) => {
-          const messaging = firebase.messaging();
-          return messaging.getToken({ vapidKey: pushConfig.vapidKey, serviceWorkerRegistration: registration }).then((fcmToken) => {
-            if (!fcmToken) {
-              showToast(t("notifError"), "error");
-              return;
-            }
-            return docRef
-              .set({ fcmTokens: firebase.firestore.FieldValue.arrayUnion(fcmToken) }, { merge: true })
-              .then(() => {
-                showToast(t("notifEnabled"), "success");
-                updateNotifButtonState();
-              });
-          });
-        });
-      })
-      .catch((e) => {
-        console.error(e);
-        showToast(t("notifError"), "error");
-      });
-  }
-  function isAdminConfigured() {
+function isAdminConfigured() {
     return typeof adminConfig !== "undefined" && adminConfig.workerUrl && adminConfig.workerUrl.indexOf("BURAYA") !== 0;
   }
 
-  function loadAdminFeedback() {
-    if (!currentUser || currentUser.uid !== ADMIN_UID) return;
-    db.collection("admin")
-      .doc("feedback")
-      .get()
-      .then((snap) => {
-        const list = snap.exists && snap.data().list ? snap.data().list : [];
-        renderAdminFeedback(list);
-      })
-      .catch((e) => {
-        console.error("Geri bildirimler okunamadı", e);
-        renderAdminFeedback([]);
-      });
-  }
-
-  function renderAdminFeedback(list) {
-    const listEl = document.getElementById("adminFeedbackList");
-    const emptyEl = document.getElementById("adminFeedbackEmptyState");
-    if (!listEl) return;
-
-    if (!list.length) {
-      listEl.innerHTML = "";
-      emptyEl.style.display = "block";
-      return;
-    }
-    emptyEl.style.display = "none";
-
-    const sorted = [...list].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-    listEl.innerHTML = sorted
-      .map((f) => {
-        const d = new Date(f.timestamp);
-        const dateStr = d.toLocaleString(locale(), { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
-        return `
-          <div class="audit-log-row">
-            <p class="audit-log-action">${escapeHtml(f.message)}</p>
-            <p class="audit-log-meta">${dateStr} · ${escapeHtml(f.email || f.uid)}</p>
-          </div>`;
-      })
-      .join("");
-  }
-
-  function loadAdminBusinessList() {
-    if (!currentUser || currentUser.uid !== ADMIN_UID) return;
-    db.collection("admin")
-      .doc("businesses")
-      .get()
-      .then((snap) => {
-        const list = snap.exists && snap.data().list ? snap.data().list : [];
-        renderAdminBusinessList(list);
-      })
-      .catch((e) => {
-        console.error("Yönetim listesi okunamadı", e);
-        renderAdminBusinessList([]);
-      });
-  }
-
-  function renderAdminBusinessList(list) {
-    const listEl = document.getElementById("adminBusinessList");
-    const emptyEl = document.getElementById("adminEmptyState");
-    if (!listEl) return;
-
-    if (!list.length) {
-      listEl.innerHTML = "";
-      emptyEl.style.display = "block";
-      return;
-    }
-    emptyEl.style.display = "none";
-
-    listEl.innerHTML = list
-      .map((b) => {
-        const statusClass = b.active ? "admin-status-active" : "admin-status-inactive";
-        const statusLabel = b.active ? t("adminActiveLabel") : t("adminInactiveLabel");
-        const toggleLabel = b.active ? t("adminInactiveLabel") : t("adminActiveLabel");
-        const dateStr = new Date(b.createdAt).toLocaleDateString(locale());
-        const categoryKey = "category" + (b.businessCategory || "diger").charAt(0).toUpperCase() + (b.businessCategory || "diger").slice(1);
-        const categoryLabel = t(categoryKey);
-        return `
-          <div class="admin-business-row">
-            <div class="admin-business-info">
-              <p class="admin-business-name">${escapeHtml(b.businessName)}</p>
-              <p class="admin-business-meta">${escapeHtml(b.email)} · ${dateStr}</p>
-              <span class="admin-status-badge ${statusClass}">${statusLabel}</span>
-              <span class="admin-category-badge">${escapeHtml(categoryLabel)}</span>
-              <div class="admin-branch-limit-row">
-                <label>${t("adminMaxBranchesLabel")}</label>
-                <input type="number" min="0" class="admin-branch-limit-input" data-uid="${b.uid}" placeholder="∞" />
-                <button class="admin-branch-limit-save-btn" data-uid="${b.uid}">${t("adminSaveBtn")}</button>
-              </div>
-              <div class="admin-branches-list" id="adminBranches-${b.uid}"></div>
-            </div>
-            <button class="admin-toggle-btn" data-uid="${b.uid}" data-active="${b.active}">${toggleLabel}</button>
-          </div>`;
-      })
-      .join("");
-
-    list.forEach((b) => loadBranchesForAdmin(b.uid));
-
-    listEl.querySelectorAll(".admin-toggle-btn").forEach((btn) => {
-      btn.addEventListener("click", () => {
-        const currentlyActive = btn.dataset.active === "true";
-        toggleAdminBusiness(btn.dataset.uid, !currentlyActive);
-      });
-    });
-
-    listEl.querySelectorAll(".admin-branch-limit-save-btn").forEach((btn) => {
-      btn.addEventListener("click", () => {
-        const input = listEl.querySelector(`.admin-branch-limit-input[data-uid="${btn.dataset.uid}"]`);
-        const value = Number(input.value);
-        if (!input.value || isNaN(value) || value < 0) {
-          showToast(t("branchFieldsRequired"), "error");
-          return;
-        }
-        setAdminBranchLimit(btn.dataset.uid, value);
-      });
-    });
-  }
-
-  function loadBranchesForAdmin(patronUid) {
-    const container = document.getElementById(`adminBranches-${patronUid}`);
-    if (!container) return;
-
-    currentUser
-      .getIdToken()
-      .then((idToken) =>
-        fetch(`${adminConfig.workerUrl}/list-branches-for`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ idToken, targetUid: patronUid })
-        })
-      )
-      .then((r) => r.json())
-      .then((data) => {
-        if (data.error || !data.branches || !data.branches.length) {
-          container.innerHTML = "";
-          return;
-        }
-        container.innerHTML = data.branches
-          .map(
-            (br) => `
-              <div class="admin-branch-sub-row">
-                <i class="fa-solid fa-code-branch" aria-hidden="true"></i>
-                <span class="admin-branch-sub-name">${escapeHtml(br.branchName)}</span>
-                <span class="admin-branch-sub-email">${escapeHtml(br.email)}</span>
-              </div>`
-          )
-          .join("");
-      })
-      .catch((e) => console.error("Şubeler yüklenemedi", e));
-  }
-
-  function createAdminBusiness() {
-    if (!isAdminConfigured()) {
-      showToast(t("adminNotConfigured"), "error");
-      return;
-    }
-    const businessName = document.getElementById("adminBusinessName").value.trim();
-    const email = document.getElementById("adminBusinessEmail").value.trim();
-    const password = document.getElementById("adminBusinessPassword").value;
-    const accountType = document.getElementById("adminAccountType").value;
-    const businessCategory = document.getElementById("adminBusinessCategory").value;
-
-    if (!businessName || !email || !password) {
-      showToast(t("adminFieldsRequired"), "error");
-      return;
-    }
-
-    currentUser
-      .getIdToken()
-      .then((idToken) =>
-        fetch(`${adminConfig.workerUrl}/create-business`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ idToken, businessName, email, password, accountType, businessCategory })
-        })
-      )
-      .then((r) => r.json())
-      .then((data) => {
-        if (data.error) {
-          showToast(data.error, "error");
-          return;
-        }
-        showToast(t("adminCreateSuccess"), "success");
-        document.getElementById("adminBusinessName").value = "";
-        document.getElementById("adminBusinessEmail").value = "";
-        document.getElementById("adminBusinessPassword").value = "";
-        loadAdminBusinessList();
-      })
-      .catch((e) => {
-        console.error(e);
-        showToast(t("adminCreateError"), "error");
-      });
-  }
-
-  function toggleAdminBusiness(targetUid, active) {
-    currentUser
-      .getIdToken()
-      .then((idToken) =>
-        fetch(`${adminConfig.workerUrl}/toggle-business`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ idToken, targetUid, active })
-        })
-      )
-      .then((r) => r.json())
-      .then((data) => {
-        if (data.error) {
-          showToast(data.error, "error");
-          return;
-        }
-        loadAdminBusinessList();
-      })
-      .catch((e) => {
-        console.error(e);
-        showToast(t("adminToggleError"), "error");
-      });
-  }
-
-  function setAdminBranchLimit(targetUid, maxBranches) {
-    currentUser
-      .getIdToken()
-      .then((idToken) =>
-        fetch(`${adminConfig.workerUrl}/set-branch-limit`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ idToken, targetUid, maxBranches })
-        })
-      )
-      .then((r) => r.json())
-      .then((data) => {
-        if (data.error) {
-          showToast(data.error, "error");
-          return;
-        }
-        showToast(t("adminBranchLimitSaved"), "success");
-      })
-      .catch((e) => {
-        console.error(e);
-        showToast(t("adminToggleError"), "error");
-      });
-  }
-
-
-  // ---------- Tedarikçi Borç Takibi ----------
-  function getSupplierBalance(supplierId) {
-    return supplierTransactions
-      .filter((t) => t.supplierId === supplierId)
-      .reduce((sum, t) => sum + (t.type === "debt" ? t.amount : -t.amount), 0);
-  }
-
-  function renderSuppliers() {
-    const listEl = document.getElementById("supplierList");
-    const emptyEl = document.getElementById("supplierEmptyState");
-    if (!listEl) return;
-
-    if (!suppliers.length) {
-      listEl.innerHTML = "";
-      emptyEl.style.display = "block";
-      return;
-    }
-    emptyEl.style.display = "none";
-
-    listEl.innerHTML = suppliers
-      .map((s) => {
-        const balance = getSupplierBalance(s.id);
-        const balanceClass = balance > 0 ? "has-debt" : "no-debt";
-        return `
-          <div class="customer-row" data-id="${s.id}">
-            <div class="customer-info">
-              <p class="customer-name">${escapeHtml(s.name)}</p>
-              <p class="customer-phone">${escapeHtml(s.phone || "—")}</p>
-            </div>
-            <span class="customer-debt ${balanceClass}">${formatTL(balance)}</span>
-          </div>`;
-      })
-      .join("");
-
-    listEl.querySelectorAll(".customer-row").forEach((row) => {
-      row.addEventListener("click", () => openSupplierModal(row.dataset.id));
-    });
-  }
-
-  function addSupplier() {
-    const name = document.getElementById("supplierName").value.trim();
-    const phone = document.getElementById("supplierPhone").value.trim();
-    if (!name) {
-      showToast(t("supplierNameRequired"), "error");
-      return;
-    }
-    suppliers.push({ id: genId(), name, phone });
-    save();
-    renderSuppliers();
-    document.getElementById("supplierName").value = "";
-    document.getElementById("supplierPhone").value = "";
-    showToast(t("supplierAdded"), "success");
-  }
-
-  function openSupplierModal(supplierId) {
-    const s = suppliers.find((x) => x.id === supplierId);
-    if (!s) return;
-    activeSupplierId = supplierId;
-    document.getElementById("supplierModalName").textContent = s.name;
-    document.getElementById("supplierModalDebt").textContent = formatTL(getSupplierBalance(supplierId));
-    renderSupplierHistory(supplierId);
-    document.getElementById("supplierModal").style.display = "flex";
-  }
-
-  function closeSupplierModal() {
-    document.getElementById("supplierModal").style.display = "none";
-    activeSupplierId = null;
-  }
-
-  function renderSupplierHistory(supplierId) {
-    const listEl = document.getElementById("supplierHistoryList");
-    const history = supplierTransactions
-      .filter((t) => t.supplierId === supplierId)
-      .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-
-    if (!history.length) {
-      listEl.innerHTML = `<p class="empty-state">${t("supplierNoHistory")}</p>`;
-      return;
-    }
-
-    listEl.innerHTML = history
-      .map((tx) => {
-        const d = new Date(tx.timestamp);
-        const dateStr = d.toLocaleDateString(locale());
-        const isDebt = tx.type === "debt";
-        return `
-          <div class="supplier-history-row">
-            <div>
-              <p class="supplier-history-note">${escapeHtml(tx.note || (isDebt ? t("supplierDebtEntry") : t("supplierPaymentEntry")))}</p>
-              <p class="supplier-history-date">${dateStr}</p>
-            </div>
-            <span class="${isDebt ? "price-change-up" : "price-change-down"}">${isDebt ? "+" : "-"}${formatTL(tx.amount)}</span>
-          </div>`;
-      })
-      .join("");
-  }
-
-  function addSupplierDebt() {
-    if (!activeSupplierId) return;
-    showPrompt(t("supplierDebtPrompt"), "").then((amountStr) => {
-      if (amountStr === null) return;
-      const amount = Number(amountStr);
-      if (!amount || amount <= 0) {
-        showToast(t("alertInvalidAmount"), "error");
-        return;
-      }
-      showPrompt(t("supplierNotePrompt"), "").then((note) => {
-        supplierTransactions.push({
-          id: genId(),
-          supplierId: activeSupplierId,
-          type: "debt",
-          amount,
-          note: note || "",
-          timestamp: new Date().toISOString()
-        });
-        save();
-        openSupplierModal(activeSupplierId);
-        renderSuppliers();
-      });
-    });
-  }
-
-  function addSupplierPayment() {
-    if (!activeSupplierId) return;
-    showPrompt(t("supplierPaymentPrompt"), "").then((amountStr) => {
-      if (amountStr === null) return;
-      const amount = Number(amountStr);
-      if (!amount || amount <= 0) {
-        showToast(t("alertInvalidAmount"), "error");
-        return;
-      }
-      supplierTransactions.push({
-        id: genId(),
-        supplierId: activeSupplierId,
-        type: "payment",
-        amount,
-        note: "",
-        timestamp: new Date().toISOString()
-      });
-      save();
-      openSupplierModal(activeSupplierId);
-      renderSuppliers();
-      showToast(t("supplierPaymentRecorded"), "success");
-    });
-  }
-
-  function deleteSupplier() {
-    if (!activeSupplierId) return;
-    if (!confirm(t("confirmDeleteSupplier"))) return;
-    suppliers = suppliers.filter((s) => s.id !== activeSupplierId);
-    supplierTransactions = supplierTransactions.filter((t) => t.supplierId !== activeSupplierId);
-    save();
-    renderSuppliers();
-    closeSupplierModal();
-  }
-
-  // ---------- Hatırlatma / Pazarlama (WhatsApp) ----------
-  function renderReminders() {
-    const debtListEl = document.getElementById("reminderDebtList");
-    const debtEmptyEl = document.getElementById("reminderDebtEmptyState");
-    const inactiveListEl = document.getElementById("reminderInactiveList");
-    const inactiveEmptyEl = document.getElementById("reminderInactiveEmptyState");
-    if (!debtListEl) return;
-
-    // Borcu olan müşteriler
-    const withDebt = customers
-      .map((c) => ({ customer: c, debt: getCustomerDebt(c.id) }))
-      .filter((x) => x.debt > 0 && x.customer.phone)
-      .sort((a, b) => b.debt - a.debt);
-
-    if (!withDebt.length) {
-      debtListEl.innerHTML = "";
-      debtEmptyEl.style.display = "block";
-    } else {
-      debtEmptyEl.style.display = "none";
-      debtListEl.innerHTML = withDebt
-        .map(
-          (x) => `
-          <div class="reminder-row">
-            <div>
-              <p class="reminder-name">${escapeHtml(x.customer.name)}</p>
-              <p class="reminder-meta">${formatTL(x.debt)}</p>
-            </div>
-            <button class="reminder-send-btn" data-type="debt" data-id="${x.customer.id}">
-              <i class="fa-brands fa-whatsapp" aria-hidden="true"></i> ${t("reminderSendBtn")}
-            </button>
-          </div>`
-        )
-        .join("");
-    }
-
-    // Uzun süredir (30+ gün) alışveriş yapmamış müşteriler
-    const cutoff = Date.now() - 30 * 86400000;
-    const inactive = customers
-      .filter((c) => c.phone)
-      .map((c) => {
-        const customerSales = sales.filter((s) => s.customerId === c.id);
-        const lastSale = customerSales.length ? new Date(Math.max(...customerSales.map((s) => new Date(s.timestamp)))) : null;
-        return { customer: c, lastSale };
-      })
-      .filter((x) => x.lastSale && x.lastSale.getTime() < cutoff);
-
-    if (!inactive.length) {
-      inactiveListEl.innerHTML = "";
-      inactiveEmptyEl.style.display = "block";
-    } else {
-      inactiveEmptyEl.style.display = "none";
-      inactiveListEl.innerHTML = inactive
-        .map((x) => {
-          const daysAgo = Math.round((Date.now() - x.lastSale.getTime()) / 86400000);
-          return `
-          <div class="reminder-row">
-            <div>
-              <p class="reminder-name">${escapeHtml(x.customer.name)}</p>
-              <p class="reminder-meta">${daysAgo} ${t("reminderDaysAgo")}</p>
-            </div>
-            <button class="reminder-send-btn" data-type="inactive" data-id="${x.customer.id}">
-              <i class="fa-brands fa-whatsapp" aria-hidden="true"></i> ${t("reminderSendBtn")}
-            </button>
-          </div>`;
-        })
-        .join("");
-    }
-
-    document.querySelectorAll(".reminder-send-btn").forEach((btn) => {
-      btn.addEventListener("click", () => sendReminderWhatsApp(btn.dataset.type, btn.dataset.id));
-    });
-  }
-
-  function sendReminderWhatsApp(type, customerId) {
-    const c = customers.find((x) => x.id === customerId);
-    if (!c || !c.phone) return;
-
-    let message;
-    if (type === "debt") {
-      const debt = getCustomerDebt(customerId);
-      message = `${t("reminderDebtMsgPrefix")} ${c.name}, ${t("reminderDebtMsgBody")} ${formatTL(debt)}. ${t("reminderDebtMsgSuffix")}`;
-    } else {
-      message = `${t("reminderInactiveMsgPrefix")} ${c.name}! ${t("reminderInactiveMsgBody")}`;
-    }
-
-    const cleanPhone = c.phone.replace(/[^\d]/g, "");
-    const url = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`;
-    window.open(url, "_blank");
-    logAudit("Hatırlatma gönderildi", `${c.name} (${type === "debt" ? "borç" : "özledik"})`);
-  }
-
-  function renderCustomers() {
-    const list = document.getElementById("customerList");
-    const empty = document.getElementById("customerEmptyState");
-    if (!list) return;
-
-    if (!customers.length) {
-      list.innerHTML = "";
-      empty.style.display = "block";
-    } else {
-      empty.style.display = "none";
-      list.innerHTML = customers.map(customerRowHtml).join("");
-    }
-    list.querySelectorAll(".customer-row").forEach((row) => {
-      row.addEventListener("click", () => openCustomerModal(row.dataset.id));
-    });
-
-    const totalDebt = customers.reduce((sum, c) => sum + getCustomerDebt(c.id), 0);
-    document.getElementById("statTotalDebt").textContent = formatTL(totalDebt);
-    document.getElementById("statCustomerCount").textContent = customers.length;
-
-    populateVeresiyeCustomerSelect();
-  }
-
-  let selectedVeresiyeCustomerId = null;
-
-  // ---------- Şubelerim (zincir marketler) ----------
-  let originalDocRef = null;
-  let viewingBranchUid = null;
-
-  function isChainConfigured() {
+function isChainConfigured() {
     return typeof chainConfig !== "undefined" && chainConfig.workerUrl && chainConfig.workerUrl.indexOf("BURAYA") !== 0;
   }
 
-  function calcTodaySalesTotal(salesArr) {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    return (salesArr || []).filter((s) => new Date(s.timestamp) >= today).reduce((sum, s) => sum + s.total, 0);
-  }
-
-  let loadedBranches = [];
-
-  function loadBranches() {
-    if (!currentUser || !cloudEnabled) return;
-    db.collection("isletmeler")
-      .where("chainOwnerUid", "==", currentUser.uid)
-      .get()
-      .then((snap) => {
-        const branches = [];
-        snap.forEach((doc) => {
-          const data = doc.data();
-          branches.push({
-            uid: doc.id,
-            branchName: data.branchName || doc.id,
-            products: data.products || [],
-            sales: data.sales || []
-          });
-        });
-        loadedBranches = branches;
-        renderBranchList(branches);
-        renderBranchSummary(branches);
-      })
-      .catch((e) => {
-        console.error("Şube listesi okunamadı", e);
-        renderBranchList([]);
-      });
-  }
-
-  // ---------- Ana Ürün Kataloğu (tüm şubelere senkronize) ----------
-  function renderCatalogList() {
-    const listEl = document.getElementById("catalogList");
-    const emptyEl = document.getElementById("catalogEmptyState");
-    if (!listEl) return;
-
-    if (!masterCatalog.length) {
-      listEl.innerHTML = "";
-      emptyEl.style.display = "block";
-      return;
-    }
-    emptyEl.style.display = "none";
-
-    listEl.innerHTML = masterCatalog
-      .map((item, i) => `
-        <div class="branch-row">
-          <div class="branch-info">
-            <p class="branch-name">${escapeHtml(item.name)}</p>
-            <p class="branch-meta">${escapeHtml(item.category)} · ${formatTL(item.price)}</p>
-          </div>
-          <button class="branch-delete-btn" data-index="${i}" aria-label="Kaldır"><i class="fa-solid fa-trash" aria-hidden="true"></i></button>
-        </div>`)
-      .join("");
-
-    listEl.querySelectorAll(".branch-delete-btn").forEach((btn) => {
-      btn.addEventListener("click", () => {
-        masterCatalog.splice(Number(btn.dataset.index), 1);
-        saveMasterCatalog();
-        renderCatalogList();
-      });
-    });
-  }
-
-  function saveMasterCatalog() {
-    const targetRef = originalDocRef || docRef;
-    if (targetRef) {
-      targetRef.set({ masterCatalog }, { merge: true }).catch((e) => console.error("Katalog kaydedilemedi", e));
-    }
-  }
-
-  function addCatalogItem() {
-    const name = document.getElementById("catalogName").value.trim();
-    const category = document.getElementById("catalogCategory").value.trim() || t("categoryOtherDefault");
-    const price = Number(document.getElementById("catalogPrice").value) || 0;
-
-    if (!name) {
-      showToast(t("branchFieldsRequired"), "error");
-      return;
-    }
-
-    const existingIndex = masterCatalog.findIndex((it) => it.name.trim().toLowerCase() === name.trim().toLowerCase());
-    if (existingIndex >= 0) {
-      masterCatalog[existingIndex] = { name, category, price };
-    } else {
-      masterCatalog.push({ name, category, price });
-    }
-
-    saveMasterCatalog();
-    renderCatalogList();
-    document.getElementById("catalogName").value = "";
-    document.getElementById("catalogCategory").value = "";
-    document.getElementById("catalogPrice").value = "";
-
-    pushCatalogToAllBranches();
-  }
-
-  function pushCatalogToAllBranches() {
-    if (!loadedBranches.length) return;
-    const loadingEl = document.getElementById("catalogSyncing");
-    if (loadingEl) loadingEl.style.display = "flex";
-
-    const writes = loadedBranches.map((branch) => {
-      const branchProducts = branch.products.map((p) => ({ ...p }));
-
-      masterCatalog.forEach((item) => {
-        const match = branchProducts.find((p) => p.name.trim().toLowerCase() === item.name.trim().toLowerCase());
-        if (match) {
-          match.category = item.category;
-          match.price = item.price;
-        } else {
-          branchProducts.push(mkProduct(item.name, item.category, 0, 5, item.price, "", "adet", 0));
-        }
-      });
-
-      return db
-        .collection("isletmeler")
-        .doc(branch.uid)
-        .set({ products: branchProducts }, { merge: true });
-    });
-
-    Promise.all(writes)
-      .then(() => {
-        if (loadingEl) loadingEl.style.display = "none";
-        showToast(t("catalogSyncSuccess"), "success");
-        loadBranches();
-      })
-      .catch((e) => {
-        console.error("Katalog şubelere gönderilemedi", e);
-        if (loadingEl) loadingEl.style.display = "none";
-        showToast(t("catalogSyncError"), "error");
-      });
-  }
-
-  function renderBranchList(branches) {
-    const listEl = document.getElementById("branchList");
-    const emptyEl = document.getElementById("branchEmptyState");
-    if (!listEl) return;
-
-    if (!branches.length) {
-      listEl.innerHTML = "";
-      emptyEl.style.display = "block";
-      return;
-    }
-    emptyEl.style.display = "none";
-
-    listEl.innerHTML = branches
-      .map((b) => {
-        const todaySales = calcTodaySalesTotal(b.sales);
-        return `
-          <div class="branch-row">
-            <div class="branch-info">
-              <p class="branch-name">${escapeHtml(b.branchName)}</p>
-              <p class="branch-meta">${b.products.length} ürün · Bugün: ${formatTL(todaySales)}</p>
-            </div>
-            <div class="branch-row-actions">
-              <button class="branch-view-btn" data-uid="${b.uid}" data-name="${escapeHtml(b.branchName)}">${t("branchViewBtn")}</button>
-              <button class="branch-edit-btn" data-uid="${b.uid}" data-name="${escapeHtml(b.branchName)}" aria-label="Düzenle"><i class="fa-solid fa-pen" aria-hidden="true"></i></button>
-              <button class="branch-delete-btn" data-uid="${b.uid}" data-name="${escapeHtml(b.branchName)}" aria-label="Sil"><i class="fa-solid fa-trash" aria-hidden="true"></i></button>
-            </div>
-          </div>`;
-      })
-      .join("");
-
-    listEl.querySelectorAll(".branch-view-btn").forEach((btn) => {
-      btn.addEventListener("click", () => viewBranch(btn.dataset.uid, btn.dataset.name));
-    });
-    listEl.querySelectorAll(".branch-edit-btn").forEach((btn) => {
-      btn.addEventListener("click", () => openBranchEditModal(btn.dataset.uid, btn.dataset.name));
-    });
-    listEl.querySelectorAll(".branch-delete-btn").forEach((btn) => {
-      btn.addEventListener("click", () => confirmDeleteBranch(btn.dataset.uid, btn.dataset.name));
-    });
-  }
-
-  function renderBranchSummary(branches) {
-    let totalSales = 0;
-    let totalLowStock = 0;
-
-    branches.forEach((b) => {
-      totalSales += calcTodaySalesTotal(b.sales);
-      totalLowStock += b.products.filter((p) => p.qty <= p.min).length;
-    });
-
-    const salesEl = document.getElementById("branchSummarySales");
-    const ordersEl = document.getElementById("branchSummaryOrders");
-    if (salesEl) salesEl.textContent = formatTL(totalSales);
-    if (ordersEl) ordersEl.textContent = totalLowStock;
-  }
-
-  function createBranch() {
-    if (!isChainConfigured()) {
-      showToast(t("branchNotConfigured"), "error");
-      return;
-    }
-    const branchName = document.getElementById("branchName").value.trim();
-    const email = document.getElementById("branchEmail").value.trim();
-    const password = document.getElementById("branchPassword").value;
-
-    if (!branchName || !email || !password) {
-      showToast(t("branchFieldsRequired"), "error");
-      return;
-    }
-
-    currentUser
-      .getIdToken()
-      .then((idToken) =>
-        fetch(`${chainConfig.workerUrl}/create-branch`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ idToken, branchName, email, password })
-        })
-      )
-      .then((r) => r.json())
-      .then((data) => {
-        if (data.error) {
-          showToast(data.error, "error");
-          return;
-        }
-        showToast(t("branchCreateSuccess"), "success");
-        document.getElementById("branchName").value = "";
-        document.getElementById("branchEmail").value = "";
-        document.getElementById("branchPassword").value = "";
-        loadBranches();
-      })
-      .catch((e) => {
-        console.error(e);
-        showToast(t("branchCreateError"), "error");
-      });
-  }
-
-  function viewBranch(uid, name) {
-    if (!originalDocRef) {
-      originalDocRef = docRef;
-    }
-    viewingBranchUid = uid;
-    docRef = db.collection("isletmeler").doc(uid);
-    if (firestoreUnsubscribe) firestoreUnsubscribe();
-    attachFirestoreListener();
-
-    document.getElementById("branchViewingBanner").style.display = "flex";
-    document.getElementById("branchViewingText").textContent = `${t("branchViewingPrefix")} ${name}`;
-    applyAccountTypeUI();
-    switchTab("tab-products");
-  }
-
-  function exitBranchView() {
-    if (!originalDocRef) return;
-    docRef = originalDocRef;
-    originalDocRef = null;
-    viewingBranchUid = null;
-    if (firestoreUnsubscribe) firestoreUnsubscribe();
-    attachFirestoreListener();
-    document.getElementById("branchViewingBanner").style.display = "none";
-    applyAccountTypeUI();
-    switchTab("tab-branches");
-  }
-
-  let editingBranchUid = null;
-
-  function openBranchEditModal(uid, name) {
-    editingBranchUid = uid;
-    document.getElementById("branchEditModalTitle").textContent = `${t("branchEditTitle")} — ${name}`;
-    document.getElementById("branchEditEmail").value = "";
-    document.getElementById("branchEditPassword").value = "";
-    document.getElementById("branchEditModal").style.display = "flex";
-  }
-
-  function closeBranchEditModal() {
-    document.getElementById("branchEditModal").style.display = "none";
-    editingBranchUid = null;
-  }
-
-  function saveBranchEdit() {
-    const newEmail = document.getElementById("branchEditEmail").value.trim();
-    const newPassword = document.getElementById("branchEditPassword").value;
-
-    if (!newEmail && !newPassword) {
-      showToast(t("branchEditFieldsRequired"), "error");
-      return;
-    }
-
-    currentUser
-      .getIdToken()
-      .then((idToken) =>
-        fetch(`${chainConfig.workerUrl}/update-branch`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ idToken, targetUid: editingBranchUid, newEmail: newEmail || null, newPassword: newPassword || null })
-        })
-      )
-      .then((r) => r.json())
-      .then((data) => {
-        if (data.error) {
-          showToast(data.error, "error");
-          return;
-        }
-        showToast(t("branchEditSuccess"), "success");
-        closeBranchEditModal();
-        loadBranches();
-      })
-      .catch((e) => {
-        console.error(e);
-        showToast(t("branchEditError"), "error");
-      });
-  }
-
-  function confirmDeleteBranch(uid, name) {
-    if (!confirm(`${t("branchDeleteConfirm")} "${name}"?`)) return;
-
-    currentUser
-      .getIdToken()
-      .then((idToken) =>
-        fetch(`${chainConfig.workerUrl}/delete-branch`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ idToken, targetUid: uid })
-        })
-      )
-      .then((r) => r.json())
-      .then((data) => {
-        if (data.error) {
-          showToast(data.error, "error");
-          return;
-        }
-        showToast(t("branchDeleteSuccess"), "success");
-        loadBranches();
-      })
-      .catch((e) => {
-        console.error(e);
-        showToast(t("branchDeleteError"), "error");
-      });
-  }
-
-
-  function populateVeresiyeCustomerSelect() {
-    // Aktif seçim varsa ama müşteri artık listede yoksa (silinmişse) sıfırla
-    if (selectedVeresiyeCustomerId && !customers.some((c) => c.id === selectedVeresiyeCustomerId)) {
-      clearVeresiyeCustomerSelection();
-    }
-  }
-
-  function renderVeresiyeCustomerResults(query) {
-    const resultsEl = document.getElementById("veresiyeCustomerResults");
-    if (!resultsEl) return;
-    const q = (query || "").toLowerCase().trim();
-    const matches = q ? customers.filter((c) => c.name.toLowerCase().includes(q)) : customers;
-
-    if (!matches.length) {
-      resultsEl.innerHTML = `<p class="searchable-result-empty">${t("noMatchingCustomers")}</p>`;
-    } else {
-      resultsEl.innerHTML = matches
-        .slice(0, 8)
-        .map((c) => `<div class="searchable-result-row" data-id="${c.id}">${escapeHtml(c.name)}</div>`)
-        .join("");
-      resultsEl.querySelectorAll(".searchable-result-row").forEach((row) => {
-        row.addEventListener("click", () => selectVeresiyeCustomer(row.dataset.id));
-      });
-    }
-    resultsEl.classList.add("show");
-  }
-
-  function selectVeresiyeCustomer(id) {
-    const c = customers.find((x) => x.id === id);
-    if (!c) return;
-    selectedVeresiyeCustomerId = id;
-    document.getElementById("veresiyeCustomerSelectedId").value = id;
-    document.getElementById("veresiyeCustomerSearch").value = c.name;
-    document.getElementById("veresiyeCustomerResults").classList.remove("show");
-  }
-
-  function clearVeresiyeCustomerSelection() {
-    selectedVeresiyeCustomerId = null;
-    const idInput = document.getElementById("veresiyeCustomerSelectedId");
-    const searchInput = document.getElementById("veresiyeCustomerSearch");
-    if (idInput) idInput.value = "";
-    if (searchInput) searchInput.value = "";
-  }
-
-  function openCustomerModal(id) {
-    const c = customers.find((x) => x.id === id);
-    if (!c) return;
-    activeCustomerId = id;
-    document.getElementById("customerModalName").textContent = c.name;
-    document.getElementById("customerModalDebt").textContent = formatTL(getCustomerDebt(id));
-    document.getElementById("editCustomerName").value = c.name;
-    document.getElementById("editCustomerPhone").value = c.phone || "";
-    document.getElementById("paymentAmountInput").value = "";
-    renderCustomerHistory(id);
-    document.getElementById("customerModal").style.display = "flex";
-  }
-
-  function closeCustomerModal() {
-    document.getElementById("customerModal").style.display = "none";
-    activeCustomerId = null;
-  }
-
-  function renderCustomerHistory(customerId) {
-    const list = document.getElementById("customerHistoryList");
-    if (!list) return;
-    const debtEntries = sales
-      .filter((s) => s.paymentType === "veresiye" && s.customerId === customerId)
-      .map((s) => ({ type: "debt", timestamp: s.timestamp, amount: s.total, label: s.items.map((i) => `${i.name} x${i.qty}`).join(", ") }));
-    const paymentEntries = payments
-      .filter((p) => p.customerId === customerId)
-      .map((p) => ({ type: "payment", timestamp: p.timestamp, amount: p.amount, label: t("paymentReceivedLabel") }));
-    const combined = [...debtEntries, ...paymentEntries].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-
-    if (!combined.length) {
-      list.innerHTML = `<p class="empty-state" style="display:block;">${t("noTransactionsYet")}</p>`;
-      return;
-    }
-
-    list.innerHTML = combined
-      .map((e) => {
-        const d = new Date(e.timestamp);
-        const timeStr = d.toLocaleString(locale(), { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
-        const amountClass = e.type === "debt" ? "history-amount-debt" : "history-amount-payment";
-        const sign = e.type === "debt" ? "+" : "-";
-        return `
-          <div class="history-row">
-            <span>${timeStr} · ${escapeHtml(e.label)}</span>
-            <span class="${amountClass}">${sign}${formatTL(e.amount)}</span>
-          </div>`;
-      })
-      .join("");
-  }
-
-  // ---------- Status helpers ----------
-  function getStatus(p) {
+function getStatus(p) {
     if (p.qty <= 0) return "tukendi";
     if (p.qty < p.min) return "kritik";
     return "yeterli";
   }
 
-  function getStatusLabel(status) {
+function getStatusLabel(status) {
     if (status === "tukendi") return t("statusTukendi");
     if (status === "kritik") return t("statusKritik");
     return t("statusYeterli");
   }
 
-  const STATUS_CLASS = { tukendi: "status-tukendi", kritik: "status-kritik", yeterli: "status-yeterli" };
-
-  function escapeHtml(s) {
+function escapeHtml(s) {
     return String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   }
 
-  // ---------- Bildirimler (toast) ----------
-  const TOAST_ICONS = {
-    success: "fa-solid fa-circle-check",
-    error: "fa-solid fa-circle-exclamation",
-    info: "fa-solid fa-circle-info"
-  };
-
-  function showToast(message, type) {
+function showToast(message, type) {
     type = type || "info";
     const container = document.getElementById("toastContainer");
     if (!container) {
@@ -2126,8 +591,7 @@
     setTimeout(removeToast, 4000);
   }
 
-  // ---------- Özel miktar/ağırlık sorma penceresi (native prompt() yerine) ----------
-  function showPrompt(title, defaultValue, isPassword) {
+function showPrompt(title, defaultValue, isPassword) {
     return new Promise((resolve) => {
       const modal = document.getElementById("promptModal");
       const titleEl = document.getElementById("promptModalTitle");
@@ -2178,8 +642,1134 @@
     });
   }
 
-  // ---------- Kg / Tutar seçerek miktar girme (tartılı ürün satışı için) ----------
-  function showKgOrPricePrompt(productName, pricePerKg) {
+function formatQty(p) {
+    if (p.unit === "kg") {
+      return (Math.round(p.qty * 1000) / 1000).toLocaleString(locale(), { minimumFractionDigits: 0, maximumFractionDigits: 3 }) + " " + t("unitKgShort");
+    }
+    return p.qty + " " + t("unitAdetShort");
+  }
+
+function formatTL(n) {
+    return (Number(n) || 0).toLocaleString(locale(), { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " ₺";
+  }
+
+function isBulkScanConfigured() {
+    return typeof bulkScanConfig !== "undefined" && bulkScanConfig.workerUrl && bulkScanConfig.workerUrl.indexOf("BURAYA") !== 0;
+  }
+
+function fileToBase64(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const result = reader.result;
+        resolve(result.split(",")[1]);
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  }
+
+function sleep_(ms) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+  }
+
+function calcSellingPrice(costPrice, percent) {
+    const p = percent != null ? percent : 20;
+    return Math.round(costPrice * (1 + p / 100) * 100) / 100;
+  }
+
+  // ==================== 03-staff-roles.js ====================
+/**
+ * 03-staff-roles.js
+ * Personel yönetimi: kasiyer/müdür rolleri, PIN girişi, sahip PIN'i, işlem geçmişi (audit log).
+ */
+
+function applyAccountTypeUI() {
+    const isAdminUser = currentUser && currentUser.uid === ADMIN_UID;
+    const isPatron = accountType === "patron";
+    const operationalTabs = ["tab-products", "tab-kasa", "tab-scan", "tab-sales", "tab-veresiye", "tab-orders", "tab-pricechanges"];
+
+    // Yönetici (sen) her zaman her şeyi görür.
+    if (isAdminUser) {
+      operationalTabs.forEach((tabId) => {
+        const btn = document.querySelector(`.nav-btn[data-tab="${tabId}"]`);
+        if (btn) btn.style.display = "flex";
+      });
+      const branchesBtn = document.getElementById("branchesNavBtn");
+      if (branchesBtn) branchesBtn.style.display = "flex";
+      return;
+    }
+
+    // Bir şubeyi görüntülerken, o şubenin tam ekranını göster (kısıtlama uygulama).
+    if (viewingBranchUid) {
+      operationalTabs.forEach((tabId) => {
+        const btn = document.querySelector(`.nav-btn[data-tab="${tabId}"]`);
+        if (btn) btn.style.display = "flex";
+      });
+      return;
+    }
+
+    // Patron hesabı: sadece Ayarlar + Şubelerim görünür.
+    if (isPatron) {
+      operationalTabs.forEach((tabId) => {
+        const btn = document.querySelector(`.nav-btn[data-tab="${tabId}"]`);
+        if (btn) btn.style.display = "none";
+      });
+      const branchesBtn = document.getElementById("branchesNavBtn");
+      if (branchesBtn) branchesBtn.style.display = "flex";
+      switchTab("tab-branches");
+      return;
+    }
+
+    // Şube ya da tekil bakkal/market hesabı: normal sekmeler görünür, Şubelerim gizli.
+    operationalTabs.forEach((tabId) => {
+      const btn = document.querySelector(`.nav-btn[data-tab="${tabId}"]`);
+      if (btn) btn.style.display = "flex";
+    });
+    const branchesBtn = document.getElementById("branchesNavBtn");
+    if (branchesBtn) branchesBtn.style.display = "none";
+  }
+
+function logAudit(action, details) {
+    const actorName = currentStaff ? `${currentStaff.name} (${currentStaff.role === "manager" ? t("staffRoleManager") : t("staffRoleCashier")})` : (currentUser && currentUser.email) || "?";
+    auditLog.push({
+      timestamp: new Date().toISOString(),
+      actor: actorName,
+      action,
+      details: details || ""
+    });
+    if (auditLog.length > 300) {
+      auditLog = auditLog.slice(auditLog.length - 300);
+    }
+  }
+
+function renderAuditLog() {
+    const listEl = document.getElementById("auditLogList");
+    const emptyEl = document.getElementById("auditLogEmptyState");
+    if (!listEl) return;
+
+    const sorted = [...auditLog].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp)).slice(0, 100);
+    if (!sorted.length) {
+      listEl.innerHTML = "";
+      emptyEl.style.display = "block";
+      return;
+    }
+    emptyEl.style.display = "none";
+
+    listEl.innerHTML = sorted
+      .map((entry) => {
+        const d = new Date(entry.timestamp);
+        const dateStr = d.toLocaleString(locale(), { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
+        return `
+          <div class="audit-log-row">
+            <p class="audit-log-action">${escapeHtml(entry.action)}</p>
+            <p class="audit-log-meta">${dateStr} · ${escapeHtml(entry.actor)}${entry.details ? " · " + escapeHtml(entry.details) : ""}</p>
+          </div>`;
+      })
+      .join("");
+  }
+
+function saveOwnerPin() {
+    const value = document.getElementById("ownerPinInput").value.trim();
+    if (!/^\d{4,6}$/.test(value)) {
+      showToast(t("ownerPinInvalid"), "error");
+      return;
+    }
+    ownerPin = value;
+    const targetRef = originalDocRef || docRef;
+    if (targetRef) {
+      targetRef.set({ ownerPin: value }, { merge: true }).catch((e) => console.error("Sahip PIN'i kaydedilemedi", e));
+    }
+    document.getElementById("ownerPinInput").value = "";
+    renderOwnerPinStatus();
+    showToast(t("ownerPinSaved"), "success");
+  }
+
+function renderOwnerPinStatus() {
+    const statusEl = document.getElementById("ownerPinStatus");
+    if (!statusEl) return;
+    statusEl.textContent = ownerPin ? t("ownerPinIsSet") : t("ownerPinNotSet");
+    statusEl.style.color = ownerPin ? "var(--green-text)" : "var(--red-text)";
+  }
+
+function renderStaffList() {
+    const listEl = document.getElementById("staffList");
+    const emptyEl = document.getElementById("staffEmptyState");
+    if (!listEl) return;
+
+    if (!staffMembers.length) {
+      listEl.innerHTML = "";
+      emptyEl.style.display = "block";
+      return;
+    }
+    emptyEl.style.display = "none";
+
+    listEl.innerHTML = staffMembers
+      .map((s, i) => {
+        const roleLabel = s.role === "manager" ? t("staffRoleManager") : t("staffRoleCashier");
+        return `
+          <div class="staff-row">
+            <div>
+              <p class="staff-row-name">${escapeHtml(s.name)}</p>
+              <p class="staff-row-role">${roleLabel}</p>
+            </div>
+            <button class="staff-remove-btn" data-index="${i}" aria-label="Kaldır"><i class="fa-solid fa-trash" aria-hidden="true"></i></button>
+          </div>`;
+      })
+      .join("");
+
+    listEl.querySelectorAll(".staff-remove-btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        staffMembers.splice(Number(btn.dataset.index), 1);
+        save();
+        renderStaffList();
+        showToast(t("staffRemoved"), "success");
+      });
+    });
+  }
+
+function addStaffMember() {
+    const name = document.getElementById("staffName").value.trim();
+    const pin = document.getElementById("staffPin").value.trim();
+    const role = document.getElementById("staffRole").value;
+
+    if (!name || !pin) {
+      showToast(t("staffFieldsRequired"), "error");
+      return;
+    }
+    if (!/^\d{4}$/.test(pin)) {
+      showToast(t("staffPinInvalid"), "error");
+      return;
+    }
+
+    staffMembers.push({ id: genId(), name, pin, role });
+    save();
+    renderStaffList();
+    document.getElementById("staffName").value = "";
+    document.getElementById("staffPin").value = "";
+    showToast(t("staffAdded"), "success");
+  }
+
+function checkStaffSelection() {
+    if (!staffMembers.length) {
+      currentStaff = null;
+      applyRoleRestrictionsUI();
+      return;
+    }
+    let savedStaffId = null;
+    try {
+      savedStaffId = sessionStorage.getItem("bakkal_current_staff_id");
+    } catch (e) {}
+    if (savedStaffId === "__owner__") {
+      currentStaff = null;
+      applyRoleRestrictionsUI();
+      return;
+    }
+    const savedStaff = staffMembers.find((s) => s.id === savedStaffId);
+    if (savedStaff) {
+      currentStaff = savedStaff;
+      applyRoleRestrictionsUI();
+      return;
+    }
+    showStaffPicker();
+  }
+
+function showStaffPicker() {
+    const listEl = document.getElementById("staffPickerList");
+    listEl.innerHTML = staffMembers
+      .map((s) => {
+        const roleLabel = s.role === "manager" ? t("staffRoleManager") : t("staffRoleCashier");
+        return `
+          <button class="staff-picker-btn" data-id="${s.id}">
+            <span>${escapeHtml(s.name)}</span>
+            <span class="staff-picker-role">${roleLabel}</span>
+          </button>`;
+      })
+      .join("");
+
+    listEl.querySelectorAll(".staff-picker-btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const staff = staffMembers.find((s) => s.id === btn.dataset.id);
+        if (!staff) return;
+        openStaffPinView({ type: "staff", staff });
+      });
+    });
+
+    document.getElementById("staffPickerListView").style.display = "block";
+    document.getElementById("staffPickerPinView").style.display = "none";
+    document.getElementById("staffPickerScreen").style.display = "flex";
+  }
+
+function openStaffPinView(selection) {
+    staffPickerPendingSelection = selection;
+    document.getElementById("staffPickerListView").style.display = "none";
+    document.getElementById("staffPickerPinView").style.display = "block";
+
+    const nameEl = document.getElementById("staffPickerSelectedName");
+    if (selection.type === "owner") {
+      nameEl.textContent = t("staffOwnerSelectedLabel");
+    } else {
+      const roleLabel = selection.staff.role === "manager" ? t("staffRoleManager") : t("staffRoleCashier");
+      nameEl.textContent = `${selection.staff.name} (${roleLabel})`;
+    }
+
+    const pinInput = document.getElementById("staffPickerPinInput");
+    const errorEl = document.getElementById("staffPickerPinError");
+    pinInput.value = "";
+    errorEl.style.display = "none";
+    setTimeout(() => pinInput.focus(), 50);
+  }
+
+function staffPickerGoBack() {
+    staffPickerPendingSelection = null;
+    document.getElementById("staffPickerListView").style.display = "block";
+    document.getElementById("staffPickerPinView").style.display = "none";
+  }
+
+function submitStaffPickerPin() {
+    if (!staffPickerPendingSelection) return;
+    const entered = document.getElementById("staffPickerPinInput").value.trim();
+    const errorEl = document.getElementById("staffPickerPinError");
+
+    if (staffPickerPendingSelection.type === "owner") {
+      if (ownerPin && entered !== ownerPin) {
+        errorEl.textContent = t("ownerPinWrong");
+        errorEl.style.display = "block";
+        return;
+      }
+      grantOwnerAccess();
+      return;
+    }
+
+    const staff = staffPickerPendingSelection.staff;
+    if (entered !== staff.pin) {
+      errorEl.textContent = t("staffPinWrong");
+      errorEl.style.display = "block";
+      return;
+    }
+    currentStaff = staff;
+    try {
+      sessionStorage.setItem("bakkal_current_staff_id", staff.id);
+    } catch (e) {}
+    document.getElementById("staffPickerScreen").style.display = "none";
+    applyRoleRestrictionsUI();
+  }
+
+function enterAsOwner() {
+    if (ownerPin) {
+      openStaffPinView({ type: "owner" });
+      return;
+    }
+    grantOwnerAccess();
+  }
+
+function grantOwnerAccess() {
+    currentStaff = null;
+    try {
+      sessionStorage.setItem("bakkal_current_staff_id", "__owner__");
+    } catch (e) {}
+    applyRoleRestrictionsUI();
+  }
+
+function applyRoleRestrictionsUI() {
+    document.getElementById("staffPickerScreen").style.display = "none";
+
+    if (!currentStaff || currentStaff.role === "manager") {
+      // Sahip ya da müdür: önceki kasiyer kısıtlamasından kalmış olabilecek
+      // gizli sekmeleri, hesap türü/basit mod kurallarına göre doğru şekilde geri getir.
+      applyAccountTypeUI();
+      reapplySimpleModeIfSet();
+      updateSwitchUserButtonVisibility();
+      return;
+    }
+
+    // Kasiyer: sadece Kasa, Satışlar, Veresiye görünür.
+    const cashierBlockedTabs = ["tab-products", "tab-scan", "tab-orders", "tab-pricechanges", "tab-settings", "tab-branches", "tab-suppliers"];
+    cashierBlockedTabs.forEach((tabId) => {
+      const btn = document.querySelector(`.nav-btn[data-tab="${tabId}"]`);
+      if (btn) btn.style.display = "none";
+    });
+    const adminBtn = document.getElementById("adminNavBtn");
+    if (adminBtn) adminBtn.style.display = "none";
+    updateSwitchUserButtonVisibility();
+    switchTab("tab-kasa");
+  }
+
+function updateSwitchUserButtonVisibility() {
+    const btn = document.getElementById("switchUserBtn");
+    if (!btn) return;
+    btn.style.display = staffMembers.length > 0 ? "inline-flex" : "none";
+  }
+
+function switchUser() {
+    currentStaff = null;
+    try {
+      sessionStorage.removeItem("bakkal_current_staff_id");
+    } catch (e) {}
+    showStaffPicker();
+  }
+
+  // ==================== 04-fiscal.js ====================
+/**
+ * 04-fiscal.js
+ * Resmi mali kayıt (e-Fatura/Yazar Kasa) entegrasyonu ayarları — varsayılan olarak pasif, istenince aktif edilebilir altyapı.
+ */
+
+function toggleFiscalEnabled(checked) {
+    fiscalEnabled = checked;
+    document.getElementById("fiscalConfigFields").style.display = checked ? "block" : "none";
+    const targetRef = originalDocRef || docRef;
+    if (targetRef) {
+      targetRef.set({ fiscalEnabled: checked }, { merge: true }).catch((e) => console.error("Mali kayıt ayarı kaydedilemedi", e));
+    }
+  }
+
+function saveFiscalSettings() {
+    fiscalProvider = document.getElementById("fiscalProvider").value;
+    fiscalApiKey = document.getElementById("fiscalApiKey").value.trim();
+    fiscalEndpoint = document.getElementById("fiscalEndpoint").value.trim();
+    fiscalVkn = document.getElementById("fiscalVkn").value.trim();
+
+    const targetRef = originalDocRef || docRef;
+    if (targetRef) {
+      targetRef
+        .set({ fiscalProvider, fiscalApiKey, fiscalEndpoint, fiscalVkn }, { merge: true })
+        .catch((e) => console.error("Mali kayıt ayarları kaydedilemedi", e));
+    }
+
+    const statusEl = document.getElementById("fiscalStatus");
+    if (fiscalApiKey && fiscalEndpoint) {
+      statusEl.textContent = t("fiscalReadyToTry");
+      statusEl.style.color = "var(--green-text)";
+    } else if (fiscalApiKey || fiscalEndpoint) {
+      statusEl.textContent = t("fiscalNotConnectedYet");
+      statusEl.style.color = "var(--amber-text)";
+    } else {
+      statusEl.textContent = "";
+    }
+    showToast(t("fiscalSettingsSaved"), "success");
+  }
+
+function renderFiscalSettings() {
+    const toggle = document.getElementById("fiscalEnabledToggle");
+    if (!toggle) return;
+    toggle.checked = fiscalEnabled;
+    document.getElementById("fiscalConfigFields").style.display = fiscalEnabled ? "block" : "none";
+    document.getElementById("fiscalProvider").value = fiscalProvider;
+    document.getElementById("fiscalApiKey").value = fiscalApiKey;
+    document.getElementById("fiscalEndpoint").value = fiscalEndpoint;
+    document.getElementById("fiscalVkn").value = fiscalVkn;
+  }
+
+function attemptSendToFiscalProvider(sale) {
+    if (!fiscalEnabled || !fiscalApiKey || !fiscalEndpoint) return;
+    if (!isChainConfigured() || !currentUser) return;
+
+    const invoicePayload = {
+      vkn: fiscalVkn,
+      faturaTarihi: sale.timestamp,
+      faturaNo: sale.id,
+      kalemler: sale.items.map((item) => ({
+        urunAdi: item.name,
+        miktar: item.qty,
+        birimFiyat: item.price,
+        toplam: Math.round(item.qty * item.price * 100) / 100
+      })),
+      araToplam: sale.subtotal,
+      indirim: sale.discount || 0,
+      genelToplam: sale.total,
+      odemeTuru: sale.paymentType
+    };
+
+    currentUser
+      .getIdToken()
+      .then((idToken) =>
+        fetch(`${chainConfig.workerUrl}/relay-fiscal-invoice`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ idToken, fiscalEndpoint, fiscalApiKey, invoicePayload })
+        })
+      )
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.success) {
+          logAudit("Mali kayıt gönderildi", `Satış #${sale.id}`);
+        } else {
+          console.error("Mali kayıt gönderimi başarısız:", data);
+          logAudit("Mali kayıt gönderimi BAŞARISIZ", `Satış #${sale.id} — ${data.error || "entegratör " + data.providerStatus + " döndürdü"}`);
+        }
+      })
+      .catch((e) => {
+        console.error("Mali kayıt gönderim hatası:", e);
+        logAudit("Mali kayıt gönderimi BAŞARISIZ", `Satış #${sale.id} (bağlantı hatası)`);
+      });
+  }
+
+  // ==================== 05-products.js ====================
+/**
+ * 05-products.js
+ * Ürün CRUD işlemleri, barkod/QR kodu, stok takibi, ürün detay modalı.
+ */
+
+function findProductByExactName(name) {
+    const normalized = name.trim().toLowerCase();
+    return products.find((p) => p.name.trim().toLowerCase() === normalized);
+  }
+
+function findProductByFuzzyName(name) {
+    if (!name) return null;
+    const normalized = name.trim().toLowerCase();
+    let match = products.find((p) => p.name.trim().toLowerCase() === normalized);
+    if (match) return match;
+    match = products.find((p) => p.name.toLowerCase().includes(normalized) || normalized.includes(p.name.toLowerCase()));
+    return match || null;
+  }
+
+function addProduct() {
+    const nameInput = document.getElementById("newName");
+    const catInput = document.getElementById("newCategory");
+    const minInput = document.getElementById("newMin");
+    const qtyInput = document.getElementById("newQty");
+    const priceInput = document.getElementById("newPrice");
+    const costPriceInput = document.getElementById("newCostPrice");
+    const barcodeInput = document.getElementById("newBarcode");
+    const unitInput = document.getElementById("newUnit");
+
+    const name = nameInput.value.trim();
+    if (!name) {
+      nameInput.focus();
+      return;
+    }
+    const category = catInput.value.trim() || t("categoryOtherDefault");
+    const min = Number(minInput.value) || 0;
+    const qty = Number(qtyInput.value) || 0;
+    const price = Number(priceInput.value) || 0;
+    const costPrice = Number(costPriceInput.value) || 0;
+    const barcode = barcodeInput.value.trim();
+    const unit = unitInput.value;
+
+    products.push(mkProduct(name, category, qty, min, price, barcode, unit, costPrice));
+    logAudit("Ürün eklendi", `${name} (${qty} adet, ${formatTL(price)})`);
+    nameInput.value = "";
+    catInput.value = "";
+    minInput.value = "5";
+    qtyInput.value = "0";
+    priceInput.value = "0";
+    costPriceInput.value = "0";
+    barcodeInput.value = "";
+    unitInput.value = "adet";
+    save();
+    renderAll();
+    nameInput.focus();
+  }
+
+function deleteProduct(id) {
+    const p = products.find((x) => x.id === id);
+    products = products.filter((x) => x.id !== id);
+    if (p) logAudit("Ürün silindi", p.name);
+    save();
+    closeModal();
+    renderAll();
+  }
+
+function updateOutOfStockTracking(p) {
+    if (p.qty <= 0) {
+      if (!p.wentOutOfStockAt) p.wentOutOfStockAt = new Date().toISOString();
+    } else {
+      p.wentOutOfStockAt = null;
+    }
+  }
+
+function adjustQty(id, delta) {
+    const p = products.find((x) => x.id === id);
+    if (!p) return;
+    p.qty = Math.max(0, Math.round((p.qty + delta) * 1000) / 1000);
+    updateOutOfStockTracking(p);
+    logAudit("Stok güncellendi", `${p.name}: ${delta > 0 ? "+" : ""}${delta} → ${p.qty}`);
+    save();
+    renderAll();
+    if (activeProductId === id) updateModalContent(p);
+  }
+
+function setQtyManually(id, newQty) {
+    const p = products.find((x) => x.id === id);
+    if (!p) return;
+    if (isNaN(newQty) || newQty < 0) {
+      showToast(t("alertInvalidAmount"), "error");
+      updateModalContent(p);
+      return;
+    }
+    const oldQty = p.qty;
+    p.qty = Math.round(newQty * 1000) / 1000;
+    updateOutOfStockTracking(p);
+    logAudit("Stok elle güncellendi", `${p.name}: ${oldQty} → ${p.qty}`);
+    save();
+    renderAll();
+    if (activeProductId === id) updateModalContent(p);
+  }
+
+function saveEdit() {
+    const p = products.find((x) => x.id === activeProductId);
+    if (!p) return;
+    const name = document.getElementById("editName").value.trim();
+    if (!name) return;
+    p.name = name;
+    p.category = document.getElementById("editCategory").value.trim() || t("categoryOtherDefault");
+    p.min = Number(document.getElementById("editMin").value) || 0;
+    p.price = Number(document.getElementById("editPrice").value) || 0;
+    p.costPrice = Number(document.getElementById("editCostPrice").value) || 0;
+    p.barcode = document.getElementById("editBarcode").value.trim();
+    p.unit = document.getElementById("editUnit").value;
+    p.expiryDate = document.getElementById("editExpiryDate").value || null;
+    p.bulkDiscountQty = Number(document.getElementById("editBulkQty").value) || 0;
+    p.bulkDiscountType = document.getElementById("editBulkType").value;
+    p.bulkDiscountValue = Number(document.getElementById("editBulkValue").value) || 0;
+    logAudit("Ürün düzenlendi", `${name} (${formatTL(p.price)})`);
+    save();
+    renderAll();
+    updateModalContent(p);
+  }
+
+function resetAll() {
+    products.forEach((p) => {
+      p.qty = Math.max(p.min, 1);
+    });
+    save();
+    renderAll();
+  }
+
+function getDisplayName(p) {
+    const lang = window.i18n.getLang();
+    if ((lang === "en" || lang === "ar") && p.nameTranslations && p.nameTranslations[lang]) {
+      return p.nameTranslations[lang];
+    }
+    return p.name;
+  }
+
+function translateMissingProductNames() {
+    const lang = window.i18n.getLang();
+    if (lang !== "en" && lang !== "ar") return;
+    if (translationInFlight) return;
+
+    const missing = products.filter((p) => !p.nameTranslations || !p.nameTranslations[lang]).slice(0, 60);
+    if (!missing.length) return;
+
+    translationInFlight = true;
+
+    const langLabel = lang === "en" ? "İngilizce" : "Arapça";
+    const prompt = [
+      `Aşağıdaki market/bakkal ürün adlarının her birini ${langLabel}'ye çevir.`,
+      "Ürün adındaki marka isimlerini olduğu gibi bırak, sadece genel kelimeleri çevir (örn. 'kepekli ekmek' -> 'whole wheat bread').",
+      "SADECE geçerli bir JSON nesnesi döndür, başka hiçbir açıklama ekleme.",
+      'Format: {"orijinal ad 1":"çeviri 1","orijinal ad 2":"çeviri 2"}',
+      "",
+      "Ürün adları:",
+      JSON.stringify(missing.map((p) => p.name))
+    ].join("\n");
+
+    callGeminiWithRetry(null, prompt)
+      .then((data) => {
+        const rawText = data && data.candidates && data.candidates[0] && data.candidates[0].content.parts[0].text;
+        if (!rawText) return;
+        const cleaned = rawText.replace(/```json|```/g, "").trim();
+        const translations = JSON.parse(cleaned);
+        let changed = false;
+        missing.forEach((p) => {
+          const translated = translations[p.name];
+          if (translated) {
+            p.nameTranslations = p.nameTranslations || {};
+            p.nameTranslations[lang] = translated;
+            changed = true;
+          }
+        });
+        if (changed) {
+          save();
+          renderAll();
+        }
+      })
+      .catch((e) => console.error("Ürün adı çevirisi başarısız:", e))
+      .finally(() => {
+        translationInFlight = false;
+      });
+  }
+
+function productRowHtml(p) {
+    const status = getStatus(p);
+    const priceLabel = p.unit === "kg" ? formatTL(p.price) + t("perKgSuffix") : formatTL(p.price);
+    return `
+      <div class="product-row" data-id="${p.id}">
+        <div class="product-info">
+          <p class="product-name">${escapeHtml(getDisplayName(p))}</p>
+          <p class="product-meta">${escapeHtml(p.category)} · ${t("stockShortLabel")}: ${formatQty(p)} · ${priceLabel}</p>
+        </div>
+        <span class="status-badge ${STATUS_CLASS[status]}">${getStatusLabel(status)}</span>
+      </div>`;
+  }
+
+function openModal(id) {
+    const p = products.find((x) => x.id === id);
+    if (!p) return;
+    activeProductId = id;
+    document.getElementById("editName").value = p.name;
+    document.getElementById("editCategory").value = p.category;
+    document.getElementById("editMin").value = p.min;
+    document.getElementById("editPrice").value = p.price;
+    document.getElementById("editCostPrice").value = p.costPrice || 0;
+    document.getElementById("editBarcode").value = p.barcode || "";
+    document.getElementById("editUnit").value = p.unit || "adet";
+    document.getElementById("editExpiryDate").value = p.expiryDate || "";
+    document.getElementById("editBulkQty").value = p.bulkDiscountQty || "";
+    document.getElementById("editBulkType").value = p.bulkDiscountType || "percent";
+    document.getElementById("editBulkValue").value = p.bulkDiscountValue || "";
+    updateModalContent(p);
+    document.getElementById("detailModal").style.display = "flex";
+    renderQrCode(p.id);
+  }
+
+function updateModalContent(p) {
+    document.getElementById("modalProductName").textContent = p.name;
+    const qtyInput = document.getElementById("modalQtyInput");
+    if (document.activeElement !== qtyInput) {
+      qtyInput.value = p.qty;
+    }
+    const status = getStatus(p);
+    const pill = document.getElementById("modalStatus");
+    pill.textContent = getStatusLabel(status);
+    pill.className = "status-pill " + STATUS_CLASS[status];
+  }
+
+function closeModal() {
+    document.getElementById("detailModal").style.display = "none";
+    activeProductId = null;
+  }
+
+function renderQrCode(productId) {
+    const box = document.getElementById("modalQrCode");
+    box.innerHTML = "";
+    if (typeof QRCode !== "undefined") {
+      new QRCode(box, {
+        text: productId,
+        width: 160,
+        height: 160,
+        colorDark: "#1F3864",
+        colorLight: "#ffffff"
+      });
+    } else {
+      box.textContent = t("qrLibError");
+    }
+  }
+
+function printQr() {
+    const box = document.getElementById("modalQrCode");
+    const p = products.find((x) => x.id === activeProductId);
+    const win = window.open("", "_blank");
+    win.document.write(`
+      <html><head><title>${t("printWindowTitle")}</title></head>
+      <body style="text-align:center;font-family:sans-serif;padding:40px;">
+        <h3>${escapeHtml(p ? p.name : "")}</h3>
+        ${box.innerHTML}
+        <script>window.onload = function(){ window.print(); }<\/script>
+      </body></html>
+    `);
+    win.document.close();
+  }
+
+function printAllQrCodes() {
+    if (!products.length) {
+      showToast(t("emptyProducts"), "info");
+      return;
+    }
+
+    // Her ürün için geçici, ekranda görünmeyen bir QR kodu üret
+    const tempContainer = document.createElement("div");
+    tempContainer.style.display = "none";
+    document.body.appendChild(tempContainer);
+
+    const blocksHtml = products
+      .map((p) => {
+        const box = document.createElement("div");
+        tempContainer.appendChild(box);
+        new QRCode(box, {
+          text: p.id,
+          width: 56,
+          height: 56,
+          colorDark: "#1F3864",
+          colorLight: "#ffffff"
+        });
+
+        const priceValue = Number(p.price) || 0;
+        const [wholePart, decimalPart] = priceValue.toFixed(2).split(".");
+        const unitSuffix = p.unit === "kg" ? `<span class="price-tag-unit">/${t("unitKgShort")}</span>` : "";
+
+        return `
+          <div class="price-tag">
+            <p class="price-tag-header">${escapeHtml(t("appName"))}</p>
+            <p class="price-tag-name">${escapeHtml(p.name)}</p>
+            <div class="price-tag-price">
+              <span class="price-tag-currency">₺</span><span class="price-tag-amount">${wholePart}</span><span class="price-tag-decimals">,${decimalPart}</span>${unitSuffix}
+            </div>
+            <div class="price-tag-qr">${box.innerHTML}</div>
+          </div>`;
+      })
+      .join("");
+
+    document.body.removeChild(tempContainer);
+
+    const win = window.open("", "_blank");
+    win.document.write(`
+      <html>
+        <head>
+          <title>${t("printAllQrBtn")}</title>
+          <style>
+            @page { margin: 12mm; }
+            body{font-family:'Segoe UI',Arial,sans-serif;padding:16px;background:#fff;}
+            .price-tag-grid{display:flex;flex-wrap:wrap;gap:14px;}
+            .price-tag{
+              width:190px;
+              text-align:center;
+              border:1.5px solid #1F3864;
+              border-radius:12px;
+              padding:12px 10px 10px;
+              page-break-inside:avoid;
+              position:relative;
+              background:#fff;
+            }
+            .price-tag-header{
+              font-size:8px;
+              letter-spacing:1.5px;
+              text-transform:uppercase;
+              color:#8B96A8;
+              font-weight:700;
+              margin:0 0 8px;
+            }
+            .price-tag-name{
+              font-size:14px;
+              font-weight:700;
+              color:#1F3864;
+              margin:0 0 10px;
+              min-height:36px;
+              line-height:1.25;
+              display:flex;
+              align-items:center;
+              justify-content:center;
+              word-break:break-word;
+            }
+            .price-tag-price{
+              display:flex;
+              align-items:baseline;
+              justify-content:center;
+              gap:1px;
+              margin-bottom:6px;
+            }
+            .price-tag-currency{font-size:20px;font-weight:700;color:#C0872E;}
+            .price-tag-amount{font-size:36px;font-weight:800;color:#C0872E;line-height:1;}
+            .price-tag-decimals{font-size:17px;font-weight:700;color:#C0872E;}
+            .price-tag-unit{font-size:12px;font-weight:600;color:#8B96A8;margin-left:3px;}
+            .price-tag-qr{
+              position:absolute;
+              bottom:8px;
+              right:8px;
+              width:42px;
+              height:42px;
+              opacity:0.9;
+            }
+            .price-tag-qr img,.price-tag-qr canvas,.price-tag-qr table{width:100% !important;height:100% !important;}
+          </style>
+        </head>
+        <body>
+          <div class="price-tag-grid">${blocksHtml}</div>
+          <script>window.onload = function(){ window.print(); }<\/script>
+        </body>
+      </html>
+    `);
+    win.document.close();
+  }
+
+function findProductByScan(code) {
+    return products.find((p) => p.id === code || (p.barcode && p.barcode === code));
+  }
+
+function productAlreadyExists(name) {
+    const normalized = name.trim().toLowerCase();
+    return products.some((p) => p.name.trim().toLowerCase() === normalized);
+  }
+
+function importProductsFromRows(rows) {
+    if (!rows.length) return;
+
+    const firstCells = rows[0].map((c) => String(c || "").trim().toLowerCase());
+    const hasHeader = firstCells.includes("name") || firstCells.includes("ürün adı") || firstCells.includes("urun adi");
+    const dataRows = hasHeader ? rows.slice(1) : rows;
+
+    let addedCount = 0;
+    dataRows.forEach((cols) => {
+      const name = String(cols[0] || "").trim();
+      if (!name) return;
+      const category = String(cols[1] || "").trim() || t("categoryOtherDefault");
+      const qty = Number(cols[2]) || 0;
+      const price = Number(cols[3]) || 0;
+      if (productAlreadyExists(name)) return;
+      products.push(mkProduct(name, category, qty, 5, price, "", "adet", 0));
+      addedCount++;
+    });
+
+    if (addedCount > 0) {
+      save();
+      renderAll();
+      showToast(t("bulkAddedAlert").replace("{n}", addedCount), "success");
+    } else {
+      showToast(t("invoiceScanNoItems"), "info");
+    }
+  }
+
+function importProductsFromCsv(text) {
+    const lines = text.split(/\r?\n/).filter((l) => l.trim());
+    const rows = lines.map((line) => line.split(",").map((c) => c.trim()));
+    importProductsFromRows(rows);
+  }
+
+function handleCsvImportFile(file) {
+    const isExcel = /\.(xlsx|xls)$/i.test(file.name);
+    if (isExcel) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const workbook = XLSX.read(new Uint8Array(e.target.result), { type: "array" });
+        const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+        const rows = XLSX.utils.sheet_to_json(firstSheet, { header: 1 });
+        importProductsFromRows(rows);
+      };
+      reader.readAsArrayBuffer(file);
+    } else {
+      file.text().then((text) => importProductsFromCsv(text));
+    }
+  }
+
+function findExistingProductByName(name) {
+    const normalized = (name || "").trim().toLowerCase();
+    if (!normalized) return null;
+    let match = products.find((p) => p.name.trim().toLowerCase() === normalized);
+    if (match) return match;
+    // Tam eşleşme yoksa, birbirini içeren isimlerle gevşek eşleştirme dene
+    match = products.find(
+      (p) => p.name.trim().toLowerCase().includes(normalized) || normalized.includes(p.name.trim().toLowerCase())
+    );
+    return match || null;
+  }
+
+  // ==================== 06-veresiye.js ====================
+/**
+ * 06-veresiye.js
+ * Müşteri yönetimi ve veresiye (borç) takibi.
+ */
+
+function mkCustomer(name, phone) {
+    return { id: genId(), name, phone: phone || "" };
+  }
+
+function addCustomer() {
+    const nameInput = document.getElementById("newCustomerName");
+    const phoneInput = document.getElementById("newCustomerPhone");
+    const name = nameInput.value.trim();
+    if (!name) {
+      nameInput.focus();
+      return;
+    }
+    customers.push(mkCustomer(name, phoneInput.value.trim()));
+    nameInput.value = "";
+    phoneInput.value = "";
+    save();
+    renderCustomers();
+  }
+
+function deleteCustomer(id) {
+    const debt = getCustomerDebt(id);
+    if (debt > 0 && !confirm(`${t("confirmDeleteCustomerWithDebt")} ${formatTL(debt)} ${t("confirmDeleteCustomerWithDebtSuffix")}`)) {
+      return;
+    }
+    customers = customers.filter((c) => c.id !== id);
+    closeCustomerModal();
+    save();
+    renderCustomers();
+  }
+
+function saveCustomerEdit() {
+    const c = customers.find((x) => x.id === activeCustomerId);
+    if (!c) return;
+    const name = document.getElementById("editCustomerName").value.trim();
+    if (!name) return;
+    c.name = name;
+    c.phone = document.getElementById("editCustomerPhone").value.trim();
+    save();
+    renderCustomers();
+    openCustomerModal(c.id);
+  }
+
+function getCustomerDebt(customerId) {
+    const debtFromSales = sales
+      .filter((s) => s.paymentType === "veresiye" && s.customerId === customerId)
+      .reduce((sum, s) => sum + s.total, 0);
+    const paid = payments.filter((p) => p.customerId === customerId).reduce((sum, p) => sum + p.amount, 0);
+    return Math.max(0, debtFromSales - paid);
+  }
+
+function recordPayment() {
+    const c = customers.find((x) => x.id === activeCustomerId);
+    if (!c) return;
+    const input = document.getElementById("paymentAmountInput");
+    const amount = Number(input.value);
+    if (!amount || amount <= 0) {
+      input.focus();
+      return;
+    }
+    payments.push({
+      id: genId(),
+      customerId: c.id,
+      customerName: c.name,
+      amount,
+      timestamp: new Date().toISOString()
+    });
+    input.value = "";
+    save();
+    renderCustomers();
+    openCustomerModal(c.id);
+  }
+
+function customerRowHtml(c) {
+    const debt = getCustomerDebt(c.id);
+    const debtClass = debt > 0 ? "has-debt" : "no-debt";
+    return `
+      <div class="customer-row" data-id="${c.id}">
+        <div class="customer-info">
+          <p class="customer-name">${escapeHtml(c.name)}</p>
+          <p class="customer-phone">${escapeHtml(c.phone || "—")}</p>
+        </div>
+        <span class="customer-debt ${debtClass}">${formatTL(debt)}</span>
+      </div>`;
+  }
+
+function renderCustomers() {
+    const list = document.getElementById("customerList");
+    const empty = document.getElementById("customerEmptyState");
+    if (!list) return;
+
+    if (!customers.length) {
+      list.innerHTML = "";
+      empty.style.display = "block";
+    } else {
+      empty.style.display = "none";
+      list.innerHTML = customers.map(customerRowHtml).join("");
+    }
+    list.querySelectorAll(".customer-row").forEach((row) => {
+      row.addEventListener("click", () => openCustomerModal(row.dataset.id));
+    });
+
+    const totalDebt = customers.reduce((sum, c) => sum + getCustomerDebt(c.id), 0);
+    document.getElementById("statTotalDebt").textContent = formatTL(totalDebt);
+    document.getElementById("statCustomerCount").textContent = customers.length;
+
+    populateVeresiyeCustomerSelect();
+  }
+
+function populateVeresiyeCustomerSelect() {
+    // Aktif seçim varsa ama müşteri artık listede yoksa (silinmişse) sıfırla
+    if (selectedVeresiyeCustomerId && !customers.some((c) => c.id === selectedVeresiyeCustomerId)) {
+      clearVeresiyeCustomerSelection();
+    }
+  }
+
+function renderVeresiyeCustomerResults(query) {
+    const resultsEl = document.getElementById("veresiyeCustomerResults");
+    if (!resultsEl) return;
+    const q = (query || "").toLowerCase().trim();
+    const matches = q ? customers.filter((c) => c.name.toLowerCase().includes(q)) : customers;
+
+    if (!matches.length) {
+      resultsEl.innerHTML = `<p class="searchable-result-empty">${t("noMatchingCustomers")}</p>`;
+    } else {
+      resultsEl.innerHTML = matches
+        .slice(0, 8)
+        .map((c) => `<div class="searchable-result-row" data-id="${c.id}">${escapeHtml(c.name)}</div>`)
+        .join("");
+      resultsEl.querySelectorAll(".searchable-result-row").forEach((row) => {
+        row.addEventListener("click", () => selectVeresiyeCustomer(row.dataset.id));
+      });
+    }
+    resultsEl.classList.add("show");
+  }
+
+function selectVeresiyeCustomer(id) {
+    const c = customers.find((x) => x.id === id);
+    if (!c) return;
+    selectedVeresiyeCustomerId = id;
+    document.getElementById("veresiyeCustomerSelectedId").value = id;
+    document.getElementById("veresiyeCustomerSearch").value = c.name;
+    document.getElementById("veresiyeCustomerResults").classList.remove("show");
+  }
+
+function clearVeresiyeCustomerSelection() {
+    selectedVeresiyeCustomerId = null;
+    const idInput = document.getElementById("veresiyeCustomerSelectedId");
+    const searchInput = document.getElementById("veresiyeCustomerSearch");
+    if (idInput) idInput.value = "";
+    if (searchInput) searchInput.value = "";
+  }
+
+function openCustomerModal(id) {
+    const c = customers.find((x) => x.id === id);
+    if (!c) return;
+    activeCustomerId = id;
+    document.getElementById("customerModalName").textContent = c.name;
+    document.getElementById("customerModalDebt").textContent = formatTL(getCustomerDebt(id));
+    document.getElementById("editCustomerName").value = c.name;
+    document.getElementById("editCustomerPhone").value = c.phone || "";
+    document.getElementById("paymentAmountInput").value = "";
+    renderCustomerHistory(id);
+    document.getElementById("customerModal").style.display = "flex";
+  }
+
+function closeCustomerModal() {
+    document.getElementById("customerModal").style.display = "none";
+    activeCustomerId = null;
+  }
+
+function renderCustomerHistory(customerId) {
+    const list = document.getElementById("customerHistoryList");
+    if (!list) return;
+    const debtEntries = sales
+      .filter((s) => s.paymentType === "veresiye" && s.customerId === customerId)
+      .map((s) => ({ type: "debt", timestamp: s.timestamp, amount: s.total, label: s.items.map((i) => `${i.name} x${i.qty}`).join(", ") }));
+    const paymentEntries = payments
+      .filter((p) => p.customerId === customerId)
+      .map((p) => ({ type: "payment", timestamp: p.timestamp, amount: p.amount, label: t("paymentReceivedLabel") }));
+    const combined = [...debtEntries, ...paymentEntries].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+    if (!combined.length) {
+      list.innerHTML = `<p class="empty-state" style="display:block;">${t("noTransactionsYet")}</p>`;
+      return;
+    }
+
+    list.innerHTML = combined
+      .map((e) => {
+        const d = new Date(e.timestamp);
+        const timeStr = d.toLocaleString(locale(), { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
+        const amountClass = e.type === "debt" ? "history-amount-debt" : "history-amount-payment";
+        const sign = e.type === "debt" ? "+" : "-";
+        return `
+          <div class="history-row">
+            <span>${timeStr} · ${escapeHtml(e.label)}</span>
+            <span class="${amountClass}">${sign}${formatTL(e.amount)}</span>
+          </div>`;
+      })
+      .join("");
+  }
+
+  // ==================== 07-kasa-checkout.js ====================
+/**
+ * 07-kasa-checkout.js
+ * Kasa: sepet yönetimi, barkod/QR tarama, ödeme türleri, toplu alım indirimi, satış tamamlama.
+ */
+
+function showKgOrPricePrompt(productName, pricePerKg) {
     return new Promise((resolve) => {
       const modal = document.getElementById("kgPricePromptModal");
       const titleEl = document.getElementById("kgPricePromptTitle");
@@ -2273,28 +1863,2012 @@
     });
   }
 
-  // ---------- Sesle ürün adı girme (Web Speech API, TR/AR) ----------
-  let activeRecognition = null;
-  let pendingVoiceAction = null;
+function startScan() {
+    const readerEl = document.getElementById("qrReader");
+    document.getElementById("startScanBtn").style.display = "none";
+    document.getElementById("stopScanBtn").style.display = "flex";
+    readerEl.innerHTML = "";
+    html5QrCode = new Html5Qrcode("qrReader");
+    scanning = true;
 
-  function getSpeechRecognitionClass() {
+    html5QrCode
+      .start(
+        { facingMode: "environment" },
+        { fps: 10, qrbox: 220 },
+        (decodedText) => {
+          onScanSuccess(decodedText);
+        },
+        () => {}
+      )
+      .catch((err) => {
+        showToast(t("cameraError"), "error");
+        stopScan();
+      });
+  }
+
+function stopScan() {
+    document.getElementById("startScanBtn").style.display = "flex";
+    document.getElementById("stopScanBtn").style.display = "none";
+    if (html5QrCode && scanning) {
+      html5QrCode
+        .stop()
+        .then(() => html5QrCode.clear())
+        .catch(() => {});
+    }
+    scanning = false;
+  }
+
+function onScanSuccess(decodedText) {
+    if (stokScanCooldown) return;
+    const p = findProductByScan(decodedText);
+    if (!p) {
+      showToast(t("alertNotRegistered"), "error");
+      return;
+    }
+    stopScan();
+    if (p.unit === "kg") {
+      const action = confirm(`${p.name}\n${t("currentStockLabel")}: ${formatQty(p)}\n\n${t("confirmStockDirection")}`);
+      showPrompt(t("promptKgAmount"), "").then((input) => {
+        if (input === null) return;
+        const weight = parseFloat(input.replace(",", "."));
+        if (!weight || weight <= 0) {
+          showToast(t("alertInvalidWeight"), "error");
+          return;
+        }
+        adjustQty(p.id, action ? weight : -weight);
+      });
+    } else {
+      const action = confirm(`${p.name}\n${t("currentStockLabel")}: ${p.qty}\n\n${t("confirmStockDirection")}`);
+      showPrompt(t("promptAdetAmount"), "1").then((input) => {
+        if (input === null) return;
+        const amount = parseFloat(input.replace(",", "."));
+        if (!amount || amount <= 0) {
+          showToast(t("alertInvalidAmount"), "error");
+          return;
+        }
+        adjustQty(p.id, action ? amount : -amount);
+      });
+    }
+  }
+
+function startScanKasa() {
+    const readerEl = document.getElementById("qrReaderKasa");
+    document.getElementById("startKasaScanBtn").style.display = "none";
+    document.getElementById("stopKasaScanBtn").style.display = "flex";
+    readerEl.innerHTML = "";
+    html5QrCodeKasa = new Html5Qrcode("qrReaderKasa");
+    scanningKasa = true;
+
+    html5QrCodeKasa
+      .start(
+        { facingMode: "environment" },
+        { fps: 10, qrbox: 220 },
+        (decodedText) => {
+          onScanSuccessKasa(decodedText);
+        },
+        () => {}
+      )
+      .catch((err) => {
+        showToast(t("cameraError"), "error");
+        stopScanKasa();
+      });
+  }
+
+function stopScanKasa() {
+    document.getElementById("startKasaScanBtn").style.display = "flex";
+    document.getElementById("stopKasaScanBtn").style.display = "none";
+    if (html5QrCodeKasa && scanningKasa) {
+      html5QrCodeKasa
+        .stop()
+        .then(() => html5QrCodeKasa.clear())
+        .catch(() => {});
+    }
+    scanningKasa = false;
+  }
+
+function playBeepSound() {
+    try {
+      if (!beepAudioCtx) {
+        beepAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      }
+      const ctx = beepAudioCtx;
+      const oscillator = ctx.createOscillator();
+      const gainNode = ctx.createGain();
+      oscillator.connect(gainNode);
+      gainNode.connect(ctx.destination);
+      oscillator.type = "square";
+      oscillator.frequency.value = 1500;
+      gainNode.gain.setValueAtTime(0.15, ctx.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.12);
+      oscillator.start(ctx.currentTime);
+      oscillator.stop(ctx.currentTime + 0.12);
+    } catch (e) {
+      // ses çalınamazsa sessizce devam et
+    }
+  }
+
+function onScanSuccessKasa(decodedText) {
+    if (kasaScanCooldown) return;
+    const p = findProductByScan(decodedText);
+    if (!p) {
+      showToast(t("alertNotRegistered"), "error");
+      return;
+    }
+
+    if (p.unit === "kg") {
+      showKgOrPricePrompt(p.name, p.price).then((weight) => {
+        if (weight === null) return;
+        if (!weight || weight <= 0) {
+          showToast(t("alertInvalidWeight"), "error");
+          return;
+        }
+        playBeepSound();
+        addToCart(p, weight);
+        kasaScanCooldown = true;
+        showKasaScanFeedback(`${p.name} (${weight} ${t("unitKgShort")})`);
+        setTimeout(() => {
+          kasaScanCooldown = false;
+        }, 3000);
+      });
+    } else {
+      playBeepSound();
+      addToCart(p, 1);
+      kasaScanCooldown = true;
+      showKasaScanFeedback(p.name);
+      setTimeout(() => {
+        kasaScanCooldown = false;
+      }, 3000);
+    }
+  }
+
+function showKasaScanFeedback(name) {
+    const readerEl = document.getElementById("qrReaderKasa");
+    if (!readerEl) return;
+    let badge = document.getElementById("kasaScanFeedback");
+    if (!badge) {
+      badge = document.createElement("div");
+      badge.id = "kasaScanFeedback";
+      badge.className = "scan-feedback";
+      readerEl.parentElement.insertBefore(badge, readerEl.nextSibling);
+    }
+    badge.innerHTML = `<i class="fa-solid fa-check" aria-hidden="true"></i> ${escapeHtml(name)} ${t("addedToCartSuffix")}`;
+    badge.classList.add("show");
+    clearTimeout(badge._hideTimer);
+    badge._hideTimer = setTimeout(() => {
+      badge.classList.remove("show");
+    }, 3000);
+  }
+
+function manualAddToCart(productId) {
+    const p = products.find((x) => x.id === productId);
+    if (!p) return;
+
+    if (p.unit === "kg") {
+      showKgOrPricePrompt(p.name, p.price).then((weight) => {
+        if (weight === null) return;
+        if (!weight || weight <= 0) {
+          showToast(t("alertInvalidAmount"), "error");
+          return;
+        }
+        addToCart(p, weight);
+        document.getElementById("manualAddSearch").value = "";
+        renderManualAddResults();
+      });
+      return;
+    }
+
+    showPrompt(`${p.name} — ${t("promptAdetAmount")}`, "1").then((input) => {
+      if (input === null) return;
+      const amount = parseFloat(input.replace(",", "."));
+      if (!amount || amount <= 0) {
+        showToast(t("alertInvalidAmount"), "error");
+        return;
+      }
+      addToCart(p, amount);
+      document.getElementById("manualAddSearch").value = "";
+      renderManualAddResults();
+    });
+  }
+
+function renderManualAddResults() {
+    const searchEl = document.getElementById("manualAddSearch");
+    const resultsEl = document.getElementById("manualAddResults");
+    if (!searchEl || !resultsEl) return;
+    const q = (searchEl.value || "").toLowerCase().trim();
+    if (!q) {
+      resultsEl.innerHTML = "";
+      return;
+    }
+    const matches = products
+      .filter((p) => p.name.toLowerCase().includes(q) || p.category.toLowerCase().includes(q))
+      .slice(0, 8);
+
+    if (!matches.length) {
+      resultsEl.innerHTML = `<p class="empty-state" style="display:block;">${t("noMatchingProducts")}</p>`;
+      return;
+    }
+
+    resultsEl.innerHTML = matches
+      .map((p) => {
+        const priceLabel = p.unit === "kg" ? formatTL(p.price) + t("perKgSuffix") : formatTL(p.price);
+        return `
+          <div class="product-row manual-add-row" data-id="${p.id}">
+            <div class="product-info">
+              <p class="product-name">${escapeHtml(getDisplayName(p))}</p>
+              <p class="product-meta">${escapeHtml(p.category)} · ${t("stockShortLabel")}: ${formatQty(p)} · ${priceLabel}</p>
+            </div>
+            <button class="btn btn-sm manual-add-btn" data-id="${p.id}">${t("addBtnShort")}</button>
+          </div>`;
+      })
+      .join("");
+
+    resultsEl.querySelectorAll(".manual-add-btn").forEach((btn) => {
+      btn.addEventListener("click", () => manualAddToCart(btn.dataset.id));
+    });
+  }
+
+function getBulkDiscountForItem(item) {
+    const p = products.find((x) => x.id === item.productId);
+    if (!p || !p.bulkDiscountQty || !p.bulkDiscountValue) return null;
+    if (item.qty < p.bulkDiscountQty) return null;
+
+    let perUnitDiscount;
+    if (p.bulkDiscountType === "amount") {
+      perUnitDiscount = p.bulkDiscountValue;
+    } else {
+      perUnitDiscount = item.price * (p.bulkDiscountValue / 100);
+    }
+    perUnitDiscount = Math.min(perUnitDiscount, item.price);
+    return { perUnitDiscount, totalDiscount: perUnitDiscount * item.qty };
+  }
+
+function calcLineTotal(item) {
+    const base = item.price * item.qty;
+    const bulkDiscount = getBulkDiscountForItem(item);
+    return bulkDiscount ? base - bulkDiscount.totalDiscount : base;
+  }
+
+function addToCart(p, amount) {
+    amount = amount || 1;
+    const existing = cart.find((c) => c.productId === p.id);
+    if (existing) {
+      existing.qty = Math.round((existing.qty + amount) * 1000) / 1000;
+    } else {
+      cart.push({ productId: p.id, name: p.name, price: p.price, qty: amount, unit: p.unit || "adet" });
+    }
+    renderCart();
+  }
+
+function adjustCartQty(productId, delta) {
+    const item = cart.find((c) => c.productId === productId);
+    if (!item) return;
+    item.qty += delta;
+    if (item.qty <= 0) {
+      cart = cart.filter((c) => c.productId !== productId);
+    }
+    renderCart();
+  }
+
+function editCartWeight(productId) {
+    const item = cart.find((c) => c.productId === productId);
+    if (!item) return;
+    showKgOrPricePrompt(item.name, item.price).then((weight) => {
+      if (weight === null) return;
+      if (!weight || weight <= 0) {
+        removeCartItem(productId);
+        return;
+      }
+      item.qty = Math.round(weight * 1000) / 1000;
+      renderCart();
+    });
+  }
+
+function removeCartItem(productId) {
+    cart = cart.filter((c) => c.productId !== productId);
+    renderCart();
+  }
+
+function clearCart() {
+    cart = [];
+    renderCart();
+  }
+
+function cartRowHtml(item) {
+    const lineTotal = calcLineTotal(item);
+    const bulkDiscount = getBulkDiscountForItem(item);
+    const isKg = item.unit === "kg";
+    const qtyDisplay = isKg
+      ? (Math.round(item.qty * 1000) / 1000).toLocaleString(locale(), { maximumFractionDigits: 3 }) + " " + t("unitKgShort")
+      : item.qty;
+    const controlsHtml = isKg
+      ? `
+          <button class="cart-edit-weight-btn" data-id="${item.productId}" aria-label="${t('editWeightAria')}"><i class="fa-solid fa-pen" aria-hidden="true"></i></button>
+          <span class="cart-qty-value">${qtyDisplay}</span>`
+      : `
+          <button class="cart-qty-btn cart-minus" data-id="${item.productId}" aria-label="${t('decreaseAria')}"><i class="fa-solid fa-minus" aria-hidden="true"></i></button>
+          <span class="cart-qty-value">${item.qty}</span>
+          <button class="cart-qty-btn cart-plus" data-id="${item.productId}" aria-label="${t('increaseAria')}"><i class="fa-solid fa-plus" aria-hidden="true"></i></button>`;
+    const p = products.find((x) => x.id === item.productId);
+    const displayName = p ? getDisplayName(p) : item.name;
+    const bulkBadgeHtml = bulkDiscount
+      ? `<p class="cart-bulk-badge">🎉 ${t("bulkDiscountApplied")}: -${formatTL(bulkDiscount.totalDiscount)}</p>`
+      : "";
+    return `
+      <div class="cart-row" data-id="${item.productId}">
+        <div class="cart-info">
+          <p class="cart-name">${escapeHtml(displayName)}</p>
+          <p class="cart-meta">${formatTL(item.price)} / ${isKg ? t("unitKgShort") : t("unitAdetShort")}</p>
+          ${bulkBadgeHtml}
+        </div>
+        <div class="cart-controls">
+          ${controlsHtml}
+          <span class="cart-line-total">${formatTL(lineTotal)}</span>
+          <button class="cart-remove-btn" data-id="${item.productId}" aria-label="${t('removeAria')}"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button>
+        </div>
+      </div>`;
+  }
+
+function renderCart() {
+    const list = document.getElementById("cartList");
+    const empty = document.getElementById("cartEmptyState");
+    if (!list) return;
+
+    if (!cart.length) {
+      list.innerHTML = "";
+      empty.style.display = "block";
+    } else {
+      empty.style.display = "none";
+      list.innerHTML = cart.map(cartRowHtml).join("");
+    }
+
+    list.querySelectorAll(".cart-plus").forEach((btn) => {
+      btn.addEventListener("click", () => adjustCartQty(btn.dataset.id, 1));
+    });
+    list.querySelectorAll(".cart-minus").forEach((btn) => {
+      btn.addEventListener("click", () => adjustCartQty(btn.dataset.id, -1));
+    });
+    list.querySelectorAll(".cart-edit-weight-btn").forEach((btn) => {
+      btn.addEventListener("click", () => editCartWeight(btn.dataset.id));
+    });
+    list.querySelectorAll(".cart-remove-btn").forEach((btn) => {
+      btn.addEventListener("click", () => removeCartItem(btn.dataset.id));
+    });
+
+    const subtotal = cart.reduce((sum, c) => sum + calcLineTotal(c), 0);
+    const discountInput = document.getElementById("cartDiscount");
+    const discount = Math.min(Number(discountInput.value) || 0, subtotal);
+    const total = Math.max(0, subtotal - discount);
+
+    document.getElementById("cartSubtotal").textContent = formatTL(subtotal);
+    document.getElementById("cartTotal").textContent = formatTL(total);
+  }
+
+function setPaymentType(type) {
+    selectedPaymentType = type;
+    document.getElementById("payNakitBtn").classList.toggle("active", type === "nakit");
+    document.getElementById("payKartBtn").classList.toggle("active", type === "kart");
+    document.getElementById("payVeresiyeBtn").classList.toggle("active", type === "veresiye");
+    document.getElementById("veresiyeCustomerRow").style.display = type === "veresiye" ? "block" : "none";
+  }
+
+function completeSale() {
+    if (!cart.length) {
+      showToast(t("alertEmptyCart"), "error");
+      return;
+    }
+
+    let customerId = null;
+    let customerName = null;
+    if (selectedPaymentType === "veresiye") {
+      if (!customers.length) {
+        showToast(t("alertNeedCustomer"), "error");
+        return;
+      }
+      customerId = document.getElementById("veresiyeCustomerSelectedId").value;
+      const c = customers.find((x) => x.id === customerId);
+      if (!c) {
+        showToast(t("alertSelectCustomer"), "error");
+        return;
+      }
+      customerName = c.name;
+    }
+
+    const subtotal = cart.reduce((sum, c) => sum + calcLineTotal(c), 0);
+    const discountInput = document.getElementById("cartDiscount");
+    const discount = Math.min(Number(discountInput.value) || 0, subtotal);
+    const total = Math.max(0, subtotal - discount);
+
+    let totalCost = 0;
+    const saleItems = cart.map((c) => {
+      const p = products.find((x) => x.id === c.productId);
+      const costPrice = p ? p.costPrice || 0 : 0;
+      totalCost += costPrice * c.qty;
+      const effectivePrice = c.qty > 0 ? calcLineTotal(c) / c.qty : c.price;
+      return { name: c.name, qty: c.qty, price: effectivePrice, unit: c.unit || "adet", costPrice };
+    });
+    const profit = total - totalCost;
+
+    cart.forEach((item) => {
+      const p = products.find((x) => x.id === item.productId);
+      if (p) {
+        p.qty = Math.max(0, p.qty - item.qty);
+        updateOutOfStockTracking(p);
+      }
+    });
+
+    const newSale = {
+      id: genId(),
+      timestamp: new Date().toISOString(),
+      items: saleItems,
+      subtotal,
+      discount,
+      total,
+      cost: totalCost,
+      profit,
+      paymentType: selectedPaymentType,
+      customerId,
+      customerName
+    };
+    sales.push(newSale);
+    attemptSendToFiscalProvider(newSale);
+    logAudit("Satış tamamlandı", `${formatTL(total)} (${saleItems.length} ürün)`);
+
+    cart = [];
+    discountInput.value = "0";
+    clearVeresiyeCustomerSelection();
+    setPaymentType("nakit");
+    save();
+    renderAll();
+    showToast(`${t("alertSaleComplete")} ${formatTL(total)}${customerName ? " (" + t("veresiyeLabel") + ": " + customerName + ")" : ""}`, "success");
+  }
+
+function openQuickBarcodeScan(targetInputId) {
+    quickScanTargetInputId = targetInputId;
+    document.getElementById("barcodeScanModal").style.display = "flex";
+    const readerEl = document.getElementById("quickScanReader");
+    readerEl.innerHTML = "";
+    quickScanCode = new Html5Qrcode("quickScanReader");
+    quickScanCode
+      .start(
+        { facingMode: "environment" },
+        { fps: 10, qrbox: 220 },
+        (decodedText) => {
+          const input = document.getElementById(quickScanTargetInputId);
+          if (input) input.value = decodedText;
+          closeQuickBarcodeScan();
+          lookupBarcodeAndFill(decodedText, quickScanTargetInputId);
+        },
+        () => {}
+      )
+      .catch((err) => {
+        showToast(t("cameraError"), "error");
+        closeQuickBarcodeScan();
+      });
+  }
+
+function closeQuickBarcodeScan() {
+    document.getElementById("barcodeScanModal").style.display = "none";
+    if (quickScanCode) {
+      quickScanCode
+        .stop()
+        .then(() => quickScanCode.clear())
+        .catch(() => {});
+      quickScanCode = null;
+    }
+  }
+
+function lookupBarcodeAndFill(barcode, targetInputId) {
+    const isNewForm = targetInputId === "newBarcode";
+    const nameInput = document.getElementById(isNewForm ? "newName" : "editName");
+    const categoryInput = document.getElementById(isNewForm ? "newCategory" : "editCategory");
+
+    fetch(`https://world.openfoodfacts.org/api/v2/product/${encodeURIComponent(barcode)}.json?fields=product_name,brands,categories_tags`)
+      .then((r) => r.json())
+      .then((data) => {
+        if (!data || data.status !== 1 || !data.product) return;
+        const p = data.product;
+        const brand = (p.brands || "").split(",")[0].trim();
+        const productName = p.product_name || "";
+        const fullName = [brand, productName].filter(Boolean).join(" ").trim();
+        if (fullName && !nameInput.value.trim()) {
+          nameInput.value = fullName;
+        }
+        if (p.categories_tags && p.categories_tags.length && !categoryInput.value.trim()) {
+          const rawCat = p.categories_tags[p.categories_tags.length - 1] || "";
+          categoryInput.value = rawCat.replace(/^\w\w:/, "").replace(/-/g, " ");
+        }
+      })
+      .catch(() => {});
+  }
+
+function searchBarcodeByName(productName) {
+    if (!productName || !productName.trim()) return Promise.resolve(null);
+    const query = encodeURIComponent(productName.trim());
+    return fetch(`https://world.openfoodfacts.org/cgi/search.pl?search_terms=${query}&json=true&page_size=5`)
+      .then((r) => r.json())
+      .then((data) => {
+        if (!data || !data.products || !data.products.length) return null;
+        const normalized = productName.trim().toLowerCase();
+        // İsmi en yakın eşleşen sonucu bul (tam ya da kısmi eşleşme)
+        const match =
+          data.products.find((p) => (p.product_name || "").toLowerCase().trim() === normalized) ||
+          data.products.find((p) => (p.product_name || "").toLowerCase().includes(normalized) || normalized.includes((p.product_name || "").toLowerCase()));
+        return match && match.code ? match.code : null;
+      })
+      .catch(() => null);
+  }
+
+function findBarcodesOnlineForCandidates(candidates, onUpdate) {
+    // Dakikada 10 istek sınırı olduğu için sırayla, aralıklarla deniyoruz.
+    let index = 0;
+    function next() {
+      if (index >= candidates.length) return;
+      const candidate = candidates[index];
+      index++;
+      if (candidate.barcode) {
+        setTimeout(next, 300);
+        return;
+      }
+      searchBarcodeByName(candidate.name).then((code) => {
+        if (code) {
+          candidate.barcode = code;
+          candidate.barcodeFromWeb = true;
+          onUpdate();
+        }
+        setTimeout(next, 700);
+      });
+    }
+    next();
+  }
+
+  // ==================== 08-sales-returns.js ====================
+/**
+ * 08-sales-returns.js
+ * Satış geçmişi, satış iptali ve iade (kısmi ürün iadesi) yönetimi.
+ */
+
+function getReturnedQtyForItem(saleId, itemName) {
+    return returns
+      .filter((r) => r.saleId === saleId)
+      .reduce((sum, r) => {
+        const item = r.items.find((i) => i.name === itemName);
+        return sum + (item ? item.qty : 0);
+      }, 0);
+  }
+
+function openReturnModal(saleId) {
+    const sale = sales.find((s) => s.id === saleId);
+    if (!sale) return;
+    activeReturnSaleId = saleId;
+
+    const listEl = document.getElementById("returnItemsList");
+    listEl.innerHTML = sale.items
+      .map((item, i) => {
+        const alreadyReturned = getReturnedQtyForItem(saleId, item.name);
+        const maxQty = Math.max(0, item.qty - alreadyReturned);
+        return `
+          <div class="return-item-row">
+            <div class="return-item-info">
+              <p class="return-item-name">${escapeHtml(item.name)}</p>
+              <p class="return-item-meta">${t("returnMaxLabel")}: ${maxQty} ${item.unit === "kg" ? t("unitKgShort") : t("unitAdetShort")}</p>
+            </div>
+            <input type="number" class="return-qty-input" data-index="${i}" min="0" max="${maxQty}" step="${item.unit === "kg" ? "0.001" : "1"}" value="0" ${maxQty <= 0 ? "disabled" : ""} />
+          </div>`;
+      })
+      .join("");
+
+    document.getElementById("returnModal").style.display = "flex";
+  }
+
+function closeReturnModal() {
+    document.getElementById("returnModal").style.display = "none";
+    activeReturnSaleId = null;
+  }
+
+function confirmReturn() {
+    const sale = sales.find((s) => s.id === activeReturnSaleId);
+    if (!sale) return;
+
+    const inputs = document.querySelectorAll(".return-qty-input");
+    const returnItems = [];
+    let totalRefund = 0;
+
+    inputs.forEach((input) => {
+      const qty = Number(input.value) || 0;
+      if (qty <= 0) return;
+      const item = sale.items[Number(input.dataset.index)];
+      if (!item) return;
+      returnItems.push({ name: item.name, qty, price: item.price });
+      totalRefund += qty * item.price;
+
+      const p = products.find((x) => x.name === item.name);
+      if (p) p.qty = Math.round((p.qty + qty) * 1000) / 1000;
+    });
+
+    if (!returnItems.length) {
+      showToast(t("returnNoneSelected"), "error");
+      return;
+    }
+
+    returns.push({
+      id: genId(),
+      saleId: sale.id,
+      timestamp: new Date().toISOString(),
+      items: returnItems,
+      totalRefund
+    });
+
+    logAudit("İade alındı", `${formatTL(totalRefund)} (${returnItems.length} ürün)`);
+    save();
+    renderAll();
+    closeReturnModal();
+    showToast(t("returnSuccess"), "success");
+  }
+
+function cancelSale(saleId) {
+    const sale = sales.find((s) => s.id === saleId);
+    if (!sale) return;
+    if (!confirm(`${t("confirmCancelSale")}\n${formatTL(sale.total)} ${t("confirmCancelSaleDetail")}`)) {
+      return;
+    }
+    sale.items.forEach((item) => {
+      const p = products.find((x) => x.name === item.name);
+      if (p) p.qty += item.qty;
+    });
+    sales = sales.filter((s) => s.id !== saleId);
+    logAudit("Satış iptal edildi", formatTL(sale.total));
+    save();
+    renderAll();
+  }
+
+function isInPeriod(isoString, period) {
+    const d = new Date(isoString);
+    const now = new Date();
+    if (period === "today") {
+      return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth() && d.getDate() === now.getDate();
+    }
+    if (period === "week") {
+      const dayOfWeek = (now.getDay() + 6) % 7; // Pazartesi=0
+      const monday = new Date(now);
+      monday.setHours(0, 0, 0, 0);
+      monday.setDate(now.getDate() - dayOfWeek);
+      return d >= monday;
+    }
+    if (period === "month") {
+      return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
+    }
+    return true; // 'all'
+  }
+
+function saleRowHtml(sale) {
+    const d = new Date(sale.timestamp);
+    const timeStr = d.toLocaleString(locale(), { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
+    const itemsSummary = sale.items
+      .map((i) => `${escapeHtml(i.name)} x${i.unit === "kg" ? i.qty + t("unitKgShort") : i.qty}`)
+      .join(", ");
+    const saleReturns = returns.filter((r) => r.saleId === sale.id);
+    const totalReturned = saleReturns.reduce((sum, r) => sum + r.totalRefund, 0);
+    const returnedNote = totalReturned > 0 ? `<p class="sale-returned-note">${t("returnedLabel")}: -${formatTL(totalReturned)}</p>` : "";
+    const paymentBadge =
+      sale.paymentType === "veresiye"
+        ? `<span class="sale-payment-badge sale-payment-veresiye">${t("veresiyeLabel")}${sale.customerName ? ": " + escapeHtml(sale.customerName) : ""}</span>`
+        : sale.paymentType === "kart"
+        ? `<span class="sale-payment-badge sale-payment-kart">${t("payKart")}</span>`
+        : "";
+    const profitValue = sale.profit != null ? sale.profit : sale.total;
+    return `
+      <div class="sale-row">
+        <div class="sale-row-top">
+          <span class="sale-time">${timeStr}</span>
+          <span class="sale-amount">${formatTL(sale.total)}</span>
+        </div>
+        <p class="sale-items">${itemsSummary}</p>
+        <p class="sale-profit">${t("profitLabel")}: ${formatTL(profitValue)}</p>
+        ${returnedNote}
+        <div class="sale-row-bottom">
+          ${paymentBadge}
+          <button class="sale-return-btn" data-id="${sale.id}">
+            <i class="fa-solid fa-rotate-left" aria-hidden="true"></i> ${t("returnBtn")}
+          </button>
+          <button class="sale-cancel-btn" data-id="${sale.id}">
+            <i class="fa-solid fa-xmark" aria-hidden="true"></i> ${t("cancelSaleBtn")}
+          </button>
+        </div>
+      </div>`;
+  }
+
+function topProductRowHtml(item, rank) {
+    return `
+      <div class="product-row">
+        <div class="product-info">
+          <p class="product-name">${rank}. ${escapeHtml(item.name)}</p>
+          <p class="product-meta">${item.qty} ${t("soldQtyLabel")}</p>
+        </div>
+        <span class="sale-amount">${formatTL(item.revenue)}</span>
+      </div>`;
+  }
+
+function renderSales() {
+    const list = document.getElementById("salesList");
+    const empty = document.getElementById("salesEmptyState");
+    const topList = document.getElementById("topProductsList");
+    const topEmpty = document.getElementById("topProductsEmptyState");
+    if (!list) return;
+
+    const periodSales = sales.filter((s) => isInPeriod(s.timestamp, currentSalesPeriod));
+    const sorted = [...periodSales].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+    if (!sorted.length) {
+      list.innerHTML = "";
+      empty.style.display = "block";
+    } else {
+      empty.style.display = "none";
+      list.innerHTML = sorted.map(saleRowHtml).join("");
+      list.querySelectorAll(".sale-cancel-btn").forEach((btn) => {
+        btn.addEventListener("click", () => cancelSale(btn.dataset.id));
+      });
+      list.querySelectorAll(".sale-return-btn").forEach((btn) => {
+        btn.addEventListener("click", () => openReturnModal(btn.dataset.id));
+      });
+    }
+
+    // En çok satan ürünler
+    const productTotals = {};
+    periodSales.forEach((s) => {
+      s.items.forEach((i) => {
+        if (!productTotals[i.name]) productTotals[i.name] = { name: i.name, qty: 0, revenue: 0 };
+        productTotals[i.name].qty += i.qty;
+        productTotals[i.name].revenue += i.qty * i.price;
+      });
+    });
+    const topProducts = Object.values(productTotals)
+      .sort((a, b) => b.qty - a.qty)
+      .slice(0, 5);
+
+    if (!topProducts.length) {
+      topList.innerHTML = "";
+      topEmpty.style.display = "block";
+    } else {
+      topEmpty.style.display = "none";
+      topList.innerHTML = topProducts.map((item, i) => topProductRowHtml(item, i + 1)).join("");
+    }
+
+    const periodTotal = periodSales.reduce((sum, s) => sum + s.total, 0);
+    const periodProfit = periodSales.reduce((sum, s) => sum + (s.profit != null ? s.profit : s.total), 0);
+    document.getElementById("statPeriodTotal").textContent = formatTL(periodTotal);
+    document.getElementById("statPeriodCount").textContent = periodSales.length;
+    const profitEl = document.getElementById("statNetProfit");
+    if (profitEl) {
+      profitEl.textContent = formatTL(periodProfit);
+      const profitCard = profitEl.closest(".profit-highlight-card");
+      if (profitCard) profitCard.classList.toggle("negative", periodProfit < 0);
+    }
+
+    const nakitTotal = periodSales.filter((s) => s.paymentType === "nakit" || !s.paymentType).reduce((sum, s) => sum + s.total, 0);
+    const kartTotal = periodSales.filter((s) => s.paymentType === "kart").reduce((sum, s) => sum + s.total, 0);
+    const veresiyeTotal = periodSales.filter((s) => s.paymentType === "veresiye").reduce((sum, s) => sum + s.total, 0);
+    const breakdownNakitEl = document.getElementById("breakdownNakit");
+    const breakdownKartEl = document.getElementById("breakdownKart");
+    const breakdownVeresiyeEl = document.getElementById("breakdownVeresiye");
+    if (breakdownNakitEl) breakdownNakitEl.textContent = formatTL(nakitTotal);
+    if (breakdownKartEl) breakdownKartEl.textContent = formatTL(kartTotal);
+    if (breakdownVeresiyeEl) breakdownVeresiyeEl.textContent = formatTL(veresiyeTotal);
+  }
+
+  // ==================== 09-suppliers.js ====================
+/**
+ * 09-suppliers.js
+ * Tedarikçi borç/ödeme takibi.
+ */
+
+function getSupplierBalance(supplierId) {
+    return supplierTransactions
+      .filter((t) => t.supplierId === supplierId)
+      .reduce((sum, t) => sum + (t.type === "debt" ? t.amount : -t.amount), 0);
+  }
+
+function renderSuppliers() {
+    const listEl = document.getElementById("supplierList");
+    const emptyEl = document.getElementById("supplierEmptyState");
+    if (!listEl) return;
+
+    if (!suppliers.length) {
+      listEl.innerHTML = "";
+      emptyEl.style.display = "block";
+      return;
+    }
+    emptyEl.style.display = "none";
+
+    listEl.innerHTML = suppliers
+      .map((s) => {
+        const balance = getSupplierBalance(s.id);
+        const balanceClass = balance > 0 ? "has-debt" : "no-debt";
+        return `
+          <div class="customer-row" data-id="${s.id}">
+            <div class="customer-info">
+              <p class="customer-name">${escapeHtml(s.name)}</p>
+              <p class="customer-phone">${escapeHtml(s.phone || "—")}</p>
+            </div>
+            <span class="customer-debt ${balanceClass}">${formatTL(balance)}</span>
+          </div>`;
+      })
+      .join("");
+
+    listEl.querySelectorAll(".customer-row").forEach((row) => {
+      row.addEventListener("click", () => openSupplierModal(row.dataset.id));
+    });
+  }
+
+function addSupplier() {
+    const name = document.getElementById("supplierName").value.trim();
+    const phone = document.getElementById("supplierPhone").value.trim();
+    if (!name) {
+      showToast(t("supplierNameRequired"), "error");
+      return;
+    }
+    suppliers.push({ id: genId(), name, phone });
+    save();
+    renderSuppliers();
+    document.getElementById("supplierName").value = "";
+    document.getElementById("supplierPhone").value = "";
+    showToast(t("supplierAdded"), "success");
+  }
+
+function openSupplierModal(supplierId) {
+    const s = suppliers.find((x) => x.id === supplierId);
+    if (!s) return;
+    activeSupplierId = supplierId;
+    document.getElementById("supplierModalName").textContent = s.name;
+    document.getElementById("supplierModalDebt").textContent = formatTL(getSupplierBalance(supplierId));
+    renderSupplierHistory(supplierId);
+    document.getElementById("supplierModal").style.display = "flex";
+  }
+
+function closeSupplierModal() {
+    document.getElementById("supplierModal").style.display = "none";
+    activeSupplierId = null;
+  }
+
+function renderSupplierHistory(supplierId) {
+    const listEl = document.getElementById("supplierHistoryList");
+    const history = supplierTransactions
+      .filter((t) => t.supplierId === supplierId)
+      .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+    if (!history.length) {
+      listEl.innerHTML = `<p class="empty-state">${t("supplierNoHistory")}</p>`;
+      return;
+    }
+
+    listEl.innerHTML = history
+      .map((tx) => {
+        const d = new Date(tx.timestamp);
+        const dateStr = d.toLocaleDateString(locale());
+        const isDebt = tx.type === "debt";
+        return `
+          <div class="supplier-history-row">
+            <div>
+              <p class="supplier-history-note">${escapeHtml(tx.note || (isDebt ? t("supplierDebtEntry") : t("supplierPaymentEntry")))}</p>
+              <p class="supplier-history-date">${dateStr}</p>
+            </div>
+            <span class="${isDebt ? "price-change-up" : "price-change-down"}">${isDebt ? "+" : "-"}${formatTL(tx.amount)}</span>
+          </div>`;
+      })
+      .join("");
+  }
+
+function addSupplierDebt() {
+    if (!activeSupplierId) return;
+    showPrompt(t("supplierDebtPrompt"), "").then((amountStr) => {
+      if (amountStr === null) return;
+      const amount = Number(amountStr);
+      if (!amount || amount <= 0) {
+        showToast(t("alertInvalidAmount"), "error");
+        return;
+      }
+      showPrompt(t("supplierNotePrompt"), "").then((note) => {
+        supplierTransactions.push({
+          id: genId(),
+          supplierId: activeSupplierId,
+          type: "debt",
+          amount,
+          note: note || "",
+          timestamp: new Date().toISOString()
+        });
+        save();
+        openSupplierModal(activeSupplierId);
+        renderSuppliers();
+      });
+    });
+  }
+
+function addSupplierPayment() {
+    if (!activeSupplierId) return;
+    showPrompt(t("supplierPaymentPrompt"), "").then((amountStr) => {
+      if (amountStr === null) return;
+      const amount = Number(amountStr);
+      if (!amount || amount <= 0) {
+        showToast(t("alertInvalidAmount"), "error");
+        return;
+      }
+      supplierTransactions.push({
+        id: genId(),
+        supplierId: activeSupplierId,
+        type: "payment",
+        amount,
+        note: "",
+        timestamp: new Date().toISOString()
+      });
+      save();
+      openSupplierModal(activeSupplierId);
+      renderSuppliers();
+      showToast(t("supplierPaymentRecorded"), "success");
+    });
+  }
+
+function deleteSupplier() {
+    if (!activeSupplierId) return;
+    if (!confirm(t("confirmDeleteSupplier"))) return;
+    suppliers = suppliers.filter((s) => s.id !== activeSupplierId);
+    supplierTransactions = supplierTransactions.filter((t) => t.supplierId !== activeSupplierId);
+    save();
+    renderSuppliers();
+    closeSupplierModal();
+  }
+
+  // ==================== 10-reminders.js ====================
+/**
+ * 10-reminders.js
+ * Müşteri hatırlatma: WhatsApp üzerinden veresiye/uzun süredir gelmeyen müşteri mesajları.
+ */
+
+function renderReminders() {
+    const debtListEl = document.getElementById("reminderDebtList");
+    const debtEmptyEl = document.getElementById("reminderDebtEmptyState");
+    const inactiveListEl = document.getElementById("reminderInactiveList");
+    const inactiveEmptyEl = document.getElementById("reminderInactiveEmptyState");
+    if (!debtListEl) return;
+
+    // Borcu olan müşteriler
+    const withDebt = customers
+      .map((c) => ({ customer: c, debt: getCustomerDebt(c.id) }))
+      .filter((x) => x.debt > 0 && x.customer.phone)
+      .sort((a, b) => b.debt - a.debt);
+
+    if (!withDebt.length) {
+      debtListEl.innerHTML = "";
+      debtEmptyEl.style.display = "block";
+    } else {
+      debtEmptyEl.style.display = "none";
+      debtListEl.innerHTML = withDebt
+        .map(
+          (x) => `
+          <div class="reminder-row">
+            <div>
+              <p class="reminder-name">${escapeHtml(x.customer.name)}</p>
+              <p class="reminder-meta">${formatTL(x.debt)}</p>
+            </div>
+            <button class="reminder-send-btn" data-type="debt" data-id="${x.customer.id}">
+              <i class="fa-brands fa-whatsapp" aria-hidden="true"></i> ${t("reminderSendBtn")}
+            </button>
+          </div>`
+        )
+        .join("");
+    }
+
+    // Uzun süredir (30+ gün) alışveriş yapmamış müşteriler
+    const cutoff = Date.now() - 30 * 86400000;
+    const inactive = customers
+      .filter((c) => c.phone)
+      .map((c) => {
+        const customerSales = sales.filter((s) => s.customerId === c.id);
+        const lastSale = customerSales.length ? new Date(Math.max(...customerSales.map((s) => new Date(s.timestamp)))) : null;
+        return { customer: c, lastSale };
+      })
+      .filter((x) => x.lastSale && x.lastSale.getTime() < cutoff);
+
+    if (!inactive.length) {
+      inactiveListEl.innerHTML = "";
+      inactiveEmptyEl.style.display = "block";
+    } else {
+      inactiveEmptyEl.style.display = "none";
+      inactiveListEl.innerHTML = inactive
+        .map((x) => {
+          const daysAgo = Math.round((Date.now() - x.lastSale.getTime()) / 86400000);
+          return `
+          <div class="reminder-row">
+            <div>
+              <p class="reminder-name">${escapeHtml(x.customer.name)}</p>
+              <p class="reminder-meta">${daysAgo} ${t("reminderDaysAgo")}</p>
+            </div>
+            <button class="reminder-send-btn" data-type="inactive" data-id="${x.customer.id}">
+              <i class="fa-brands fa-whatsapp" aria-hidden="true"></i> ${t("reminderSendBtn")}
+            </button>
+          </div>`;
+        })
+        .join("");
+    }
+
+    document.querySelectorAll(".reminder-send-btn").forEach((btn) => {
+      btn.addEventListener("click", () => sendReminderWhatsApp(btn.dataset.type, btn.dataset.id));
+    });
+  }
+
+function sendReminderWhatsApp(type, customerId) {
+    const c = customers.find((x) => x.id === customerId);
+    if (!c || !c.phone) return;
+
+    let message;
+    if (type === "debt") {
+      const debt = getCustomerDebt(customerId);
+      message = `${t("reminderDebtMsgPrefix")} ${c.name}, ${t("reminderDebtMsgBody")} ${formatTL(debt)}. ${t("reminderDebtMsgSuffix")}`;
+    } else {
+      message = `${t("reminderInactiveMsgPrefix")} ${c.name}! ${t("reminderInactiveMsgBody")}`;
+    }
+
+    const cleanPhone = c.phone.replace(/[^\d]/g, "");
+    const url = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`;
+    window.open(url, "_blank");
+    logAudit("Hatırlatma gönderildi", `${c.name} (${type === "debt" ? "borç" : "özledik"})`);
+  }
+
+  // ==================== 11-bread-orders.js ====================
+/**
+ * 11-bread-orders.js
+ * Günlük ürün takibi (ekmek vb.), acil sipariş listesi ve fiyat değişimi geçmişi.
+ */
+
+function addBreadConfig() {
+    const nameInput = document.getElementById("breadConfigName");
+    const qtyInput = document.getElementById("breadConfigQty");
+    const staleInput = document.getElementById("breadConfigStaleName");
+    const autoResetInput = document.getElementById("breadConfigAutoReset");
+
+    const productName = nameInput.value.trim();
+    if (!productName) {
+      showToast(t("breadConfigNameRequired"), "error");
+      return;
+    }
+
+    dailyResetConfig.push({
+      productName,
+      dailyQty: Number(qtyInput.value) || 0,
+      autoReset: autoResetInput.checked,
+      staleProductName: staleInput.value.trim()
+    });
+
+    nameInput.value = "";
+    qtyInput.value = "";
+    staleInput.value = "";
+    autoResetInput.checked = true;
+
+    save();
+    renderBreadStatus();
+    showToast(t("breadConfigAdded"), "success");
+  }
+
+function removeBreadConfig(index) {
+    dailyResetConfig.splice(index, 1);
+    save();
+    renderBreadStatus();
+    showToast(t("breadConfigRemoved"), "success");
+  }
+
+function renderBreadConfigList() {
+    const listEl = document.getElementById("breadConfigList");
+    if (!listEl) return;
+
+    if (!dailyResetConfig.length) {
+      listEl.innerHTML = `<p class="empty-state" style="display:block;">${t("breadConfigEmpty")}</p>`;
+      return;
+    }
+
+    listEl.innerHTML = dailyResetConfig
+      .map((cfg, i) => {
+        const autoResetLabel = cfg.autoReset ? t("breadAutoResetYes") : t("breadAutoResetNo");
+        const staleStr = cfg.staleProductName ? ` · ${escapeHtml(cfg.staleProductName)}` : "";
+        return `
+          <div class="bread-config-row">
+            <div class="bread-config-info">
+              <p class="bread-config-name">${escapeHtml(cfg.productName)}</p>
+              <p class="bread-config-meta">${cfg.dailyQty} adet · ${autoResetLabel}${staleStr}</p>
+            </div>
+            <button class="bread-config-remove-btn" data-index="${i}" aria-label="Kaldır"><i class="fa-solid fa-trash" aria-hidden="true"></i></button>
+          </div>`;
+      })
+      .join("");
+
+    listEl.querySelectorAll(".bread-config-remove-btn").forEach((btn) => {
+      btn.addEventListener("click", () => removeBreadConfig(Number(btn.dataset.index)));
+    });
+  }
+
+function renderBreadStatus() {
+    const currentEl = document.getElementById("breadCurrentList");
+    const logListEl = document.getElementById("breadLogList");
+    const logEmptyEl = document.getElementById("breadLogEmptyState");
+    const numberInput = document.getElementById("breadWhatsAppNumber");
+    if (!currentEl) return;
+
+    if (numberInput && document.activeElement !== numberInput) {
+      numberInput.value = breadWhatsAppNumber || "";
+    }
+
+    renderBreadConfigList();
+    updateNotifButtonState();
+
+    if (!dailyResetConfig.length) {
+      currentEl.innerHTML = `<p class="empty-state" style="display:block;">${t("breadConfigEmpty")}</p>`;
+    } else {
+      currentEl.innerHTML = dailyResetConfig
+        .map((cfg) => {
+          const p = findProductByExactName(cfg.productName);
+          return `
+            <div class="bread-current-row">
+              <span>${escapeHtml(cfg.productName)}</span>
+              <span class="bread-current-qty">${p ? formatQty(p) : "—"}</span>
+            </div>`;
+        })
+        .join("");
+    }
+
+    const sorted = [...breadLog].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp)).slice(0, 14);
+    if (!sorted.length) {
+      logListEl.innerHTML = "";
+      logEmptyEl.style.display = "block";
+    } else {
+      logEmptyEl.style.display = "none";
+      logListEl.innerHTML = sorted
+        .map((entry) => {
+          const d = new Date(entry.timestamp);
+          const dateStr = d.toLocaleString(locale(), { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
+          const items = Array.isArray(entry.items) ? entry.items : [];
+          const itemsStr = items.map((it) => `${escapeHtml(it.name)}: ${it.qty}`).join(" · ");
+          return `
+            <div class="bread-log-row">
+              <span class="bread-log-date">${dateStr} · ${escapeHtml(entry.note || "")}</span>
+              <span class="bread-log-qty">${itemsStr}</span>
+            </div>`;
+        })
+        .join("");
+    }
+  }
+
+function sendBreadWhatsApp() {
+    const number = (document.getElementById("breadWhatsAppNumber").value || "").trim();
+    if (!number) {
+      showToast(t("breadNoWhatsAppNumber"), "error");
+      return;
+    }
+    breadWhatsAppNumber = number;
+    save();
+
+    const today = new Date().toLocaleDateString(locale());
+    const lines = dailyResetConfig.map((cfg) => {
+      const p = findProductByExactName(cfg.productName);
+      return `${cfg.productName}: ${p ? formatQty(p) : "0 adet"}`;
+    });
+    const message = `🍞 ${t("breadStatusTitle").replace("🍞 ", "")} (${today})\n${lines.join("\n")}`;
+    const url = `https://wa.me/${number}?text=${encodeURIComponent(message)}`;
+    window.open(url, "_blank");
+  }
+
+function cleanOldPriceChanges() {
+    const twoDaysMs = 2 * 24 * 60 * 60 * 1000;
+    const cutoff = Date.now() - twoDaysMs;
+    priceChangeLog = priceChangeLog.filter((entry) => new Date(entry.timestamp).getTime() >= cutoff);
+  }
+
+function renderPriceChanges() {
+    const listEl = document.getElementById("priceChangesList");
+    const emptyEl = document.getElementById("priceChangesEmptyState");
+    if (!listEl) return;
+
+    cleanOldPriceChanges();
+
+    const sorted = [...priceChangeLog].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+    if (!sorted.length) {
+      listEl.innerHTML = "";
+      emptyEl.style.display = "block";
+      return;
+    }
+    emptyEl.style.display = "none";
+
+    listEl.innerHTML = sorted
+      .map((entry) => {
+        const d = new Date(entry.timestamp);
+        const dateStr = d.toLocaleString(locale(), { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
+        const directionClass = entry.direction === "up" ? "price-change-up" : "price-change-down";
+        const directionIcon = entry.direction === "up" ? "fa-arrow-up" : "fa-arrow-down";
+        const directionLabel = entry.direction === "up" ? t("priceIncreasedLabel") : t("priceDecreasedLabel");
+        return `
+          <div class="price-change-row">
+            <div class="price-change-info">
+              <p class="price-change-name">${escapeHtml(entry.productName)}</p>
+              <p class="price-change-date">${dateStr} · ${directionLabel}</p>
+            </div>
+            <div class="price-change-values">
+              <span class="price-change-old">${formatTL(entry.oldPrice)}</span>
+              <i class="fa-solid ${directionIcon} ${directionClass}" aria-hidden="true"></i>
+              <span class="${directionClass}">${formatTL(entry.newPrice)}</span>
+            </div>
+          </div>`;
+      })
+      .join("");
+  }
+
+  // ==================== 12-push-notifications.js ====================
+/**
+ * 12-push-notifications.js
+ * Push bildirimleri (Firebase Cloud Messaging) ve raf kontrol uyarısı.
+ */
+
+function updateNotifButtonState() {
+    const btn = document.getElementById("notifEnableBtn");
+    if (!btn) return;
+    const span = btn.querySelector("span");
+    if (typeof Notification !== "undefined" && Notification.permission === "granted") {
+      span.textContent = t("notifDisableBtn");
+      btn.disabled = true;
+    } else {
+      span.textContent = t("notifEnableBtn");
+      btn.disabled = false;
+    }
+  }
+
+function enableNotifications() {
+    if (!isPushConfigured()) {
+      showToast(t("notifError"), "error");
+      return;
+    }
+    if (!("Notification" in window) || !("serviceWorker" in navigator) || !cloudEnabled || !currentUser) {
+      showToast(t("notifError"), "error");
+      return;
+    }
+
+    Notification.requestPermission()
+      .then((permission) => {
+        if (permission !== "granted") {
+          showToast(t("notifPermissionDenied"), "error");
+          return;
+        }
+        return navigator.serviceWorker.ready.then((registration) => {
+          const messaging = firebase.messaging();
+          return messaging.getToken({ vapidKey: pushConfig.vapidKey, serviceWorkerRegistration: registration }).then((fcmToken) => {
+            if (!fcmToken) {
+              showToast(t("notifError"), "error");
+              return;
+            }
+            return docRef
+              .set({ fcmTokens: firebase.firestore.FieldValue.arrayUnion(fcmToken) }, { merge: true })
+              .then(() => {
+                showToast(t("notifEnabled"), "success");
+                updateNotifButtonState();
+              });
+          });
+        });
+      })
+      .catch((e) => {
+        console.error(e);
+        showToast(t("notifError"), "error");
+      });
+  }
+
+function renderShelfCheckAlert() {
+    const listEl = document.getElementById("shelfCheckList");
+    const emptyEl = document.getElementById("shelfCheckEmptyState");
+    if (!listEl) return;
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const todaySales = sales.filter((s) => new Date(s.timestamp) >= today);
+    const soldTodayByProduct = {};
+    todaySales.forEach((s) => {
+      s.items.forEach((item) => {
+        soldTodayByProduct[item.name] = (soldTodayByProduct[item.name] || 0) + item.qty;
+      });
+    });
+
+    const cutoff14 = new Date(Date.now() - 14 * 86400000);
+    const recentSales = sales.filter((s) => new Date(s.timestamp) >= cutoff14 && new Date(s.timestamp) < today);
+    const salesByProduct14 = {};
+    recentSales.forEach((s) => {
+      s.items.forEach((item) => {
+        salesByProduct14[item.name] = (salesByProduct14[item.name] || 0) + item.qty;
+      });
+    });
+
+    const alerts = Object.keys(soldTodayByProduct)
+      .map((name) => {
+        const soldToday = soldTodayByProduct[name];
+        const avgDaily = (salesByProduct14[name] || 0) / 14;
+        if (soldToday < 3) return null; // çok küçük hacimlerde gürültü yaratmasın
+        if (avgDaily > 0 && soldToday < avgDaily * 1.5) return null; // normalin çok üstünde değilse alarm verme
+        if (avgDaily === 0 && soldToday < 5) return null; // geçmiş veri yoksa daha yüksek bir eşik kullan
+        return { name, soldToday, avgDaily };
+      })
+      .filter(Boolean)
+      .sort((a, b) => b.soldToday - a.soldToday);
+
+    if (!alerts.length) {
+      listEl.innerHTML = "";
+      emptyEl.style.display = "block";
+      return;
+    }
+    emptyEl.style.display = "none";
+
+    listEl.innerHTML = alerts
+      .map((a) => {
+        const avgLabel = a.avgDaily > 0 ? `${t("shelfCheckUsualAvg")}: ${a.avgDaily.toFixed(1)}` : t("shelfCheckNoHistory");
+        return `
+          <div class="shelf-check-row">
+            <div class="shelf-check-info">
+              <p class="shelf-check-name">${escapeHtml(a.name)}</p>
+              <p class="shelf-check-meta">${t("shelfCheckSoldToday")}: ${a.soldToday} · ${avgLabel}</p>
+            </div>
+            <span class="shelf-check-badge">${t("shelfCheckAction")}</span>
+          </div>`;
+      })
+      .join("");
+
+    // Daha önce bugün bildirilmemiş ürünler için tarayıcı bildirimi gönder
+    alerts.forEach((a) => notifyShelfCheckOnce(a.name));
+  }
+
+function notifyShelfCheckOnce(productName) {
+    const todayKey = new Date().toISOString().slice(0, 10);
+    let notified = {};
+    try {
+      notified = JSON.parse(sessionStorage.getItem("bakkal_shelf_notified") || "{}");
+    } catch (e) {}
+    const key = `${todayKey}_${productName}`;
+    if (notified[key]) return;
+    notified[key] = true;
+    try {
+      sessionStorage.setItem("bakkal_shelf_notified", JSON.stringify(notified));
+    } catch (e) {}
+
+    // Yerel tarayıcı bildirimi (uygulama o an açıksa anında görünür)
+    if ("Notification" in window && Notification.permission === "granted") {
+      try {
+        new Notification(t("shelfCheckNotifTitle"), {
+          body: `${productName} ${t("shelfCheckNotifBody")}`,
+          icon: "./icons/icon-192.png"
+        });
+      } catch (e) {}
+    }
+
+    // Gerçek push bildirimi (telefon/uygulama kapalıyken de ulaşır)
+    sendShelfCheckPush(productName);
+  }
+
+function sendShelfCheckPush(productName) {
+    if (!isChainConfigured() || !currentUser) return;
+    currentUser
+      .getIdToken()
+      .then((idToken) =>
+        fetch(`${chainConfig.workerUrl}/send-self-notification`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            idToken,
+            title: t("shelfCheckNotifTitle"),
+            message: `${productName} ${t("shelfCheckNotifBody")}`
+          })
+        })
+      )
+      .catch((e) => console.error("Raf kontrolü bildirimi gönderilemedi", e));
+  }
+
+  // ==================== 13-branches-chain.js ====================
+/**
+ * 13-branches-chain.js
+ * Çok şubeli yönetim (patron/zincir sahibi hesapları): şube oluşturma/düzenleme/silme, ortak ürün kataloğu senkronizasyonu.
+ */
+
+function calcTodaySalesTotal(salesArr) {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return (salesArr || []).filter((s) => new Date(s.timestamp) >= today).reduce((sum, s) => sum + s.total, 0);
+  }
+
+function loadBranches() {
+    if (!currentUser || !cloudEnabled) return;
+    db.collection("isletmeler")
+      .where("chainOwnerUid", "==", currentUser.uid)
+      .get()
+      .then((snap) => {
+        const branches = [];
+        snap.forEach((doc) => {
+          const data = doc.data();
+          branches.push({
+            uid: doc.id,
+            branchName: data.branchName || doc.id,
+            products: data.products || [],
+            sales: data.sales || []
+          });
+        });
+        loadedBranches = branches;
+        renderBranchList(branches);
+        renderBranchSummary(branches);
+      })
+      .catch((e) => {
+        console.error("Şube listesi okunamadı", e);
+        renderBranchList([]);
+      });
+  }
+
+function renderCatalogList() {
+    const listEl = document.getElementById("catalogList");
+    const emptyEl = document.getElementById("catalogEmptyState");
+    if (!listEl) return;
+
+    if (!masterCatalog.length) {
+      listEl.innerHTML = "";
+      emptyEl.style.display = "block";
+      return;
+    }
+    emptyEl.style.display = "none";
+
+    listEl.innerHTML = masterCatalog
+      .map((item, i) => `
+        <div class="branch-row">
+          <div class="branch-info">
+            <p class="branch-name">${escapeHtml(item.name)}</p>
+            <p class="branch-meta">${escapeHtml(item.category)} · ${formatTL(item.price)}</p>
+          </div>
+          <button class="branch-delete-btn" data-index="${i}" aria-label="Kaldır"><i class="fa-solid fa-trash" aria-hidden="true"></i></button>
+        </div>`)
+      .join("");
+
+    listEl.querySelectorAll(".branch-delete-btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        masterCatalog.splice(Number(btn.dataset.index), 1);
+        saveMasterCatalog();
+        renderCatalogList();
+      });
+    });
+  }
+
+function saveMasterCatalog() {
+    const targetRef = originalDocRef || docRef;
+    if (targetRef) {
+      targetRef.set({ masterCatalog }, { merge: true }).catch((e) => console.error("Katalog kaydedilemedi", e));
+    }
+  }
+
+function addCatalogItem() {
+    const name = document.getElementById("catalogName").value.trim();
+    const category = document.getElementById("catalogCategory").value.trim() || t("categoryOtherDefault");
+    const price = Number(document.getElementById("catalogPrice").value) || 0;
+
+    if (!name) {
+      showToast(t("branchFieldsRequired"), "error");
+      return;
+    }
+
+    const existingIndex = masterCatalog.findIndex((it) => it.name.trim().toLowerCase() === name.trim().toLowerCase());
+    if (existingIndex >= 0) {
+      masterCatalog[existingIndex] = { name, category, price };
+    } else {
+      masterCatalog.push({ name, category, price });
+    }
+
+    saveMasterCatalog();
+    renderCatalogList();
+    document.getElementById("catalogName").value = "";
+    document.getElementById("catalogCategory").value = "";
+    document.getElementById("catalogPrice").value = "";
+
+    pushCatalogToAllBranches();
+  }
+
+function pushCatalogToAllBranches() {
+    if (!loadedBranches.length) return;
+    const loadingEl = document.getElementById("catalogSyncing");
+    if (loadingEl) loadingEl.style.display = "flex";
+
+    const writes = loadedBranches.map((branch) => {
+      const branchProducts = branch.products.map((p) => ({ ...p }));
+
+      masterCatalog.forEach((item) => {
+        const match = branchProducts.find((p) => p.name.trim().toLowerCase() === item.name.trim().toLowerCase());
+        if (match) {
+          match.category = item.category;
+          match.price = item.price;
+        } else {
+          branchProducts.push(mkProduct(item.name, item.category, 0, 5, item.price, "", "adet", 0));
+        }
+      });
+
+      return db
+        .collection("isletmeler")
+        .doc(branch.uid)
+        .set({ products: branchProducts }, { merge: true });
+    });
+
+    Promise.all(writes)
+      .then(() => {
+        if (loadingEl) loadingEl.style.display = "none";
+        showToast(t("catalogSyncSuccess"), "success");
+        loadBranches();
+      })
+      .catch((e) => {
+        console.error("Katalog şubelere gönderilemedi", e);
+        if (loadingEl) loadingEl.style.display = "none";
+        showToast(t("catalogSyncError"), "error");
+      });
+  }
+
+function renderBranchList(branches) {
+    const listEl = document.getElementById("branchList");
+    const emptyEl = document.getElementById("branchEmptyState");
+    if (!listEl) return;
+
+    if (!branches.length) {
+      listEl.innerHTML = "";
+      emptyEl.style.display = "block";
+      return;
+    }
+    emptyEl.style.display = "none";
+
+    listEl.innerHTML = branches
+      .map((b) => {
+        const todaySales = calcTodaySalesTotal(b.sales);
+        return `
+          <div class="branch-row">
+            <div class="branch-info">
+              <p class="branch-name">${escapeHtml(b.branchName)}</p>
+              <p class="branch-meta">${b.products.length} ürün · Bugün: ${formatTL(todaySales)}</p>
+            </div>
+            <div class="branch-row-actions">
+              <button class="branch-view-btn" data-uid="${b.uid}" data-name="${escapeHtml(b.branchName)}">${t("branchViewBtn")}</button>
+              <button class="branch-edit-btn" data-uid="${b.uid}" data-name="${escapeHtml(b.branchName)}" aria-label="Düzenle"><i class="fa-solid fa-pen" aria-hidden="true"></i></button>
+              <button class="branch-delete-btn" data-uid="${b.uid}" data-name="${escapeHtml(b.branchName)}" aria-label="Sil"><i class="fa-solid fa-trash" aria-hidden="true"></i></button>
+            </div>
+          </div>`;
+      })
+      .join("");
+
+    listEl.querySelectorAll(".branch-view-btn").forEach((btn) => {
+      btn.addEventListener("click", () => viewBranch(btn.dataset.uid, btn.dataset.name));
+    });
+    listEl.querySelectorAll(".branch-edit-btn").forEach((btn) => {
+      btn.addEventListener("click", () => openBranchEditModal(btn.dataset.uid, btn.dataset.name));
+    });
+    listEl.querySelectorAll(".branch-delete-btn").forEach((btn) => {
+      btn.addEventListener("click", () => confirmDeleteBranch(btn.dataset.uid, btn.dataset.name));
+    });
+  }
+
+function renderBranchSummary(branches) {
+    let totalSales = 0;
+    let totalLowStock = 0;
+
+    branches.forEach((b) => {
+      totalSales += calcTodaySalesTotal(b.sales);
+      totalLowStock += b.products.filter((p) => p.qty <= p.min).length;
+    });
+
+    const salesEl = document.getElementById("branchSummarySales");
+    const ordersEl = document.getElementById("branchSummaryOrders");
+    if (salesEl) salesEl.textContent = formatTL(totalSales);
+    if (ordersEl) ordersEl.textContent = totalLowStock;
+  }
+
+function createBranch() {
+    if (!isChainConfigured()) {
+      showToast(t("branchNotConfigured"), "error");
+      return;
+    }
+    const branchName = document.getElementById("branchName").value.trim();
+    const email = document.getElementById("branchEmail").value.trim();
+    const password = document.getElementById("branchPassword").value;
+
+    if (!branchName || !email || !password) {
+      showToast(t("branchFieldsRequired"), "error");
+      return;
+    }
+
+    currentUser
+      .getIdToken()
+      .then((idToken) =>
+        fetch(`${chainConfig.workerUrl}/create-branch`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ idToken, branchName, email, password })
+        })
+      )
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.error) {
+          showToast(data.error, "error");
+          return;
+        }
+        showToast(t("branchCreateSuccess"), "success");
+        document.getElementById("branchName").value = "";
+        document.getElementById("branchEmail").value = "";
+        document.getElementById("branchPassword").value = "";
+        loadBranches();
+      })
+      .catch((e) => {
+        console.error(e);
+        showToast(t("branchCreateError"), "error");
+      });
+  }
+
+function viewBranch(uid, name) {
+    if (!originalDocRef) {
+      originalDocRef = docRef;
+    }
+    viewingBranchUid = uid;
+    docRef = db.collection("isletmeler").doc(uid);
+    if (firestoreUnsubscribe) firestoreUnsubscribe();
+    attachFirestoreListener();
+
+    document.getElementById("branchViewingBanner").style.display = "flex";
+    document.getElementById("branchViewingText").textContent = `${t("branchViewingPrefix")} ${name}`;
+    applyAccountTypeUI();
+    switchTab("tab-products");
+  }
+
+function exitBranchView() {
+    if (!originalDocRef) return;
+    docRef = originalDocRef;
+    originalDocRef = null;
+    viewingBranchUid = null;
+    if (firestoreUnsubscribe) firestoreUnsubscribe();
+    attachFirestoreListener();
+    document.getElementById("branchViewingBanner").style.display = "none";
+    applyAccountTypeUI();
+    switchTab("tab-branches");
+  }
+
+function openBranchEditModal(uid, name) {
+    editingBranchUid = uid;
+    document.getElementById("branchEditModalTitle").textContent = `${t("branchEditTitle")} — ${name}`;
+    document.getElementById("branchEditEmail").value = "";
+    document.getElementById("branchEditPassword").value = "";
+    document.getElementById("branchEditModal").style.display = "flex";
+  }
+
+function closeBranchEditModal() {
+    document.getElementById("branchEditModal").style.display = "none";
+    editingBranchUid = null;
+  }
+
+function saveBranchEdit() {
+    const newEmail = document.getElementById("branchEditEmail").value.trim();
+    const newPassword = document.getElementById("branchEditPassword").value;
+
+    if (!newEmail && !newPassword) {
+      showToast(t("branchEditFieldsRequired"), "error");
+      return;
+    }
+
+    currentUser
+      .getIdToken()
+      .then((idToken) =>
+        fetch(`${chainConfig.workerUrl}/update-branch`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ idToken, targetUid: editingBranchUid, newEmail: newEmail || null, newPassword: newPassword || null })
+        })
+      )
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.error) {
+          showToast(data.error, "error");
+          return;
+        }
+        showToast(t("branchEditSuccess"), "success");
+        closeBranchEditModal();
+        loadBranches();
+      })
+      .catch((e) => {
+        console.error(e);
+        showToast(t("branchEditError"), "error");
+      });
+  }
+
+function confirmDeleteBranch(uid, name) {
+    if (!confirm(`${t("branchDeleteConfirm")} "${name}"?`)) return;
+
+    currentUser
+      .getIdToken()
+      .then((idToken) =>
+        fetch(`${chainConfig.workerUrl}/delete-branch`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ idToken, targetUid: uid })
+        })
+      )
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.error) {
+          showToast(data.error, "error");
+          return;
+        }
+        showToast(t("branchDeleteSuccess"), "success");
+        loadBranches();
+      })
+      .catch((e) => {
+        console.error(e);
+        showToast(t("branchDeleteError"), "error");
+      });
+  }
+
+  // ==================== 14-admin-panel.js ====================
+/**
+ * 14-admin-panel.js
+ * Yönetim paneli (sadece SaaS admin hesabı): işletme oluşturma, aktif/pasif yapma, şube limiti, gelen geri bildirimler.
+ */
+
+function loadAdminFeedback() {
+    if (!currentUser || currentUser.uid !== ADMIN_UID) return;
+    db.collection("admin")
+      .doc("feedback")
+      .get()
+      .then((snap) => {
+        const list = snap.exists && snap.data().list ? snap.data().list : [];
+        renderAdminFeedback(list);
+      })
+      .catch((e) => {
+        console.error("Geri bildirimler okunamadı", e);
+        renderAdminFeedback([]);
+      });
+  }
+
+function renderAdminFeedback(list) {
+    const listEl = document.getElementById("adminFeedbackList");
+    const emptyEl = document.getElementById("adminFeedbackEmptyState");
+    if (!listEl) return;
+
+    if (!list.length) {
+      listEl.innerHTML = "";
+      emptyEl.style.display = "block";
+      return;
+    }
+    emptyEl.style.display = "none";
+
+    const sorted = [...list].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+    listEl.innerHTML = sorted
+      .map((f) => {
+        const d = new Date(f.timestamp);
+        const dateStr = d.toLocaleString(locale(), { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
+        return `
+          <div class="audit-log-row">
+            <p class="audit-log-action">${escapeHtml(f.message)}</p>
+            <p class="audit-log-meta">${dateStr} · ${escapeHtml(f.email || f.uid)}</p>
+          </div>`;
+      })
+      .join("");
+  }
+
+function loadAdminBusinessList() {
+    if (!currentUser || currentUser.uid !== ADMIN_UID) return;
+    db.collection("admin")
+      .doc("businesses")
+      .get()
+      .then((snap) => {
+        const list = snap.exists && snap.data().list ? snap.data().list : [];
+        renderAdminBusinessList(list);
+      })
+      .catch((e) => {
+        console.error("Yönetim listesi okunamadı", e);
+        renderAdminBusinessList([]);
+      });
+  }
+
+function renderAdminBusinessList(list) {
+    const listEl = document.getElementById("adminBusinessList");
+    const emptyEl = document.getElementById("adminEmptyState");
+    if (!listEl) return;
+
+    if (!list.length) {
+      listEl.innerHTML = "";
+      emptyEl.style.display = "block";
+      return;
+    }
+    emptyEl.style.display = "none";
+
+    listEl.innerHTML = list
+      .map((b) => {
+        const statusClass = b.active ? "admin-status-active" : "admin-status-inactive";
+        const statusLabel = b.active ? t("adminActiveLabel") : t("adminInactiveLabel");
+        const toggleLabel = b.active ? t("adminInactiveLabel") : t("adminActiveLabel");
+        const dateStr = new Date(b.createdAt).toLocaleDateString(locale());
+        const categoryKey = "category" + (b.businessCategory || "diger").charAt(0).toUpperCase() + (b.businessCategory || "diger").slice(1);
+        const categoryLabel = t(categoryKey);
+        return `
+          <div class="admin-business-row">
+            <div class="admin-business-info">
+              <p class="admin-business-name">${escapeHtml(b.businessName)}</p>
+              <p class="admin-business-meta">${escapeHtml(b.email)} · ${dateStr}</p>
+              <span class="admin-status-badge ${statusClass}">${statusLabel}</span>
+              <span class="admin-category-badge">${escapeHtml(categoryLabel)}</span>
+              <div class="admin-branch-limit-row">
+                <label>${t("adminMaxBranchesLabel")}</label>
+                <input type="number" min="0" class="admin-branch-limit-input" data-uid="${b.uid}" placeholder="∞" />
+                <button class="admin-branch-limit-save-btn" data-uid="${b.uid}">${t("adminSaveBtn")}</button>
+              </div>
+              <div class="admin-branches-list" id="adminBranches-${b.uid}"></div>
+            </div>
+            <button class="admin-toggle-btn" data-uid="${b.uid}" data-active="${b.active}">${toggleLabel}</button>
+          </div>`;
+      })
+      .join("");
+
+    list.forEach((b) => loadBranchesForAdmin(b.uid));
+
+    listEl.querySelectorAll(".admin-toggle-btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const currentlyActive = btn.dataset.active === "true";
+        toggleAdminBusiness(btn.dataset.uid, !currentlyActive);
+      });
+    });
+
+    listEl.querySelectorAll(".admin-branch-limit-save-btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const input = listEl.querySelector(`.admin-branch-limit-input[data-uid="${btn.dataset.uid}"]`);
+        const value = Number(input.value);
+        if (!input.value || isNaN(value) || value < 0) {
+          showToast(t("branchFieldsRequired"), "error");
+          return;
+        }
+        setAdminBranchLimit(btn.dataset.uid, value);
+      });
+    });
+  }
+
+function loadBranchesForAdmin(patronUid) {
+    const container = document.getElementById(`adminBranches-${patronUid}`);
+    if (!container) return;
+
+    currentUser
+      .getIdToken()
+      .then((idToken) =>
+        fetch(`${adminConfig.workerUrl}/list-branches-for`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ idToken, targetUid: patronUid })
+        })
+      )
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.error || !data.branches || !data.branches.length) {
+          container.innerHTML = "";
+          return;
+        }
+        container.innerHTML = data.branches
+          .map(
+            (br) => `
+              <div class="admin-branch-sub-row">
+                <i class="fa-solid fa-code-branch" aria-hidden="true"></i>
+                <span class="admin-branch-sub-name">${escapeHtml(br.branchName)}</span>
+                <span class="admin-branch-sub-email">${escapeHtml(br.email)}</span>
+              </div>`
+          )
+          .join("");
+      })
+      .catch((e) => console.error("Şubeler yüklenemedi", e));
+  }
+
+function createAdminBusiness() {
+    if (!isAdminConfigured()) {
+      showToast(t("adminNotConfigured"), "error");
+      return;
+    }
+    const businessName = document.getElementById("adminBusinessName").value.trim();
+    const email = document.getElementById("adminBusinessEmail").value.trim();
+    const password = document.getElementById("adminBusinessPassword").value;
+    const accountType = document.getElementById("adminAccountType").value;
+    const businessCategory = document.getElementById("adminBusinessCategory").value;
+
+    if (!businessName || !email || !password) {
+      showToast(t("adminFieldsRequired"), "error");
+      return;
+    }
+
+    currentUser
+      .getIdToken()
+      .then((idToken) =>
+        fetch(`${adminConfig.workerUrl}/create-business`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ idToken, businessName, email, password, accountType, businessCategory })
+        })
+      )
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.error) {
+          showToast(data.error, "error");
+          return;
+        }
+        showToast(t("adminCreateSuccess"), "success");
+        document.getElementById("adminBusinessName").value = "";
+        document.getElementById("adminBusinessEmail").value = "";
+        document.getElementById("adminBusinessPassword").value = "";
+        loadAdminBusinessList();
+      })
+      .catch((e) => {
+        console.error(e);
+        showToast(t("adminCreateError"), "error");
+      });
+  }
+
+function toggleAdminBusiness(targetUid, active) {
+    currentUser
+      .getIdToken()
+      .then((idToken) =>
+        fetch(`${adminConfig.workerUrl}/toggle-business`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ idToken, targetUid, active })
+        })
+      )
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.error) {
+          showToast(data.error, "error");
+          return;
+        }
+        loadAdminBusinessList();
+      })
+      .catch((e) => {
+        console.error(e);
+        showToast(t("adminToggleError"), "error");
+      });
+  }
+
+function setAdminBranchLimit(targetUid, maxBranches) {
+    currentUser
+      .getIdToken()
+      .then((idToken) =>
+        fetch(`${adminConfig.workerUrl}/set-branch-limit`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ idToken, targetUid, maxBranches })
+        })
+      )
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.error) {
+          showToast(data.error, "error");
+          return;
+        }
+        showToast(t("adminBranchLimitSaved"), "success");
+      })
+      .catch((e) => {
+        console.error(e);
+        showToast(t("adminToggleError"), "error");
+      });
+  }
+
+  // ==================== 15-voice-commands.js ====================
+/**
+ * 15-voice-commands.js
+ * Sesli komut sistemi: konuşmayı metne çevirme, basit komutları anında (yerel) işleme, karmaşık komutları yapay zekaya yönlendirme.
+ */
+
+function getSpeechRecognitionClass() {
     return window.SpeechRecognition || window.webkitSpeechRecognition || null;
   }
 
-  function getVoiceLangForTarget(targetInputId) {
+function getVoiceLangForTarget(targetInputId) {
     const container = document.querySelector(`.voice-lang-toggle[data-for="${targetInputId}"]`);
     const activeBtn = container ? container.querySelector(".voice-lang-btn.active") : null;
     return activeBtn ? activeBtn.dataset.lang : "tr-TR";
   }
 
-  // ==================== SESLİ KOMUT SİSTEMİ ====================
-  function getVoiceCommandLang() {
+function getVoiceCommandLang() {
     const container = document.getElementById("voiceCommandLangToggle");
     const activeBtn = container ? container.querySelector(".voice-lang-btn.active") : null;
     return activeBtn ? activeBtn.dataset.lang : "tr-TR";
   }
 
-  function startVoiceCommand() {
+function startVoiceCommand() {
     const SpeechRecognitionClass = getSpeechRecognitionClass();
     const btn = document.getElementById("voiceCommandBtn");
     if (!SpeechRecognitionClass) {
@@ -2342,7 +3916,7 @@
     recognition.start();
   }
 
-  function speakFeedback(text) {
+function speakFeedback(text) {
     if (!("speechSynthesis" in window)) return;
     try {
       const utterance = new SpeechSynthesisUtterance(text);
@@ -2351,17 +3925,7 @@
     } catch (e) {}
   }
 
-  // ---------- Hızlı Yerel Ayrıştırıcı (basit "X sat/ekle" komutları için AI'a hiç gitmeden anında işler) ----------
-  const TURKISH_NUMBER_WORDS = {
-    bir: 1, iki: 2, üç: 3, uc: 3, dört: 4, dort: 4, beş: 5, bes: 5,
-    altı: 6, alti: 6, yedi: 7, sekiz: 8, dokuz: 9, on: 10
-  };
-  const VOICE_STOPWORDS = [
-    "sat", "satıyorum", "satiyorum", "sattım", "sattim", "ekle", "ekliyorum", "ekledim",
-    "al", "alıyorum", "aliyorum", "tane", "adet", "lütfen", "lutfen"
-  ];
-
-  function tryLocalVoiceParse(transcript) {
+function tryLocalVoiceParse(transcript) {
     const lower = transcript.trim().toLowerCase();
 
     // Karmaşık/başka türde bir komuma benziyorsa, yerelde çözmeye çalışma — AI'a bırak.
@@ -2406,7 +3970,7 @@
     return true;
   }
 
-  function processVoiceCommand(transcript) {
+function processVoiceCommand(transcript) {
     if (tryLocalVoiceParse(transcript)) return;
 
     if (!isBulkScanConfigured()) {
@@ -2468,7 +4032,7 @@
       });
   }
 
-  function handleVoiceCommandAction(parsed) {
+function handleVoiceCommandAction(parsed) {
     const action = parsed.action;
     const params = parsed.params || {};
 
@@ -2620,32 +4184,23 @@
     speakFeedback(msg);
   }
 
-  function findProductByFuzzyName(name) {
-    if (!name) return null;
-    const normalized = name.trim().toLowerCase();
-    let match = products.find((p) => p.name.trim().toLowerCase() === normalized);
-    if (match) return match;
-    match = products.find((p) => p.name.toLowerCase().includes(normalized) || normalized.includes(p.name.toLowerCase()));
-    return match || null;
-  }
-
-  function showVoiceCommandConfirm(text, onConfirm) {
+function showVoiceCommandConfirm(text, onConfirm) {
     pendingVoiceAction = onConfirm;
     document.getElementById("voiceCommandConfirmText").textContent = text;
     document.getElementById("voiceCommandConfirm").style.display = "block";
   }
 
-  function hideVoiceCommandConfirm() {
+function hideVoiceCommandConfirm() {
     pendingVoiceAction = null;
     document.getElementById("voiceCommandConfirm").style.display = "none";
   }
 
-  function confirmVoiceAction() {
+function confirmVoiceAction() {
     if (pendingVoiceAction) pendingVoiceAction();
     hideVoiceCommandConfirm();
   }
 
-  function startVoiceInput(targetInputId, micBtn) {
+function startVoiceInput(targetInputId, micBtn) {
     const SpeechRecognitionClass = getSpeechRecognitionClass();
     if (!SpeechRecognitionClass) {
       showToast(t("voiceNotSupported"), "error");
@@ -2689,1445 +4244,19 @@
     recognition.start();
   }
 
-  function setVoiceLang(container, lang) {
+function setVoiceLang(container, lang) {
     container.querySelectorAll(".voice-lang-btn").forEach((btn) => {
       btn.classList.toggle("active", btn.dataset.lang === lang);
     });
   }
 
-  function formatQty(p) {
-    if (p.unit === "kg") {
-      return (Math.round(p.qty * 1000) / 1000).toLocaleString(locale(), { minimumFractionDigits: 0, maximumFractionDigits: 3 }) + " " + t("unitKgShort");
-    }
-    return p.qty + " " + t("unitAdetShort");
-  }
-
-  function formatTL(n) {
-    return (Number(n) || 0).toLocaleString(locale(), { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " ₺";
-  }
-
-  // ---------- CRUD ----------
-  // ---------- Eski (giriş öncesi) yerel yedeği içe aktar ----------
-  function hasImportableLocalBackup() {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (!raw) return false;
-      const parsed = JSON.parse(raw);
-      return Array.isArray(parsed.products) && parsed.products.length > 0;
-    } catch (e) {
-      return false;
-    }
-  }
-
-  function importLocalBackup() {
-    let parsed;
-    try {
-      parsed = JSON.parse(localStorage.getItem(STORAGE_KEY));
-    } catch (e) {
-      showToast(t("importParseError"), "error");
-      return;
-    }
-    const localProducts = (parsed && parsed.products) || [];
-    if (!localProducts.length) {
-      showToast(t("importNoLocalBackup"), "info");
-      return;
-    }
-    if (!confirm(t("importConfirm").replace("{n}", localProducts.length))) return;
-
-    let addedCount = 0;
-    localProducts.forEach((lp) => {
-      if (!productAlreadyExists(lp.name)) {
-        products.push(lp);
-        addedCount++;
-      }
-    });
-    if (Array.isArray(parsed.sales)) {
-      const existingSaleIds = new Set(sales.map((s) => s.id));
-      parsed.sales.forEach((s) => {
-        if (!existingSaleIds.has(s.id)) sales.push(s);
-      });
-    }
-    if (Array.isArray(parsed.customers)) {
-      const existingCustomerIds = new Set(customers.map((c) => c.id));
-      parsed.customers.forEach((c) => {
-        if (!existingCustomerIds.has(c.id)) customers.push(c);
-      });
-    }
-    if (Array.isArray(parsed.payments)) {
-      const existingPaymentIds = new Set(payments.map((p) => p.id));
-      parsed.payments.forEach((p) => {
-        if (!existingPaymentIds.has(p.id)) payments.push(p);
-      });
-    }
-
-    save();
-    renderAll();
-    document.getElementById("importBackupBtn").style.display = "none";
-    showToast(t("importSuccess").replace("{n}", addedCount), "success");
-  }
-
-  function addProduct() {
-    const nameInput = document.getElementById("newName");
-    const catInput = document.getElementById("newCategory");
-    const minInput = document.getElementById("newMin");
-    const qtyInput = document.getElementById("newQty");
-    const priceInput = document.getElementById("newPrice");
-    const costPriceInput = document.getElementById("newCostPrice");
-    const barcodeInput = document.getElementById("newBarcode");
-    const unitInput = document.getElementById("newUnit");
-
-    const name = nameInput.value.trim();
-    if (!name) {
-      nameInput.focus();
-      return;
-    }
-    const category = catInput.value.trim() || t("categoryOtherDefault");
-    const min = Number(minInput.value) || 0;
-    const qty = Number(qtyInput.value) || 0;
-    const price = Number(priceInput.value) || 0;
-    const costPrice = Number(costPriceInput.value) || 0;
-    const barcode = barcodeInput.value.trim();
-    const unit = unitInput.value;
-
-    products.push(mkProduct(name, category, qty, min, price, barcode, unit, costPrice));
-    logAudit("Ürün eklendi", `${name} (${qty} adet, ${formatTL(price)})`);
-    nameInput.value = "";
-    catInput.value = "";
-    minInput.value = "5";
-    qtyInput.value = "0";
-    priceInput.value = "0";
-    costPriceInput.value = "0";
-    barcodeInput.value = "";
-    unitInput.value = "adet";
-    save();
-    renderAll();
-    nameInput.focus();
-  }
-
-  function deleteProduct(id) {
-    const p = products.find((x) => x.id === id);
-    products = products.filter((x) => x.id !== id);
-    if (p) logAudit("Ürün silindi", p.name);
-    save();
-    closeModal();
-    renderAll();
-  }
-
-  function updateOutOfStockTracking(p) {
-    if (p.qty <= 0) {
-      if (!p.wentOutOfStockAt) p.wentOutOfStockAt = new Date().toISOString();
-    } else {
-      p.wentOutOfStockAt = null;
-    }
-  }
-
-  function adjustQty(id, delta) {
-    const p = products.find((x) => x.id === id);
-    if (!p) return;
-    p.qty = Math.max(0, Math.round((p.qty + delta) * 1000) / 1000);
-    updateOutOfStockTracking(p);
-    logAudit("Stok güncellendi", `${p.name}: ${delta > 0 ? "+" : ""}${delta} → ${p.qty}`);
-    save();
-    renderAll();
-    if (activeProductId === id) updateModalContent(p);
-  }
-
-  function setQtyManually(id, newQty) {
-    const p = products.find((x) => x.id === id);
-    if (!p) return;
-    if (isNaN(newQty) || newQty < 0) {
-      showToast(t("alertInvalidAmount"), "error");
-      updateModalContent(p);
-      return;
-    }
-    const oldQty = p.qty;
-    p.qty = Math.round(newQty * 1000) / 1000;
-    updateOutOfStockTracking(p);
-    logAudit("Stok elle güncellendi", `${p.name}: ${oldQty} → ${p.qty}`);
-    save();
-    renderAll();
-    if (activeProductId === id) updateModalContent(p);
-  }
-
-  function saveEdit() {
-    const p = products.find((x) => x.id === activeProductId);
-    if (!p) return;
-    const name = document.getElementById("editName").value.trim();
-    if (!name) return;
-    p.name = name;
-    p.category = document.getElementById("editCategory").value.trim() || t("categoryOtherDefault");
-    p.min = Number(document.getElementById("editMin").value) || 0;
-    p.price = Number(document.getElementById("editPrice").value) || 0;
-    p.costPrice = Number(document.getElementById("editCostPrice").value) || 0;
-    p.barcode = document.getElementById("editBarcode").value.trim();
-    p.unit = document.getElementById("editUnit").value;
-    p.expiryDate = document.getElementById("editExpiryDate").value || null;
-    p.bulkDiscountQty = Number(document.getElementById("editBulkQty").value) || 0;
-    p.bulkDiscountType = document.getElementById("editBulkType").value;
-    p.bulkDiscountValue = Number(document.getElementById("editBulkValue").value) || 0;
-    logAudit("Ürün düzenlendi", `${name} (${formatTL(p.price)})`);
-    save();
-    renderAll();
-    updateModalContent(p);
-  }
-
-  function resetAll() {
-    products.forEach((p) => {
-      p.qty = Math.max(p.min, 1);
-    });
-    save();
-    renderAll();
-  }
-
-  // ---------- Rendering: Products ----------
-  // ---------- Ürün adlarını seçili dile çevirme ----------
-  function getDisplayName(p) {
-    const lang = window.i18n.getLang();
-    if ((lang === "en" || lang === "ar") && p.nameTranslations && p.nameTranslations[lang]) {
-      return p.nameTranslations[lang];
-    }
-    return p.name;
-  }
-
-  let translationInFlight = false;
-
-  function translateMissingProductNames() {
-    const lang = window.i18n.getLang();
-    if (lang !== "en" && lang !== "ar") return;
-    if (translationInFlight) return;
-
-    const missing = products.filter((p) => !p.nameTranslations || !p.nameTranslations[lang]).slice(0, 60);
-    if (!missing.length) return;
-
-    translationInFlight = true;
-
-    const langLabel = lang === "en" ? "İngilizce" : "Arapça";
-    const prompt = [
-      `Aşağıdaki market/bakkal ürün adlarının her birini ${langLabel}'ye çevir.`,
-      "Ürün adındaki marka isimlerini olduğu gibi bırak, sadece genel kelimeleri çevir (örn. 'kepekli ekmek' -> 'whole wheat bread').",
-      "SADECE geçerli bir JSON nesnesi döndür, başka hiçbir açıklama ekleme.",
-      'Format: {"orijinal ad 1":"çeviri 1","orijinal ad 2":"çeviri 2"}',
-      "",
-      "Ürün adları:",
-      JSON.stringify(missing.map((p) => p.name))
-    ].join("\n");
-
-    callGeminiWithRetry(null, prompt)
-      .then((data) => {
-        const rawText = data && data.candidates && data.candidates[0] && data.candidates[0].content.parts[0].text;
-        if (!rawText) return;
-        const cleaned = rawText.replace(/```json|```/g, "").trim();
-        const translations = JSON.parse(cleaned);
-        let changed = false;
-        missing.forEach((p) => {
-          const translated = translations[p.name];
-          if (translated) {
-            p.nameTranslations = p.nameTranslations || {};
-            p.nameTranslations[lang] = translated;
-            changed = true;
-          }
-        });
-        if (changed) {
-          save();
-          renderAll();
-        }
-      })
-      .catch((e) => console.error("Ürün adı çevirisi başarısız:", e))
-      .finally(() => {
-        translationInFlight = false;
-      });
-  }
-
-  function productRowHtml(p) {
-    const status = getStatus(p);
-    const priceLabel = p.unit === "kg" ? formatTL(p.price) + t("perKgSuffix") : formatTL(p.price);
-    return `
-      <div class="product-row" data-id="${p.id}">
-        <div class="product-info">
-          <p class="product-name">${escapeHtml(getDisplayName(p))}</p>
-          <p class="product-meta">${escapeHtml(p.category)} · ${t("stockShortLabel")}: ${formatQty(p)} · ${priceLabel}</p>
-        </div>
-        <span class="status-badge ${STATUS_CLASS[status]}">${getStatusLabel(status)}</span>
-      </div>`;
-  }
-
-  function renderAll() {
-    const searchEl = document.getElementById("searchBox");
-    const search = (searchEl ? searchEl.value : "").toLowerCase().trim();
-    const list = document.getElementById("productList");
-    const empty = document.getElementById("emptyState");
-
-    const filtered = products.filter((p) => p.name.toLowerCase().includes(search) || p.category.toLowerCase().includes(search));
-
-    if (!filtered.length) {
-      list.innerHTML = "";
-      empty.style.display = "block";
-    } else {
-      empty.style.display = "none";
-      list.innerHTML = filtered.map(productRowHtml).join("");
-    }
-
-    list.querySelectorAll(".product-row").forEach((row) => {
-      row.addEventListener("click", () => openModal(row.dataset.id));
-    });
-
-    // Order list
-    const orderList = document.getElementById("orderList");
-    const orderEmpty = document.getElementById("orderEmptyState");
-    const needsOrder = products
-      .filter((p) => getStatus(p) !== "yeterli")
-      .sort((a, b) => (getStatus(a) === "tukendi" ? 0 : 1) - (getStatus(b) === "tukendi" ? 0 : 1));
-
-    if (!needsOrder.length) {
-      orderList.innerHTML = "";
-      orderEmpty.style.display = "block";
-    } else {
-      orderEmpty.style.display = "none";
-      orderList.innerHTML = needsOrder.map(productRowHtml).join("");
-      orderList.querySelectorAll(".product-row").forEach((row) => {
-        row.addEventListener("click", () => openModal(row.dataset.id));
-      });
-    }
-
-    document.getElementById("statTotal").textContent = products.length;
-    document.getElementById("statOrder").textContent = needsOrder.length;
-
-    renderCart();
-    renderSales();
-    renderCustomers();
-    renderReminders();
-    renderSuppliers();
-    renderBreadStatus();
-    renderPriceChanges();
-    renderAuditLog();
-    renderStaffList();
-    renderOwnerPinStatus();
-    renderDataSize();
-    renderFiscalSettings();
-    renderAiPanel();
-    translateMissingProductNames();
-  }
-
-  // ---------- Modal ----------
-  function openModal(id) {
-    const p = products.find((x) => x.id === id);
-    if (!p) return;
-    activeProductId = id;
-    document.getElementById("editName").value = p.name;
-    document.getElementById("editCategory").value = p.category;
-    document.getElementById("editMin").value = p.min;
-    document.getElementById("editPrice").value = p.price;
-    document.getElementById("editCostPrice").value = p.costPrice || 0;
-    document.getElementById("editBarcode").value = p.barcode || "";
-    document.getElementById("editUnit").value = p.unit || "adet";
-    document.getElementById("editExpiryDate").value = p.expiryDate || "";
-    document.getElementById("editBulkQty").value = p.bulkDiscountQty || "";
-    document.getElementById("editBulkType").value = p.bulkDiscountType || "percent";
-    document.getElementById("editBulkValue").value = p.bulkDiscountValue || "";
-    updateModalContent(p);
-    document.getElementById("detailModal").style.display = "flex";
-    renderQrCode(p.id);
-  }
-
-  function updateModalContent(p) {
-    document.getElementById("modalProductName").textContent = p.name;
-    const qtyInput = document.getElementById("modalQtyInput");
-    if (document.activeElement !== qtyInput) {
-      qtyInput.value = p.qty;
-    }
-    const status = getStatus(p);
-    const pill = document.getElementById("modalStatus");
-    pill.textContent = getStatusLabel(status);
-    pill.className = "status-pill " + STATUS_CLASS[status];
-  }
-
-  function closeModal() {
-    document.getElementById("detailModal").style.display = "none";
-    activeProductId = null;
-  }
-
-  function renderQrCode(productId) {
-    const box = document.getElementById("modalQrCode");
-    box.innerHTML = "";
-    if (typeof QRCode !== "undefined") {
-      new QRCode(box, {
-        text: productId,
-        width: 160,
-        height: 160,
-        colorDark: "#1F3864",
-        colorLight: "#ffffff"
-      });
-    } else {
-      box.textContent = t("qrLibError");
-    }
-  }
-
-  function printQr() {
-    const box = document.getElementById("modalQrCode");
-    const p = products.find((x) => x.id === activeProductId);
-    const win = window.open("", "_blank");
-    win.document.write(`
-      <html><head><title>${t("printWindowTitle")}</title></head>
-      <body style="text-align:center;font-family:sans-serif;padding:40px;">
-        <h3>${escapeHtml(p ? p.name : "")}</h3>
-        ${box.innerHTML}
-        <script>window.onload = function(){ window.print(); }<\/script>
-      </body></html>
-    `);
-    win.document.close();
-  }
-
-  function printAllQrCodes() {
-    if (!products.length) {
-      showToast(t("emptyProducts"), "info");
-      return;
-    }
-
-    // Her ürün için geçici, ekranda görünmeyen bir QR kodu üret
-    const tempContainer = document.createElement("div");
-    tempContainer.style.display = "none";
-    document.body.appendChild(tempContainer);
-
-    const blocksHtml = products
-      .map((p) => {
-        const box = document.createElement("div");
-        tempContainer.appendChild(box);
-        new QRCode(box, {
-          text: p.id,
-          width: 56,
-          height: 56,
-          colorDark: "#1F3864",
-          colorLight: "#ffffff"
-        });
-
-        const priceValue = Number(p.price) || 0;
-        const [wholePart, decimalPart] = priceValue.toFixed(2).split(".");
-        const unitSuffix = p.unit === "kg" ? `<span class="price-tag-unit">/${t("unitKgShort")}</span>` : "";
-
-        return `
-          <div class="price-tag">
-            <p class="price-tag-header">${escapeHtml(t("appName"))}</p>
-            <p class="price-tag-name">${escapeHtml(p.name)}</p>
-            <div class="price-tag-price">
-              <span class="price-tag-currency">₺</span><span class="price-tag-amount">${wholePart}</span><span class="price-tag-decimals">,${decimalPart}</span>${unitSuffix}
-            </div>
-            <div class="price-tag-qr">${box.innerHTML}</div>
-          </div>`;
-      })
-      .join("");
-
-    document.body.removeChild(tempContainer);
-
-    const win = window.open("", "_blank");
-    win.document.write(`
-      <html>
-        <head>
-          <title>${t("printAllQrBtn")}</title>
-          <style>
-            @page { margin: 12mm; }
-            body{font-family:'Segoe UI',Arial,sans-serif;padding:16px;background:#fff;}
-            .price-tag-grid{display:flex;flex-wrap:wrap;gap:14px;}
-            .price-tag{
-              width:190px;
-              text-align:center;
-              border:1.5px solid #1F3864;
-              border-radius:12px;
-              padding:12px 10px 10px;
-              page-break-inside:avoid;
-              position:relative;
-              background:#fff;
-            }
-            .price-tag-header{
-              font-size:8px;
-              letter-spacing:1.5px;
-              text-transform:uppercase;
-              color:#8B96A8;
-              font-weight:700;
-              margin:0 0 8px;
-            }
-            .price-tag-name{
-              font-size:14px;
-              font-weight:700;
-              color:#1F3864;
-              margin:0 0 10px;
-              min-height:36px;
-              line-height:1.25;
-              display:flex;
-              align-items:center;
-              justify-content:center;
-              word-break:break-word;
-            }
-            .price-tag-price{
-              display:flex;
-              align-items:baseline;
-              justify-content:center;
-              gap:1px;
-              margin-bottom:6px;
-            }
-            .price-tag-currency{font-size:20px;font-weight:700;color:#C0872E;}
-            .price-tag-amount{font-size:36px;font-weight:800;color:#C0872E;line-height:1;}
-            .price-tag-decimals{font-size:17px;font-weight:700;color:#C0872E;}
-            .price-tag-unit{font-size:12px;font-weight:600;color:#8B96A8;margin-left:3px;}
-            .price-tag-qr{
-              position:absolute;
-              bottom:8px;
-              right:8px;
-              width:42px;
-              height:42px;
-              opacity:0.9;
-            }
-            .price-tag-qr img,.price-tag-qr canvas,.price-tag-qr table{width:100% !important;height:100% !important;}
-          </style>
-        </head>
-        <body>
-          <div class="price-tag-grid">${blocksHtml}</div>
-          <script>window.onload = function(){ window.print(); }<\/script>
-        </body>
-      </html>
-    `);
-    win.document.close();
-  }
-
-  function findProductByScan(code) {
-    return products.find((p) => p.id === code || (p.barcode && p.barcode === code));
-  }
-
-  // ---------- QR Scanning: Stok giriş/çıkış ----------
-  function startScan() {
-    const readerEl = document.getElementById("qrReader");
-    document.getElementById("startScanBtn").style.display = "none";
-    document.getElementById("stopScanBtn").style.display = "flex";
-    readerEl.innerHTML = "";
-    html5QrCode = new Html5Qrcode("qrReader");
-    scanning = true;
-
-    html5QrCode
-      .start(
-        { facingMode: "environment" },
-        { fps: 10, qrbox: 220 },
-        (decodedText) => {
-          onScanSuccess(decodedText);
-        },
-        () => {}
-      )
-      .catch((err) => {
-        showToast(t("cameraError"), "error");
-        stopScan();
-      });
-  }
-
-  function stopScan() {
-    document.getElementById("startScanBtn").style.display = "flex";
-    document.getElementById("stopScanBtn").style.display = "none";
-    if (html5QrCode && scanning) {
-      html5QrCode
-        .stop()
-        .then(() => html5QrCode.clear())
-        .catch(() => {});
-    }
-    scanning = false;
-  }
-
-  function onScanSuccess(decodedText) {
-    if (stokScanCooldown) return;
-    const p = findProductByScan(decodedText);
-    if (!p) {
-      showToast(t("alertNotRegistered"), "error");
-      return;
-    }
-    stopScan();
-    if (p.unit === "kg") {
-      const action = confirm(`${p.name}\n${t("currentStockLabel")}: ${formatQty(p)}\n\n${t("confirmStockDirection")}`);
-      showPrompt(t("promptKgAmount"), "").then((input) => {
-        if (input === null) return;
-        const weight = parseFloat(input.replace(",", "."));
-        if (!weight || weight <= 0) {
-          showToast(t("alertInvalidWeight"), "error");
-          return;
-        }
-        adjustQty(p.id, action ? weight : -weight);
-      });
-    } else {
-      const action = confirm(`${p.name}\n${t("currentStockLabel")}: ${p.qty}\n\n${t("confirmStockDirection")}`);
-      showPrompt(t("promptAdetAmount"), "1").then((input) => {
-        if (input === null) return;
-        const amount = parseFloat(input.replace(",", "."));
-        if (!amount || amount <= 0) {
-          showToast(t("alertInvalidAmount"), "error");
-          return;
-        }
-        adjustQty(p.id, action ? amount : -amount);
-      });
-    }
-  }
-
-  // ---------- QR Scanning: Kasa (satış) ----------
-  function startScanKasa() {
-    const readerEl = document.getElementById("qrReaderKasa");
-    document.getElementById("startKasaScanBtn").style.display = "none";
-    document.getElementById("stopKasaScanBtn").style.display = "flex";
-    readerEl.innerHTML = "";
-    html5QrCodeKasa = new Html5Qrcode("qrReaderKasa");
-    scanningKasa = true;
-
-    html5QrCodeKasa
-      .start(
-        { facingMode: "environment" },
-        { fps: 10, qrbox: 220 },
-        (decodedText) => {
-          onScanSuccessKasa(decodedText);
-        },
-        () => {}
-      )
-      .catch((err) => {
-        showToast(t("cameraError"), "error");
-        stopScanKasa();
-      });
-  }
-
-  function stopScanKasa() {
-    document.getElementById("startKasaScanBtn").style.display = "flex";
-    document.getElementById("stopKasaScanBtn").style.display = "none";
-    if (html5QrCodeKasa && scanningKasa) {
-      html5QrCodeKasa
-        .stop()
-        .then(() => html5QrCodeKasa.clear())
-        .catch(() => {});
-    }
-    scanningKasa = false;
-  }
-
-  // ---------- Barkod okuma "düüt" sesi ----------
-  let beepAudioCtx = null;
-
-  function playBeepSound() {
-    try {
-      if (!beepAudioCtx) {
-        beepAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
-      }
-      const ctx = beepAudioCtx;
-      const oscillator = ctx.createOscillator();
-      const gainNode = ctx.createGain();
-      oscillator.connect(gainNode);
-      gainNode.connect(ctx.destination);
-      oscillator.type = "square";
-      oscillator.frequency.value = 1500;
-      gainNode.gain.setValueAtTime(0.15, ctx.currentTime);
-      gainNode.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.12);
-      oscillator.start(ctx.currentTime);
-      oscillator.stop(ctx.currentTime + 0.12);
-    } catch (e) {
-      // ses çalınamazsa sessizce devam et
-    }
-  }
-
-  function onScanSuccessKasa(decodedText) {
-    if (kasaScanCooldown) return;
-    const p = findProductByScan(decodedText);
-    if (!p) {
-      showToast(t("alertNotRegistered"), "error");
-      return;
-    }
-
-    if (p.unit === "kg") {
-      showKgOrPricePrompt(p.name, p.price).then((weight) => {
-        if (weight === null) return;
-        if (!weight || weight <= 0) {
-          showToast(t("alertInvalidWeight"), "error");
-          return;
-        }
-        playBeepSound();
-        addToCart(p, weight);
-        kasaScanCooldown = true;
-        showKasaScanFeedback(`${p.name} (${weight} ${t("unitKgShort")})`);
-        setTimeout(() => {
-          kasaScanCooldown = false;
-        }, 3000);
-      });
-    } else {
-      playBeepSound();
-      addToCart(p, 1);
-      kasaScanCooldown = true;
-      showKasaScanFeedback(p.name);
-      setTimeout(() => {
-        kasaScanCooldown = false;
-      }, 3000);
-    }
-  }
-
-  function showKasaScanFeedback(name) {
-    const readerEl = document.getElementById("qrReaderKasa");
-    if (!readerEl) return;
-    let badge = document.getElementById("kasaScanFeedback");
-    if (!badge) {
-      badge = document.createElement("div");
-      badge.id = "kasaScanFeedback";
-      badge.className = "scan-feedback";
-      readerEl.parentElement.insertBefore(badge, readerEl.nextSibling);
-    }
-    badge.innerHTML = `<i class="fa-solid fa-check" aria-hidden="true"></i> ${escapeHtml(name)} ${t("addedToCartSuffix")}`;
-    badge.classList.add("show");
-    clearTimeout(badge._hideTimer);
-    badge._hideTimer = setTimeout(() => {
-      badge.classList.remove("show");
-    }, 3000);
-  }
-
-  function manualAddToCart(productId) {
-    const p = products.find((x) => x.id === productId);
-    if (!p) return;
-
-    if (p.unit === "kg") {
-      showKgOrPricePrompt(p.name, p.price).then((weight) => {
-        if (weight === null) return;
-        if (!weight || weight <= 0) {
-          showToast(t("alertInvalidAmount"), "error");
-          return;
-        }
-        addToCart(p, weight);
-        document.getElementById("manualAddSearch").value = "";
-        renderManualAddResults();
-      });
-      return;
-    }
-
-    showPrompt(`${p.name} — ${t("promptAdetAmount")}`, "1").then((input) => {
-      if (input === null) return;
-      const amount = parseFloat(input.replace(",", "."));
-      if (!amount || amount <= 0) {
-        showToast(t("alertInvalidAmount"), "error");
-        return;
-      }
-      addToCart(p, amount);
-      document.getElementById("manualAddSearch").value = "";
-      renderManualAddResults();
-    });
-  }
-
-  function renderManualAddResults() {
-    const searchEl = document.getElementById("manualAddSearch");
-    const resultsEl = document.getElementById("manualAddResults");
-    if (!searchEl || !resultsEl) return;
-    const q = (searchEl.value || "").toLowerCase().trim();
-    if (!q) {
-      resultsEl.innerHTML = "";
-      return;
-    }
-    const matches = products
-      .filter((p) => p.name.toLowerCase().includes(q) || p.category.toLowerCase().includes(q))
-      .slice(0, 8);
-
-    if (!matches.length) {
-      resultsEl.innerHTML = `<p class="empty-state" style="display:block;">${t("noMatchingProducts")}</p>`;
-      return;
-    }
-
-    resultsEl.innerHTML = matches
-      .map((p) => {
-        const priceLabel = p.unit === "kg" ? formatTL(p.price) + t("perKgSuffix") : formatTL(p.price);
-        return `
-          <div class="product-row manual-add-row" data-id="${p.id}">
-            <div class="product-info">
-              <p class="product-name">${escapeHtml(getDisplayName(p))}</p>
-              <p class="product-meta">${escapeHtml(p.category)} · ${t("stockShortLabel")}: ${formatQty(p)} · ${priceLabel}</p>
-            </div>
-            <button class="btn btn-sm manual-add-btn" data-id="${p.id}">${t("addBtnShort")}</button>
-          </div>`;
-      })
-      .join("");
-
-    resultsEl.querySelectorAll(".manual-add-btn").forEach((btn) => {
-      btn.addEventListener("click", () => manualAddToCart(btn.dataset.id));
-    });
-  }
-
-  // ---------- Kasa: Sepet ----------
-  // ---------- Toplu Alım İndirimi ----------
-  function getBulkDiscountForItem(item) {
-    const p = products.find((x) => x.id === item.productId);
-    if (!p || !p.bulkDiscountQty || !p.bulkDiscountValue) return null;
-    if (item.qty < p.bulkDiscountQty) return null;
-
-    let perUnitDiscount;
-    if (p.bulkDiscountType === "amount") {
-      perUnitDiscount = p.bulkDiscountValue;
-    } else {
-      perUnitDiscount = item.price * (p.bulkDiscountValue / 100);
-    }
-    perUnitDiscount = Math.min(perUnitDiscount, item.price);
-    return { perUnitDiscount, totalDiscount: perUnitDiscount * item.qty };
-  }
-
-  function calcLineTotal(item) {
-    const base = item.price * item.qty;
-    const bulkDiscount = getBulkDiscountForItem(item);
-    return bulkDiscount ? base - bulkDiscount.totalDiscount : base;
-  }
-
-  function addToCart(p, amount) {
-    amount = amount || 1;
-    const existing = cart.find((c) => c.productId === p.id);
-    if (existing) {
-      existing.qty = Math.round((existing.qty + amount) * 1000) / 1000;
-    } else {
-      cart.push({ productId: p.id, name: p.name, price: p.price, qty: amount, unit: p.unit || "adet" });
-    }
-    renderCart();
-  }
-
-  function adjustCartQty(productId, delta) {
-    const item = cart.find((c) => c.productId === productId);
-    if (!item) return;
-    item.qty += delta;
-    if (item.qty <= 0) {
-      cart = cart.filter((c) => c.productId !== productId);
-    }
-    renderCart();
-  }
-
-  function editCartWeight(productId) {
-    const item = cart.find((c) => c.productId === productId);
-    if (!item) return;
-    showKgOrPricePrompt(item.name, item.price).then((weight) => {
-      if (weight === null) return;
-      if (!weight || weight <= 0) {
-        removeCartItem(productId);
-        return;
-      }
-      item.qty = Math.round(weight * 1000) / 1000;
-      renderCart();
-    });
-  }
-
-  function removeCartItem(productId) {
-    cart = cart.filter((c) => c.productId !== productId);
-    renderCart();
-  }
-
-  function clearCart() {
-    cart = [];
-    renderCart();
-  }
-
-  function cartRowHtml(item) {
-    const lineTotal = calcLineTotal(item);
-    const bulkDiscount = getBulkDiscountForItem(item);
-    const isKg = item.unit === "kg";
-    const qtyDisplay = isKg
-      ? (Math.round(item.qty * 1000) / 1000).toLocaleString(locale(), { maximumFractionDigits: 3 }) + " " + t("unitKgShort")
-      : item.qty;
-    const controlsHtml = isKg
-      ? `
-          <button class="cart-edit-weight-btn" data-id="${item.productId}" aria-label="${t('editWeightAria')}"><i class="fa-solid fa-pen" aria-hidden="true"></i></button>
-          <span class="cart-qty-value">${qtyDisplay}</span>`
-      : `
-          <button class="cart-qty-btn cart-minus" data-id="${item.productId}" aria-label="${t('decreaseAria')}"><i class="fa-solid fa-minus" aria-hidden="true"></i></button>
-          <span class="cart-qty-value">${item.qty}</span>
-          <button class="cart-qty-btn cart-plus" data-id="${item.productId}" aria-label="${t('increaseAria')}"><i class="fa-solid fa-plus" aria-hidden="true"></i></button>`;
-    const p = products.find((x) => x.id === item.productId);
-    const displayName = p ? getDisplayName(p) : item.name;
-    const bulkBadgeHtml = bulkDiscount
-      ? `<p class="cart-bulk-badge">🎉 ${t("bulkDiscountApplied")}: -${formatTL(bulkDiscount.totalDiscount)}</p>`
-      : "";
-    return `
-      <div class="cart-row" data-id="${item.productId}">
-        <div class="cart-info">
-          <p class="cart-name">${escapeHtml(displayName)}</p>
-          <p class="cart-meta">${formatTL(item.price)} / ${isKg ? t("unitKgShort") : t("unitAdetShort")}</p>
-          ${bulkBadgeHtml}
-        </div>
-        <div class="cart-controls">
-          ${controlsHtml}
-          <span class="cart-line-total">${formatTL(lineTotal)}</span>
-          <button class="cart-remove-btn" data-id="${item.productId}" aria-label="${t('removeAria')}"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button>
-        </div>
-      </div>`;
-  }
-
-  function renderCart() {
-    const list = document.getElementById("cartList");
-    const empty = document.getElementById("cartEmptyState");
-    if (!list) return;
-
-    if (!cart.length) {
-      list.innerHTML = "";
-      empty.style.display = "block";
-    } else {
-      empty.style.display = "none";
-      list.innerHTML = cart.map(cartRowHtml).join("");
-    }
-
-    list.querySelectorAll(".cart-plus").forEach((btn) => {
-      btn.addEventListener("click", () => adjustCartQty(btn.dataset.id, 1));
-    });
-    list.querySelectorAll(".cart-minus").forEach((btn) => {
-      btn.addEventListener("click", () => adjustCartQty(btn.dataset.id, -1));
-    });
-    list.querySelectorAll(".cart-edit-weight-btn").forEach((btn) => {
-      btn.addEventListener("click", () => editCartWeight(btn.dataset.id));
-    });
-    list.querySelectorAll(".cart-remove-btn").forEach((btn) => {
-      btn.addEventListener("click", () => removeCartItem(btn.dataset.id));
-    });
-
-    const subtotal = cart.reduce((sum, c) => sum + calcLineTotal(c), 0);
-    const discountInput = document.getElementById("cartDiscount");
-    const discount = Math.min(Number(discountInput.value) || 0, subtotal);
-    const total = Math.max(0, subtotal - discount);
-
-    document.getElementById("cartSubtotal").textContent = formatTL(subtotal);
-    document.getElementById("cartTotal").textContent = formatTL(total);
-  }
-
-  function setPaymentType(type) {
-    selectedPaymentType = type;
-    document.getElementById("payNakitBtn").classList.toggle("active", type === "nakit");
-    document.getElementById("payKartBtn").classList.toggle("active", type === "kart");
-    document.getElementById("payVeresiyeBtn").classList.toggle("active", type === "veresiye");
-    document.getElementById("veresiyeCustomerRow").style.display = type === "veresiye" ? "block" : "none";
-  }
-
-  function completeSale() {
-    if (!cart.length) {
-      showToast(t("alertEmptyCart"), "error");
-      return;
-    }
-
-    let customerId = null;
-    let customerName = null;
-    if (selectedPaymentType === "veresiye") {
-      if (!customers.length) {
-        showToast(t("alertNeedCustomer"), "error");
-        return;
-      }
-      customerId = document.getElementById("veresiyeCustomerSelectedId").value;
-      const c = customers.find((x) => x.id === customerId);
-      if (!c) {
-        showToast(t("alertSelectCustomer"), "error");
-        return;
-      }
-      customerName = c.name;
-    }
-
-    const subtotal = cart.reduce((sum, c) => sum + calcLineTotal(c), 0);
-    const discountInput = document.getElementById("cartDiscount");
-    const discount = Math.min(Number(discountInput.value) || 0, subtotal);
-    const total = Math.max(0, subtotal - discount);
-
-    let totalCost = 0;
-    const saleItems = cart.map((c) => {
-      const p = products.find((x) => x.id === c.productId);
-      const costPrice = p ? p.costPrice || 0 : 0;
-      totalCost += costPrice * c.qty;
-      const effectivePrice = c.qty > 0 ? calcLineTotal(c) / c.qty : c.price;
-      return { name: c.name, qty: c.qty, price: effectivePrice, unit: c.unit || "adet", costPrice };
-    });
-    const profit = total - totalCost;
-
-    cart.forEach((item) => {
-      const p = products.find((x) => x.id === item.productId);
-      if (p) {
-        p.qty = Math.max(0, p.qty - item.qty);
-        updateOutOfStockTracking(p);
-      }
-    });
-
-    const newSale = {
-      id: genId(),
-      timestamp: new Date().toISOString(),
-      items: saleItems,
-      subtotal,
-      discount,
-      total,
-      cost: totalCost,
-      profit,
-      paymentType: selectedPaymentType,
-      customerId,
-      customerName
-    };
-    sales.push(newSale);
-    attemptSendToFiscalProvider(newSale);
-    logAudit("Satış tamamlandı", `${formatTL(total)} (${saleItems.length} ürün)`);
-
-    cart = [];
-    discountInput.value = "0";
-    clearVeresiyeCustomerSelection();
-    setPaymentType("nakit");
-    save();
-    renderAll();
-    showToast(`${t("alertSaleComplete")} ${formatTL(total)}${customerName ? " (" + t("veresiyeLabel") + ": " + customerName + ")" : ""}`, "success");
-  }
-
-  // ---------- İade Yönetimi ----------
-  function getReturnedQtyForItem(saleId, itemName) {
-    return returns
-      .filter((r) => r.saleId === saleId)
-      .reduce((sum, r) => {
-        const item = r.items.find((i) => i.name === itemName);
-        return sum + (item ? item.qty : 0);
-      }, 0);
-  }
-
-  function openReturnModal(saleId) {
-    const sale = sales.find((s) => s.id === saleId);
-    if (!sale) return;
-    activeReturnSaleId = saleId;
-
-    const listEl = document.getElementById("returnItemsList");
-    listEl.innerHTML = sale.items
-      .map((item, i) => {
-        const alreadyReturned = getReturnedQtyForItem(saleId, item.name);
-        const maxQty = Math.max(0, item.qty - alreadyReturned);
-        return `
-          <div class="return-item-row">
-            <div class="return-item-info">
-              <p class="return-item-name">${escapeHtml(item.name)}</p>
-              <p class="return-item-meta">${t("returnMaxLabel")}: ${maxQty} ${item.unit === "kg" ? t("unitKgShort") : t("unitAdetShort")}</p>
-            </div>
-            <input type="number" class="return-qty-input" data-index="${i}" min="0" max="${maxQty}" step="${item.unit === "kg" ? "0.001" : "1"}" value="0" ${maxQty <= 0 ? "disabled" : ""} />
-          </div>`;
-      })
-      .join("");
-
-    document.getElementById("returnModal").style.display = "flex";
-  }
-
-  function closeReturnModal() {
-    document.getElementById("returnModal").style.display = "none";
-    activeReturnSaleId = null;
-  }
-
-  function confirmReturn() {
-    const sale = sales.find((s) => s.id === activeReturnSaleId);
-    if (!sale) return;
-
-    const inputs = document.querySelectorAll(".return-qty-input");
-    const returnItems = [];
-    let totalRefund = 0;
-
-    inputs.forEach((input) => {
-      const qty = Number(input.value) || 0;
-      if (qty <= 0) return;
-      const item = sale.items[Number(input.dataset.index)];
-      if (!item) return;
-      returnItems.push({ name: item.name, qty, price: item.price });
-      totalRefund += qty * item.price;
-
-      const p = products.find((x) => x.name === item.name);
-      if (p) p.qty = Math.round((p.qty + qty) * 1000) / 1000;
-    });
-
-    if (!returnItems.length) {
-      showToast(t("returnNoneSelected"), "error");
-      return;
-    }
-
-    returns.push({
-      id: genId(),
-      saleId: sale.id,
-      timestamp: new Date().toISOString(),
-      items: returnItems,
-      totalRefund
-    });
-
-    logAudit("İade alındı", `${formatTL(totalRefund)} (${returnItems.length} ürün)`);
-    save();
-    renderAll();
-    closeReturnModal();
-    showToast(t("returnSuccess"), "success");
-  }
-
-  function cancelSale(saleId) {
-    const sale = sales.find((s) => s.id === saleId);
-    if (!sale) return;
-    if (!confirm(`${t("confirmCancelSale")}\n${formatTL(sale.total)} ${t("confirmCancelSaleDetail")}`)) {
-      return;
-    }
-    sale.items.forEach((item) => {
-      const p = products.find((x) => x.name === item.name);
-      if (p) p.qty += item.qty;
-    });
-    sales = sales.filter((s) => s.id !== saleId);
-    logAudit("Satış iptal edildi", formatTL(sale.total));
-    save();
-    renderAll();
-  }
-
-  // ---------- Satışlar (geçmiş + rapor) ----------
-  function isInPeriod(isoString, period) {
-    const d = new Date(isoString);
-    const now = new Date();
-    if (period === "today") {
-      return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth() && d.getDate() === now.getDate();
-    }
-    if (period === "week") {
-      const dayOfWeek = (now.getDay() + 6) % 7; // Pazartesi=0
-      const monday = new Date(now);
-      monday.setHours(0, 0, 0, 0);
-      monday.setDate(now.getDate() - dayOfWeek);
-      return d >= monday;
-    }
-    if (period === "month") {
-      return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
-    }
-    return true; // 'all'
-  }
-
-  function saleRowHtml(sale) {
-    const d = new Date(sale.timestamp);
-    const timeStr = d.toLocaleString(locale(), { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
-    const itemsSummary = sale.items
-      .map((i) => `${escapeHtml(i.name)} x${i.unit === "kg" ? i.qty + t("unitKgShort") : i.qty}`)
-      .join(", ");
-    const saleReturns = returns.filter((r) => r.saleId === sale.id);
-    const totalReturned = saleReturns.reduce((sum, r) => sum + r.totalRefund, 0);
-    const returnedNote = totalReturned > 0 ? `<p class="sale-returned-note">${t("returnedLabel")}: -${formatTL(totalReturned)}</p>` : "";
-    const paymentBadge =
-      sale.paymentType === "veresiye"
-        ? `<span class="sale-payment-badge sale-payment-veresiye">${t("veresiyeLabel")}${sale.customerName ? ": " + escapeHtml(sale.customerName) : ""}</span>`
-        : sale.paymentType === "kart"
-        ? `<span class="sale-payment-badge sale-payment-kart">${t("payKart")}</span>`
-        : "";
-    const profitValue = sale.profit != null ? sale.profit : sale.total;
-    return `
-      <div class="sale-row">
-        <div class="sale-row-top">
-          <span class="sale-time">${timeStr}</span>
-          <span class="sale-amount">${formatTL(sale.total)}</span>
-        </div>
-        <p class="sale-items">${itemsSummary}</p>
-        <p class="sale-profit">${t("profitLabel")}: ${formatTL(profitValue)}</p>
-        ${returnedNote}
-        <div class="sale-row-bottom">
-          ${paymentBadge}
-          <button class="sale-return-btn" data-id="${sale.id}">
-            <i class="fa-solid fa-rotate-left" aria-hidden="true"></i> ${t("returnBtn")}
-          </button>
-          <button class="sale-cancel-btn" data-id="${sale.id}">
-            <i class="fa-solid fa-xmark" aria-hidden="true"></i> ${t("cancelSaleBtn")}
-          </button>
-        </div>
-      </div>`;
-  }
-
-  function topProductRowHtml(item, rank) {
-    return `
-      <div class="product-row">
-        <div class="product-info">
-          <p class="product-name">${rank}. ${escapeHtml(item.name)}</p>
-          <p class="product-meta">${item.qty} ${t("soldQtyLabel")}</p>
-        </div>
-        <span class="sale-amount">${formatTL(item.revenue)}</span>
-      </div>`;
-  }
-
-  function renderSales() {
-    const list = document.getElementById("salesList");
-    const empty = document.getElementById("salesEmptyState");
-    const topList = document.getElementById("topProductsList");
-    const topEmpty = document.getElementById("topProductsEmptyState");
-    if (!list) return;
-
-    const periodSales = sales.filter((s) => isInPeriod(s.timestamp, currentSalesPeriod));
-    const sorted = [...periodSales].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-
-    if (!sorted.length) {
-      list.innerHTML = "";
-      empty.style.display = "block";
-    } else {
-      empty.style.display = "none";
-      list.innerHTML = sorted.map(saleRowHtml).join("");
-      list.querySelectorAll(".sale-cancel-btn").forEach((btn) => {
-        btn.addEventListener("click", () => cancelSale(btn.dataset.id));
-      });
-      list.querySelectorAll(".sale-return-btn").forEach((btn) => {
-        btn.addEventListener("click", () => openReturnModal(btn.dataset.id));
-      });
-    }
-
-    // En çok satan ürünler
-    const productTotals = {};
-    periodSales.forEach((s) => {
-      s.items.forEach((i) => {
-        if (!productTotals[i.name]) productTotals[i.name] = { name: i.name, qty: 0, revenue: 0 };
-        productTotals[i.name].qty += i.qty;
-        productTotals[i.name].revenue += i.qty * i.price;
-      });
-    });
-    const topProducts = Object.values(productTotals)
-      .sort((a, b) => b.qty - a.qty)
-      .slice(0, 5);
-
-    if (!topProducts.length) {
-      topList.innerHTML = "";
-      topEmpty.style.display = "block";
-    } else {
-      topEmpty.style.display = "none";
-      topList.innerHTML = topProducts.map((item, i) => topProductRowHtml(item, i + 1)).join("");
-    }
-
-    const periodTotal = periodSales.reduce((sum, s) => sum + s.total, 0);
-    const periodProfit = periodSales.reduce((sum, s) => sum + (s.profit != null ? s.profit : s.total), 0);
-    document.getElementById("statPeriodTotal").textContent = formatTL(periodTotal);
-    document.getElementById("statPeriodCount").textContent = periodSales.length;
-    const profitEl = document.getElementById("statNetProfit");
-    if (profitEl) {
-      profitEl.textContent = formatTL(periodProfit);
-      const profitCard = profitEl.closest(".profit-highlight-card");
-      if (profitCard) profitCard.classList.toggle("negative", periodProfit < 0);
-    }
-
-    const nakitTotal = periodSales.filter((s) => s.paymentType === "nakit" || !s.paymentType).reduce((sum, s) => sum + s.total, 0);
-    const kartTotal = periodSales.filter((s) => s.paymentType === "kart").reduce((sum, s) => sum + s.total, 0);
-    const veresiyeTotal = periodSales.filter((s) => s.paymentType === "veresiye").reduce((sum, s) => sum + s.total, 0);
-    const breakdownNakitEl = document.getElementById("breakdownNakit");
-    const breakdownKartEl = document.getElementById("breakdownKart");
-    const breakdownVeresiyeEl = document.getElementById("breakdownVeresiye");
-    if (breakdownNakitEl) breakdownNakitEl.textContent = formatTL(nakitTotal);
-    if (breakdownKartEl) breakdownKartEl.textContent = formatTL(kartTotal);
-    if (breakdownVeresiyeEl) breakdownVeresiyeEl.textContent = formatTL(veresiyeTotal);
-  }
-
-  // ---------- Hızlı barkod tarama (ürün ekle/düzenle formları için) ----------
-  let quickScanCode = null;
-  let quickScanTargetInputId = null;
-
-  function openQuickBarcodeScan(targetInputId) {
-    quickScanTargetInputId = targetInputId;
-    document.getElementById("barcodeScanModal").style.display = "flex";
-    const readerEl = document.getElementById("quickScanReader");
-    readerEl.innerHTML = "";
-    quickScanCode = new Html5Qrcode("quickScanReader");
-    quickScanCode
-      .start(
-        { facingMode: "environment" },
-        { fps: 10, qrbox: 220 },
-        (decodedText) => {
-          const input = document.getElementById(quickScanTargetInputId);
-          if (input) input.value = decodedText;
-          closeQuickBarcodeScan();
-          lookupBarcodeAndFill(decodedText, quickScanTargetInputId);
-        },
-        () => {}
-      )
-      .catch((err) => {
-        showToast(t("cameraError"), "error");
-        closeQuickBarcodeScan();
-      });
-  }
-
-  function closeQuickBarcodeScan() {
-    document.getElementById("barcodeScanModal").style.display = "none";
-    if (quickScanCode) {
-      quickScanCode
-        .stop()
-        .then(() => quickScanCode.clear())
-        .catch(() => {});
-      quickScanCode = null;
-    }
-  }
-
-  // ---------- Open Food Facts: barkoddan otomatik ürün bilgisi ----------
-  function lookupBarcodeAndFill(barcode, targetInputId) {
-    const isNewForm = targetInputId === "newBarcode";
-    const nameInput = document.getElementById(isNewForm ? "newName" : "editName");
-    const categoryInput = document.getElementById(isNewForm ? "newCategory" : "editCategory");
-
-    fetch(`https://world.openfoodfacts.org/api/v2/product/${encodeURIComponent(barcode)}.json?fields=product_name,brands,categories_tags`)
-      .then((r) => r.json())
-      .then((data) => {
-        if (!data || data.status !== 1 || !data.product) return;
-        const p = data.product;
-        const brand = (p.brands || "").split(",")[0].trim();
-        const productName = p.product_name || "";
-        const fullName = [brand, productName].filter(Boolean).join(" ").trim();
-        if (fullName && !nameInput.value.trim()) {
-          nameInput.value = fullName;
-        }
-        if (p.categories_tags && p.categories_tags.length && !categoryInput.value.trim()) {
-          const rawCat = p.categories_tags[p.categories_tags.length - 1] || "";
-          categoryInput.value = rawCat.replace(/^\w\w:/, "").replace(/-/g, " ");
-        }
-      })
-      .catch(() => {});
-  }
-
-  // ---------- Open Food Facts: isimden barkod arama (en iyi çaba, garanti değil) ----------
-  function searchBarcodeByName(productName) {
-    if (!productName || !productName.trim()) return Promise.resolve(null);
-    const query = encodeURIComponent(productName.trim());
-    return fetch(`https://world.openfoodfacts.org/cgi/search.pl?search_terms=${query}&json=true&page_size=5`)
-      .then((r) => r.json())
-      .then((data) => {
-        if (!data || !data.products || !data.products.length) return null;
-        const normalized = productName.trim().toLowerCase();
-        // İsmi en yakın eşleşen sonucu bul (tam ya da kısmi eşleşme)
-        const match =
-          data.products.find((p) => (p.product_name || "").toLowerCase().trim() === normalized) ||
-          data.products.find((p) => (p.product_name || "").toLowerCase().includes(normalized) || normalized.includes((p.product_name || "").toLowerCase()));
-        return match && match.code ? match.code : null;
-      })
-      .catch(() => null);
-  }
-
-  function findBarcodesOnlineForCandidates(candidates, onUpdate) {
-    // Dakikada 10 istek sınırı olduğu için sırayla, aralıklarla deniyoruz.
-    let index = 0;
-    function next() {
-      if (index >= candidates.length) return;
-      const candidate = candidates[index];
-      index++;
-      if (candidate.barcode) {
-        setTimeout(next, 300);
-        return;
-      }
-      searchBarcodeByName(candidate.name).then((code) => {
-        if (code) {
-          candidate.barcode = code;
-          candidate.barcodeFromWeb = true;
-          onUpdate();
-        }
-        setTimeout(next, 700);
-      });
-    }
-    next();
-  }
-
-  let bulkScanCandidates = [];
-
-  function isBulkScanConfigured() {
-    return typeof bulkScanConfig !== "undefined" && bulkScanConfig.workerUrl && bulkScanConfig.workerUrl.indexOf("BURAYA") !== 0;
-  }
-
-  function fileToBase64(file) {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => {
-        const result = reader.result;
-        resolve(result.split(",")[1]);
-      };
-      reader.onerror = reject;
-      reader.readAsDataURL(file);
-    });
-  }
-
-  // ---------- Raf Kontrol Uyarısı (satış hızına dayalı) ----------
-  function renderShelfCheckAlert() {
-    const listEl = document.getElementById("shelfCheckList");
-    const emptyEl = document.getElementById("shelfCheckEmptyState");
-    if (!listEl) return;
-
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const todaySales = sales.filter((s) => new Date(s.timestamp) >= today);
-    const soldTodayByProduct = {};
-    todaySales.forEach((s) => {
-      s.items.forEach((item) => {
-        soldTodayByProduct[item.name] = (soldTodayByProduct[item.name] || 0) + item.qty;
-      });
-    });
-
-    const cutoff14 = new Date(Date.now() - 14 * 86400000);
-    const recentSales = sales.filter((s) => new Date(s.timestamp) >= cutoff14 && new Date(s.timestamp) < today);
-    const salesByProduct14 = {};
-    recentSales.forEach((s) => {
-      s.items.forEach((item) => {
-        salesByProduct14[item.name] = (salesByProduct14[item.name] || 0) + item.qty;
-      });
-    });
-
-    const alerts = Object.keys(soldTodayByProduct)
-      .map((name) => {
-        const soldToday = soldTodayByProduct[name];
-        const avgDaily = (salesByProduct14[name] || 0) / 14;
-        if (soldToday < 3) return null; // çok küçük hacimlerde gürültü yaratmasın
-        if (avgDaily > 0 && soldToday < avgDaily * 1.5) return null; // normalin çok üstünde değilse alarm verme
-        if (avgDaily === 0 && soldToday < 5) return null; // geçmiş veri yoksa daha yüksek bir eşik kullan
-        return { name, soldToday, avgDaily };
-      })
-      .filter(Boolean)
-      .sort((a, b) => b.soldToday - a.soldToday);
-
-    if (!alerts.length) {
-      listEl.innerHTML = "";
-      emptyEl.style.display = "block";
-      return;
-    }
-    emptyEl.style.display = "none";
-
-    listEl.innerHTML = alerts
-      .map((a) => {
-        const avgLabel = a.avgDaily > 0 ? `${t("shelfCheckUsualAvg")}: ${a.avgDaily.toFixed(1)}` : t("shelfCheckNoHistory");
-        return `
-          <div class="shelf-check-row">
-            <div class="shelf-check-info">
-              <p class="shelf-check-name">${escapeHtml(a.name)}</p>
-              <p class="shelf-check-meta">${t("shelfCheckSoldToday")}: ${a.soldToday} · ${avgLabel}</p>
-            </div>
-            <span class="shelf-check-badge">${t("shelfCheckAction")}</span>
-          </div>`;
-      })
-      .join("");
-
-    // Daha önce bugün bildirilmemiş ürünler için tarayıcı bildirimi gönder
-    alerts.forEach((a) => notifyShelfCheckOnce(a.name));
-  }
-
-  function notifyShelfCheckOnce(productName) {
-    const todayKey = new Date().toISOString().slice(0, 10);
-    let notified = {};
-    try {
-      notified = JSON.parse(sessionStorage.getItem("bakkal_shelf_notified") || "{}");
-    } catch (e) {}
-    const key = `${todayKey}_${productName}`;
-    if (notified[key]) return;
-    notified[key] = true;
-    try {
-      sessionStorage.setItem("bakkal_shelf_notified", JSON.stringify(notified));
-    } catch (e) {}
-
-    // Yerel tarayıcı bildirimi (uygulama o an açıksa anında görünür)
-    if ("Notification" in window && Notification.permission === "granted") {
-      try {
-        new Notification(t("shelfCheckNotifTitle"), {
-          body: `${productName} ${t("shelfCheckNotifBody")}`,
-          icon: "./icons/icon-192.png"
-        });
-      } catch (e) {}
-    }
-
-    // Gerçek push bildirimi (telefon/uygulama kapalıyken de ulaşır)
-    sendShelfCheckPush(productName);
-  }
-
-  function sendShelfCheckPush(productName) {
-    if (!isChainConfigured() || !currentUser) return;
-    currentUser
-      .getIdToken()
-      .then((idToken) =>
-        fetch(`${chainConfig.workerUrl}/send-self-notification`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            idToken,
-            title: t("shelfCheckNotifTitle"),
-            message: `${productName} ${t("shelfCheckNotifBody")}`
-          })
-        })
-      )
-      .catch((e) => console.error("Raf kontrolü bildirimi gönderilemedi", e));
-  }
-
-  function productAlreadyExists(name) {
-    const normalized = name.trim().toLowerCase();
-    return products.some((p) => p.name.trim().toLowerCase() === normalized);
-  }
-
-  function sleep_(ms) {
-    return new Promise((resolve) => setTimeout(resolve, ms));
-  }
-
-  function callGeminiWithRetry(base64, prompt, maxRetries) {
+  // ==================== 16-bulk-scan-ai.js ====================
+/**
+ * 16-bulk-scan-ai.js
+ * Yapay zeka destekli toplu ürün girişi: raf/fatura fotoğrafı tarama, dosya/CSV içe aktarma, paylaşım hedefi (share target).
+ */
+
+function callGeminiWithRetry(base64, prompt, maxRetries) {
     maxRetries = maxRetries || 3;
     let attempt = 0;
 
@@ -4158,7 +4287,7 @@
     });
   }
 
-  function analyzeOnePhoto(file) {
+function analyzeOnePhoto(file) {
     const prompt = [
       "Bu bir market/bakkal rafının fotoğrafı.",
       "Fotoğrafta görünen HER FARKLI ürünü tek tek tespit et.",
@@ -4197,8 +4326,7 @@
       });
   }
 
-  // ---------- Dosya İşleyici (File Handling API) - CSV toplu ürün içe aktarma ----------
-  function checkForLaunchedFile() {
+function checkForLaunchedFile() {
     if (!("launchQueue" in window)) return;
     window.launchQueue.setConsumer((launchParams) => {
       if (!launchParams.files || !launchParams.files.length) return;
@@ -4208,58 +4336,7 @@
     });
   }
 
-  function importProductsFromRows(rows) {
-    if (!rows.length) return;
-
-    const firstCells = rows[0].map((c) => String(c || "").trim().toLowerCase());
-    const hasHeader = firstCells.includes("name") || firstCells.includes("ürün adı") || firstCells.includes("urun adi");
-    const dataRows = hasHeader ? rows.slice(1) : rows;
-
-    let addedCount = 0;
-    dataRows.forEach((cols) => {
-      const name = String(cols[0] || "").trim();
-      if (!name) return;
-      const category = String(cols[1] || "").trim() || t("categoryOtherDefault");
-      const qty = Number(cols[2]) || 0;
-      const price = Number(cols[3]) || 0;
-      if (productAlreadyExists(name)) return;
-      products.push(mkProduct(name, category, qty, 5, price, "", "adet", 0));
-      addedCount++;
-    });
-
-    if (addedCount > 0) {
-      save();
-      renderAll();
-      showToast(t("bulkAddedAlert").replace("{n}", addedCount), "success");
-    } else {
-      showToast(t("invoiceScanNoItems"), "info");
-    }
-  }
-
-  function importProductsFromCsv(text) {
-    const lines = text.split(/\r?\n/).filter((l) => l.trim());
-    const rows = lines.map((line) => line.split(",").map((c) => c.trim()));
-    importProductsFromRows(rows);
-  }
-
-  function handleCsvImportFile(file) {
-    const isExcel = /\.(xlsx|xls)$/i.test(file.name);
-    if (isExcel) {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const workbook = XLSX.read(new Uint8Array(e.target.result), { type: "array" });
-        const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-        const rows = XLSX.utils.sheet_to_json(firstSheet, { header: 1 });
-        importProductsFromRows(rows);
-      };
-      reader.readAsArrayBuffer(file);
-    } else {
-      file.text().then((text) => importProductsFromCsv(text));
-    }
-  }
-
-  // ---------- Not Alma (Note Taking capability) - hızlı ürün ekleme formuna yönlendir ----------
-  function checkForNoteTakingLaunch() {
+function checkForNoteTakingLaunch() {
     const params = new URLSearchParams(window.location.search);
     if (params.get("newnote") !== "1") return;
     window.history.replaceState({}, "", window.location.pathname);
@@ -4270,8 +4347,7 @@
     }, 200);
   }
 
-  // ---------- Protokol İşleyici (web+bakkal://) ----------
-  function checkForProtocolLaunch() {
+function checkForProtocolLaunch() {
     const params = new URLSearchParams(window.location.search);
     const weblink = params.get("weblink");
     if (!weblink) return;
@@ -4295,8 +4371,7 @@
     }
   }
 
-  // ---------- Paylaşılan fotoğrafı işleme (Share Target) ----------
-  function checkForSharedPhoto() {
+function checkForSharedPhoto() {
     const params = new URLSearchParams(window.location.search);
     if (params.get("shared") !== "1") return;
 
@@ -4318,7 +4393,7 @@
       .catch(() => {});
   }
 
-  function askSharedPhotoDestination(file) {
+function askSharedPhotoDestination(file) {
     if (confirm(t("sharedPhotoPrompt"))) {
       handleShelfPhotos([file]);
     } else {
@@ -4326,7 +4401,7 @@
     }
   }
 
-  function handleShelfPhotos(files) {
+function handleShelfPhotos(files) {
     if (!isBulkScanConfigured()) {
       showToast(t("bulkScanNotConfigured"), "error");
       return;
@@ -4379,7 +4454,7 @@
     processNext();
   }
 
-  function renderBulkScanModal() {
+function renderBulkScanModal() {
     const titleEl = document.getElementById("bulkScanModalTitle");
     titleEl.textContent = t("bulkScanFoundTitle").replace("{n}", bulkScanCandidates.length);
 
@@ -4412,12 +4487,12 @@
     document.getElementById("bulkScanModal").style.display = "flex";
   }
 
-  function closeBulkScanModal() {
+function closeBulkScanModal() {
     document.getElementById("bulkScanModal").style.display = "none";
     bulkScanCandidates = [];
   }
 
-  function addAllBulkScanProducts() {
+function addAllBulkScanProducts() {
     const checks = document.querySelectorAll(".bulk-result-check");
     let addedCount = 0;
     checks.forEach((chk) => {
@@ -4443,22 +4518,7 @@
     showToast(t("bulkAddedAlert").replace("{n}", addedCount), "success");
   }
 
-  // ---------- Fatura ile toplu stok girişi (Google Gemini ücretsiz API ile) ----------
-  let invoiceScanCandidates = [];
-
-  function findExistingProductByName(name) {
-    const normalized = (name || "").trim().toLowerCase();
-    if (!normalized) return null;
-    let match = products.find((p) => p.name.trim().toLowerCase() === normalized);
-    if (match) return match;
-    // Tam eşleşme yoksa, birbirini içeren isimlerle gevşek eşleştirme dene
-    match = products.find(
-      (p) => p.name.trim().toLowerCase().includes(normalized) || normalized.includes(p.name.trim().toLowerCase())
-    );
-    return match || null;
-  }
-
-  function analyzeOneInvoicePhoto(file) {
+function analyzeOneInvoicePhoto(file) {
     const prompt = [
       "Bu bir tedarikçi/toptancı faturasının fotoğrafı. Faturadaki HER ÜRÜN SATIRINI tek tek çıkar.",
       "",
@@ -4506,50 +4566,7 @@
       });
   }
 
-  function findBoxMultiplier(name) {
-    const str = (name || "").trim();
-    const starIndex = str.indexOf("*");
-
-    if (starIndex === -1) {
-      // "(4 x 6)" gibi parantezli ama "*" yerine "x"/"×" kullanan nadir biçim
-      const parenMatch = str.match(/\((\d+)\s*[x×]\s*(\d+)\)/i);
-      if (parenMatch) {
-        const total = Number(parenMatch[1]) * Number(parenMatch[2]);
-        return total > 0 ? total : 1;
-      }
-      return 1;
-    }
-
-    const before = str.slice(0, starIndex);
-    const after = str.slice(starIndex + 1);
-
-    // "*" sonrasındaki ilk sayı (örn. "*12" -> 12)
-    const afterMatch = after.match(/^\s*(\d+)/);
-    const afterNum = afterMatch ? Number(afterMatch[1]) : null;
-
-    // "*" öncesindeki son sayı — ama hemen önünde "/" varsa (örn. "1/2 *12"
-    // içindeki "2" gibi bir ölçü/oran ifadesiyse) bunu kutu çarpanı sayma
-    const beforeMatch = before.match(/(\d+)\s*$/);
-    let beforeNum = null;
-    if (beforeMatch) {
-      const idx = before.lastIndexOf(beforeMatch[1]);
-      const charBeforeNumber = before.slice(0, idx).trim().slice(-1);
-      if (charBeforeNumber !== "/") {
-        beforeNum = Number(beforeMatch[1]);
-      }
-    }
-
-    if (afterNum && beforeNum) {
-      const total = beforeNum * afterNum;
-      return total > 0 ? total : 1;
-    }
-    if (afterNum) {
-      return afterNum > 0 ? afterNum : 1;
-    }
-    return 1;
-  }
-
-  function handleInvoicePhotos(files) {
+function handleInvoicePhotos(files) {
     if (!isBulkScanConfigured()) {
       showToast(t("invoiceScanNotConfigured"), "error");
       return;
@@ -4621,7 +4638,7 @@
     processNext();
   }
 
-  function renderInvoiceScanModal() {
+function renderInvoiceScanModal() {
     const titleEl = document.getElementById("invoiceScanModalTitle");
     titleEl.textContent = t("invoiceScanFoundTitle").replace("{n}", invoiceScanCandidates.length);
 
@@ -4687,66 +4704,62 @@
     document.getElementById("invoiceScanModal").style.display = "flex";
   }
 
-  function closeInvoiceScanModal() {
+function closeInvoiceScanModal() {
     document.getElementById("invoiceScanModal").style.display = "none";
     invoiceScanCandidates = [];
   }
 
-  function calcSellingPrice(costPrice, percent) {
-    const p = percent != null ? percent : 20;
-    return Math.round(costPrice * (1 + p / 100) * 100) / 100;
-  }
+function applyInvoiceScan() {
+    const checks = document.querySelectorAll(".invoice-result-check");
+    let appliedCount = 0;
+    checks.forEach((chk) => {
+      if (!chk.checked) return;
+      const item = invoiceScanCandidates[Number(chk.dataset.index)];
+      if (!item) return;
 
-  // ---------- Fiyat Değişimi takibi (2 gün sonra otomatik silinir) ----------
-  function cleanOldPriceChanges() {
-    const twoDaysMs = 2 * 24 * 60 * 60 * 1000;
-    const cutoff = Date.now() - twoDaysMs;
-    priceChangeLog = priceChangeLog.filter((entry) => new Date(entry.timestamp).getTime() >= cutoff);
-  }
-
-  function renderPriceChanges() {
-    const listEl = document.getElementById("priceChangesList");
-    const emptyEl = document.getElementById("priceChangesEmptyState");
-    if (!listEl) return;
-
+      if (item.matchedProductId) {
+        const p = products.find((x) => x.id === item.matchedProductId);
+        if (p) {
+          p.qty = Math.round((p.qty + item.qty) * 1000) / 1000;
+          updateOutOfStockTracking(p);
+          if (item.barcode && !p.barcode) p.barcode = item.barcode;
+          if (item.unitCost) {
+            const oldPrice = p.price;
+            const newPrice = calcSellingPrice(item.unitCost, item.markupPercent);
+            if (oldPrice && Math.abs(newPrice - oldPrice) >= 0.01) {
+              priceChangeLog.push({
+                productName: p.name,
+                oldPrice,
+                newPrice,
+                direction: newPrice > oldPrice ? "up" : "down",
+                timestamp: new Date().toISOString()
+              });
+            }
+            p.costPrice = item.unitCost;
+            p.price = newPrice;
+          }
+        }
+      } else {
+        const costPrice = item.unitCost || 0;
+        const price = costPrice ? calcSellingPrice(costPrice, item.markupPercent) : 0;
+        products.push(mkProduct(item.name, t("categoryOtherDefault"), item.qty, 5, price, item.barcode || "", "adet", costPrice));
+      }
+      appliedCount++;
+    });
     cleanOldPriceChanges();
-
-    const sorted = [...priceChangeLog].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-
-    if (!sorted.length) {
-      listEl.innerHTML = "";
-      emptyEl.style.display = "block";
-      return;
-    }
-    emptyEl.style.display = "none";
-
-    listEl.innerHTML = sorted
-      .map((entry) => {
-        const d = new Date(entry.timestamp);
-        const dateStr = d.toLocaleString(locale(), { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
-        const directionClass = entry.direction === "up" ? "price-change-up" : "price-change-down";
-        const directionIcon = entry.direction === "up" ? "fa-arrow-up" : "fa-arrow-down";
-        const directionLabel = entry.direction === "up" ? t("priceIncreasedLabel") : t("priceDecreasedLabel");
-        return `
-          <div class="price-change-row">
-            <div class="price-change-info">
-              <p class="price-change-name">${escapeHtml(entry.productName)}</p>
-              <p class="price-change-date">${dateStr} · ${directionLabel}</p>
-            </div>
-            <div class="price-change-values">
-              <span class="price-change-old">${formatTL(entry.oldPrice)}</span>
-              <i class="fa-solid ${directionIcon} ${directionClass}" aria-hidden="true"></i>
-              <span class="${directionClass}">${formatTL(entry.newPrice)}</span>
-            </div>
-          </div>`;
-      })
-      .join("");
+    save();
+    renderAll();
+    closeInvoiceScanModal();
+    showToast(t("invoiceAppliedAlert").replace("{n}", appliedCount), "success");
   }
 
-  // ==================== AI PANEL ====================
+  // ==================== 17-ai-panel.js ====================
+/**
+ * 17-ai-panel.js
+ * AI Panel: günlük rapor, market sağlık skoru, akıllı sipariş motoru, kayıp satış hesaplayıcısı, akıllı fiyat önerisi, AI danışman.
+ */
 
-  // ---------- 1) Günlük Rapor + Market Sağlık Skoru ----------
-  function renderDailyReportAndHealth() {
+function renderDailyReportAndHealth() {
     const reportSoldOutEl = document.getElementById("reportSoldOutCount");
     if (!reportSoldOutEl) return;
 
@@ -4812,7 +4825,7 @@
       .join("");
   }
 
-  function daysUntil(dateStr) {
+function daysUntil(dateStr) {
     const target = new Date(dateStr);
     target.setHours(0, 0, 0, 0);
     const today = new Date();
@@ -4820,9 +4833,7 @@
     return Math.round((target - today) / 86400000);
   }
 
-  // ---------- 2) AI Sipariş Motoru (satış hızına göre) ----------
-  // ---------- 2b) Kayıp Satış Hesaplayıcısı ----------
-  function renderLostSales() {
+function renderLostSales() {
     const listEl = document.getElementById("lostSalesList");
     const emptyEl = document.getElementById("lostSalesEmptyState");
     const totalEl = document.getElementById("lostSalesTotalValue");
@@ -4873,7 +4884,7 @@
       .join("");
   }
 
-  function renderOrderEngine() {
+function renderOrderEngine() {
     const listEl = document.getElementById("orderEngineList");
     const emptyEl = document.getElementById("orderEngineEmptyState");
     if (!listEl) return;
@@ -4931,9 +4942,7 @@
     renderOrderEngineSupplierSelect();
   }
 
-  let orderEngineSuggestionsCache = [];
-
-  function renderOrderEngineSupplierSelect() {
+function renderOrderEngineSupplierSelect() {
     const selectEl = document.getElementById("orderEngineSupplierSelect");
     if (!selectEl) return;
     selectEl.innerHTML =
@@ -4941,7 +4950,7 @@
       suppliers.map((s) => `<option value="${s.id}">${escapeHtml(s.name)}</option>`).join("");
   }
 
-  function createOrderFromEngine() {
+function createOrderFromEngine() {
     const checks = document.querySelectorAll(".order-engine-check");
     const selected = [];
     checks.forEach((chk) => {
@@ -4971,9 +4980,7 @@
     logAudit("Sipariş oluşturuldu", `${selected.length} ürün${supplier ? " · " + supplier.name : ""}`);
   }
 
-  // ---------- 3) Son Kullanma Tarihi Takibi ----------
-  // ---------- Akıllı Fiyat Önerisi ----------
-  function renderPriceSuggestions() {
+function renderPriceSuggestions() {
     const listEl = document.getElementById("priceSuggestList");
     const emptyEl = document.getElementById("priceSuggestEmptyState");
     if (!listEl) return;
@@ -5048,7 +5055,7 @@
       .join("");
   }
 
-  function renderExpiryTracking() {
+function renderExpiryTracking() {
     const listEl = document.getElementById("expiryList");
     const emptyEl = document.getElementById("expiryEmptyState");
     if (!listEl) return;
@@ -5079,8 +5086,7 @@
       .join("");
   }
 
-  // ---------- 4) Hırsızlık / Anormal Durum Algılama ----------
-  function renderAnomalyDetection() {
+function renderAnomalyDetection() {
     const listEl = document.getElementById("anomalyList");
     const emptyEl = document.getElementById("anomalyEmptyState");
     if (!listEl) return;
@@ -5126,8 +5132,7 @@
       .join("");
   }
 
-  // ---------- 5) AI Market Danışmanı ----------
-  function askAiAdvisor() {
+function askAiAdvisor() {
     const question = document.getElementById("advisorQuestion").value.trim();
     if (!question) return;
 
@@ -5177,7 +5182,7 @@
       });
   }
 
-  function renderAiPanel() {
+function renderAiPanel() {
     if (!document.getElementById("tab-ai")) return;
     renderDailyReportAndHealth();
     renderOrderEngine();
@@ -5188,229 +5193,48 @@
     renderShelfCheckAlert();
   }
 
-  function applyInvoiceScan() {
-    const checks = document.querySelectorAll(".invoice-result-check");
-    let appliedCount = 0;
-    checks.forEach((chk) => {
-      if (!chk.checked) return;
-      const item = invoiceScanCandidates[Number(chk.dataset.index)];
-      if (!item) return;
+  // ==================== 18-settings-backup.js ====================
+/**
+ * 18-settings-backup.js
+ * Ayarlar: tema, menü konumu, yazı boyutu, basit mod, otomatik/manuel veri yedekleme, geri bildirim gönderme.
+ */
 
-      if (item.matchedProductId) {
-        const p = products.find((x) => x.id === item.matchedProductId);
-        if (p) {
-          p.qty = Math.round((p.qty + item.qty) * 1000) / 1000;
-          updateOutOfStockTracking(p);
-          if (item.barcode && !p.barcode) p.barcode = item.barcode;
-          if (item.unitCost) {
-            const oldPrice = p.price;
-            const newPrice = calcSellingPrice(item.unitCost, item.markupPercent);
-            if (oldPrice && Math.abs(newPrice - oldPrice) >= 0.01) {
-              priceChangeLog.push({
-                productName: p.name,
-                oldPrice,
-                newPrice,
-                direction: newPrice > oldPrice ? "up" : "down",
-                timestamp: new Date().toISOString()
-              });
-            }
-            p.costPrice = item.unitCost;
-            p.price = newPrice;
-          }
+function sendFeedback() {
+    const textEl = document.getElementById("feedbackText");
+    const message = textEl.value.trim();
+    if (!message) {
+      showToast(t("feedbackEmptyError"), "error");
+      return;
+    }
+    if (!isChainConfigured()) {
+      showToast(t("feedbackNotConfigured"), "error");
+      return;
+    }
+    currentUser
+      .getIdToken()
+      .then((idToken) =>
+        fetch(`${chainConfig.workerUrl}/submit-feedback`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ idToken, message })
+        })
+      )
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.error) {
+          showToast(data.error, "error");
+          return;
         }
-      } else {
-        const costPrice = item.unitCost || 0;
-        const price = costPrice ? calcSellingPrice(costPrice, item.markupPercent) : 0;
-        products.push(mkProduct(item.name, t("categoryOtherDefault"), item.qty, 5, price, item.barcode || "", "adet", costPrice));
-      }
-      appliedCount++;
-    });
-    cleanOldPriceChanges();
-    save();
-    renderAll();
-    closeInvoiceScanModal();
-    showToast(t("invoiceAppliedAlert").replace("{n}", appliedCount), "success");
+        textEl.value = "";
+        showToast(t("feedbackSentSuccess"), "success");
+      })
+      .catch((e) => {
+        console.error(e);
+        showToast(t("feedbackSendError"), "error");
+      });
   }
 
-  // ---------- Tabs ----------
-  function switchTab(tabId) {
-    document.querySelectorAll(".tab-panel").forEach((el) => el.classList.remove("active"));
-    document.getElementById(tabId).classList.add("active");
-    document.querySelectorAll(".nav-btn").forEach((btn) => {
-      btn.classList.toggle("active", btn.dataset.tab === tabId);
-    });
-    if (tabId !== "tab-scan" && scanning) stopScan();
-    if (tabId !== "tab-kasa" && scanningKasa) stopScanKasa();
-    if (tabId === "tab-branches" && !viewingBranchUid) {
-      loadBranches();
-      renderCatalogList();
-    }
-    if (tabId === "tab-settings") {
-      loadAutoBackups();
-    }
-  }
-
-  // ---------- Event wiring ----------
-  document.getElementById("addBtn").addEventListener("click", addProduct);
-
-  document.querySelectorAll(".voice-mic-btn").forEach((btn) => {
-    btn.addEventListener("click", () => startVoiceInput(btn.dataset.target, btn));
-  });
-  document.querySelectorAll(".voice-lang-toggle").forEach((container) => {
-    container.querySelectorAll(".voice-lang-btn").forEach((btn) => {
-      btn.addEventListener("click", () => setVoiceLang(container, btn.dataset.lang));
-    });
-  });
-  document.getElementById("newQty").addEventListener("keydown", (e) => {
-    if (e.key === "Enter") addProduct();
-  });
-  document.getElementById("searchBox").addEventListener("input", renderAll);
-  document.getElementById("resetBtn").addEventListener("click", () => {
-    if (confirm(t("confirmResetAll"))) resetAll();
-  });
-  document.getElementById("breadWhatsAppBtn").addEventListener("click", sendBreadWhatsApp);
-  document.getElementById("notifEnableBtn").addEventListener("click", enableNotifications);
-  document.getElementById("breadConfigAddBtn").addEventListener("click", addBreadConfig);
-  document.getElementById("breadWhatsAppNumber").addEventListener("change", (e) => {
-    breadWhatsAppNumber = e.target.value.trim();
-    save();
-  });
-
-  document.getElementById("closeModalBtn").addEventListener("click", closeModal);
-  document.getElementById("detailModal").addEventListener("click", (e) => {
-    if (e.target.id === "detailModal") closeModal();
-  });
-  document.getElementById("qtyPlusBtn").addEventListener("click", () => {
-    const p = products.find((x) => x.id === activeProductId);
-    adjustQty(activeProductId, p && p.unit === "kg" ? 0.1 : 1);
-  });
-  document.getElementById("qtyMinusBtn").addEventListener("click", () => {
-    const p = products.find((x) => x.id === activeProductId);
-    adjustQty(activeProductId, p && p.unit === "kg" ? -0.1 : -1);
-  });
-  document.getElementById("modalQtyInput").addEventListener("change", (e) => {
-    const newQty = parseFloat(String(e.target.value).replace(",", "."));
-    setQtyManually(activeProductId, newQty);
-  });
-  document.getElementById("saveEditBtn").addEventListener("click", saveEdit);
-  document.getElementById("deleteProductBtn").addEventListener("click", () => {
-    if (confirm(t("confirmDeleteProduct"))) deleteProduct(activeProductId);
-  });
-  document.getElementById("printQrBtn").addEventListener("click", printQr);
-  document.getElementById("printAllQrBtn").addEventListener("click", printAllQrCodes);
-
-  document.getElementById("scanNewBarcodeBtn").addEventListener("click", () => openQuickBarcodeScan("newBarcode"));
-  document.getElementById("scanEditBarcodeBtn").addEventListener("click", () => openQuickBarcodeScan("editBarcode"));
-  document.getElementById("closeBarcodeModalBtn").addEventListener("click", closeQuickBarcodeScan);
-
-  document.getElementById("shelfPhotoBtn").addEventListener("click", () => {
-    document.getElementById("shelfPhotoInput").click();
-  });
-  document.getElementById("shelfPhotoInput").addEventListener("change", (e) => {
-    const files = Array.from(e.target.files || []);
-    if (files.length) handleShelfPhotos(files);
-    e.target.value = "";
-  });
-  document.getElementById("closeBulkScanModalBtn").addEventListener("click", closeBulkScanModal);
-  document.getElementById("bulkScanModal").addEventListener("click", (e) => {
-    if (e.target.id === "bulkScanModal") closeBulkScanModal();
-  });
-  document.getElementById("bulkAddAllBtn").addEventListener("click", addAllBulkScanProducts);
-
-  document.getElementById("invoicePhotoBtn").addEventListener("click", () => {
-    document.getElementById("invoicePhotoInput").click();
-  });
-  document.getElementById("csvImportBtn").addEventListener("click", () => {
-    document.getElementById("csvImportInput").click();
-  });
-  document.getElementById("csvImportInput").addEventListener("change", (e) => {
-    const file = e.target.files[0];
-    if (file) handleCsvImportFile(file);
-    e.target.value = "";
-  });
-  document.getElementById("invoicePhotoInput").addEventListener("change", (e) => {
-    const files = Array.from(e.target.files || []);
-    if (files.length) handleInvoicePhotos(files);
-    e.target.value = "";
-  });
-  document.getElementById("closeInvoiceScanModalBtn").addEventListener("click", closeInvoiceScanModal);
-  document.getElementById("invoiceScanModal").addEventListener("click", (e) => {
-    if (e.target.id === "invoiceScanModal") closeInvoiceScanModal();
-  });
-  document.getElementById("invoiceApplyBtn").addEventListener("click", applyInvoiceScan);
-  document.getElementById("barcodeScanModal").addEventListener("click", (e) => {
-    if (e.target.id === "barcodeScanModal") closeQuickBarcodeScan();
-  });
-
-  document.getElementById("startScanBtn").addEventListener("click", startScan);
-  document.getElementById("stopScanBtn").addEventListener("click", stopScan);
-
-  document.getElementById("manualAddSearch").addEventListener("input", renderManualAddResults);
-  document.getElementById("startKasaScanBtn").addEventListener("click", startScanKasa);
-  document.getElementById("stopKasaScanBtn").addEventListener("click", stopScanKasa);
-  document.getElementById("clearCartBtn").addEventListener("click", () => {
-    if (!cart.length || confirm(t("confirmClearCart"))) clearCart();
-  });
-  document.getElementById("completeSaleBtn").addEventListener("click", completeSale);
-  document.getElementById("cartDiscount").addEventListener("input", renderCart);
-  document.getElementById("payNakitBtn").addEventListener("click", () => setPaymentType("nakit"));
-  document.getElementById("payKartBtn").addEventListener("click", () => setPaymentType("kart"));
-  document.getElementById("payVeresiyeBtn").addEventListener("click", () => setPaymentType("veresiye"));
-
-  document.getElementById("veresiyeCustomerSearch").addEventListener("input", (e) => {
-    selectedVeresiyeCustomerId = null;
-    document.getElementById("veresiyeCustomerSelectedId").value = "";
-    renderVeresiyeCustomerResults(e.target.value);
-  });
-  document.getElementById("veresiyeCustomerSearch").addEventListener("focus", (e) => {
-    renderVeresiyeCustomerResults(e.target.value);
-  });
-  document.addEventListener("click", (e) => {
-    const wrapper = document.getElementById("veresiyeCustomerRow");
-    if (wrapper && !wrapper.contains(e.target)) {
-      document.getElementById("veresiyeCustomerResults").classList.remove("show");
-    }
-  });
-
-  document.querySelectorAll(".period-btn").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      currentSalesPeriod = btn.dataset.period;
-      document.querySelectorAll(".period-btn").forEach((b) => b.classList.toggle("active", b === btn));
-      renderSales();
-    });
-  });
-
-  document.getElementById("addCustomerBtn").addEventListener("click", addCustomer);
-  document.getElementById("closeCustomerModalBtn").addEventListener("click", closeCustomerModal);
-  document.getElementById("customerModal").addEventListener("click", (e) => {
-    if (e.target.id === "customerModal") closeCustomerModal();
-  });
-  document.getElementById("recordPaymentBtn").addEventListener("click", recordPayment);
-  document.getElementById("saveCustomerEditBtn").addEventListener("click", saveCustomerEdit);
-  document.getElementById("deleteCustomerBtn").addEventListener("click", () => {
-    if (confirm(t("confirmDeleteCustomer"))) deleteCustomer(activeCustomerId);
-  });
-
-  document.querySelectorAll(".nav-btn").forEach((btn) => {
-    btn.addEventListener("click", () => switchTab(btn.dataset.tab));
-  });
-
-  document.getElementById("authSubmitBtn").addEventListener("click", submitAuth);
-  document.getElementById("authPassword").addEventListener("keydown", (e) => {
-    if (e.key === "Enter") submitAuth();
-  });
-  document.getElementById("forgotPasswordBtn").addEventListener("click", forgotPassword);
-  document.getElementById("logoutBtn").addEventListener("click", logout);
-  document.getElementById("switchUserBtn").addEventListener("click", switchUser);
-  document.getElementById("adminCreateBtn").addEventListener("click", createAdminBusiness);
-  document.getElementById("importBackupBtn").addEventListener("click", importLocalBackup);
-
-  document.querySelectorAll(".lang-btn").forEach((btn) => {
-    btn.addEventListener("click", () => window.i18n.setLang(btn.dataset.lang));
-  });
-
-  // ---------- Ayarlar: Tema (açık/koyu) ve Menü Konumu ----------
-  function applyTheme(theme) {
+function applyTheme(theme) {
     document.documentElement.setAttribute("data-theme", theme);
     const lightBtn = document.getElementById("themeLightBtn");
     const darkBtn = document.getElementById("themeDarkBtn");
@@ -5421,7 +5245,7 @@
     } catch (e) {}
   }
 
-  function applyNavPosition(position) {
+function applyNavPosition(position) {
     document.body.classList.toggle("nav-side", position === "side");
     const bottomBtn = document.getElementById("navBottomBtn");
     const sideBtn = document.getElementById("navSideBtn");
@@ -5432,7 +5256,7 @@
     } catch (e) {}
   }
 
-  function applyFontSize(size) {
+function applyFontSize(size) {
     document.body.classList.toggle("font-large", size === "large");
     const normalBtn = document.getElementById("fontNormalBtn");
     const largeBtn = document.getElementById("fontLargeBtn");
@@ -5443,7 +5267,7 @@
     } catch (e) {}
   }
 
-  function applySimpleMode(mode) {
+function applySimpleMode(mode) {
     const simpleBtn = document.getElementById("simpleModeBtn");
     const advancedBtn = document.getElementById("advancedModeBtn");
     if (simpleBtn) simpleBtn.classList.toggle("active", mode === "simple");
@@ -5459,7 +5283,7 @@
     });
   }
 
-  function reapplySimpleModeIfSet() {
+function reapplySimpleModeIfSet() {
     let mode = "advanced";
     try {
       mode = localStorage.getItem("bakkal_simple_mode") || "advanced";
@@ -5467,50 +5291,7 @@
     applySimpleMode(mode);
   }
 
-  // ---------- İlk Kullanım Rehberi (Onboarding) ----------
-  let onboardingSlideIndex = 0;
-  const ONBOARDING_SLIDE_COUNT = 4;
-
-  function checkOnboarding() {
-    let seen = false;
-    try {
-      seen = localStorage.getItem("bakkal_onboarding_seen") === "true";
-    } catch (e) {}
-    if (seen) return;
-    onboardingSlideIndex = 0;
-    showOnboardingSlide(0);
-    document.getElementById("onboardingModal").style.display = "flex";
-  }
-
-  function showOnboardingSlide(index) {
-    document.querySelectorAll(".onboarding-slide").forEach((slide) => {
-      slide.style.display = Number(slide.dataset.slide) === index ? "block" : "none";
-    });
-    document.querySelectorAll(".onboarding-dot").forEach((dot) => {
-      dot.classList.toggle("active", Number(dot.dataset.dot) === index);
-    });
-    const nextBtn = document.getElementById("onboardingNextBtn");
-    nextBtn.textContent = index === ONBOARDING_SLIDE_COUNT - 1 ? t("onboardFinish") : t("onboardNext");
-  }
-
-  function onboardingNext() {
-    if (onboardingSlideIndex >= ONBOARDING_SLIDE_COUNT - 1) {
-      finishOnboarding();
-      return;
-    }
-    onboardingSlideIndex++;
-    showOnboardingSlide(onboardingSlideIndex);
-  }
-
-  function finishOnboarding() {
-    try {
-      localStorage.setItem("bakkal_onboarding_seen", "true");
-    } catch (e) {}
-    document.getElementById("onboardingModal").style.display = "none";
-  }
-
-  // ---------- Veri Boyutu Takibi ----------
-  function renderDataSize() {
+function renderDataSize() {
     const fillEl = document.getElementById("dataSizeBarFill");
     const labelEl = document.getElementById("dataSizeLabel");
     if (!fillEl) return;
@@ -5541,8 +5322,7 @@
     labelEl.textContent = `${sizeKB} KB / ${limitKB} KB (%${percent})`;
   }
 
-  // ---------- Otomatik Günlük Yedekleme (ayrı bir alt koleksiyona, ana veriden bağımsız) ----------
-  function maybeCreateDailyBackup() {
+function maybeCreateDailyBackup() {
     if (viewingBranchUid) return; // bir şubeyi görüntülerken yedek almıyoruz, sadece kendi hesabında
     if (!products.length && !sales.length) return; // gerçekten veri yoksa boş bir yedek almaya gerek yok
     if (!docRef) return;
@@ -5583,7 +5363,7 @@
       .catch((e) => console.error("Otomatik yedek oluşturulamadı", e));
   }
 
-  function loadAutoBackups() {
+function loadAutoBackups() {
     if (!docRef) return;
     docRef
       .collection("backups")
@@ -5599,7 +5379,7 @@
       });
   }
 
-  function renderAutoBackups(backups) {
+function renderAutoBackups(backups) {
     const listEl = document.getElementById("autoBackupList");
     const emptyEl = document.getElementById("autoBackupEmptyState");
     if (!listEl) return;
@@ -5631,7 +5411,7 @@
     });
   }
 
-  function restoreFromAutoBackup(backupId, backups) {
+function restoreFromAutoBackup(backupId, backups) {
     const backup = backups.find((b) => b.id === backupId);
     if (!backup) return;
     if (!confirm(`${t("autoBackupConfirmRestore")} (${backupId})`)) return;
@@ -5655,7 +5435,7 @@
     showToast(t("autoBackupRestoreSuccess"), "success");
   }
 
-  function downloadBackup() {
+function downloadBackup() {
     const backup = {
       exportedAt: new Date().toISOString(),
       products,
@@ -5679,7 +5459,7 @@
     showToast(t("settingsBackupSuccess"), "success");
   }
 
-  function initSettings() {
+function initSettings() {
     let theme = "light";
     let navPosition = "bottom";
     let fontSize = "normal";
@@ -5696,74 +5476,464 @@
     applySimpleMode(simpleMode);
   }
 
-  window.onLangChanged = function () {
+  // ==================== 19-onboarding.js ====================
+/**
+ * 19-onboarding.js
+ * İlk kullanım rehberi (tanıtım turu).
+ */
+
+function checkOnboarding() {
+    let seen = false;
+    try {
+      seen = localStorage.getItem("bakkal_onboarding_seen") === "true";
+    } catch (e) {}
+    if (seen) return;
+    onboardingSlideIndex = 0;
+    showOnboardingSlide(0);
+    document.getElementById("onboardingModal").style.display = "flex";
+  }
+
+function showOnboardingSlide(index) {
+    document.querySelectorAll(".onboarding-slide").forEach((slide) => {
+      slide.style.display = Number(slide.dataset.slide) === index ? "block" : "none";
+    });
+    document.querySelectorAll(".onboarding-dot").forEach((dot) => {
+      dot.classList.toggle("active", Number(dot.dataset.dot) === index);
+    });
+    const nextBtn = document.getElementById("onboardingNextBtn");
+    nextBtn.textContent = index === ONBOARDING_SLIDE_COUNT - 1 ? t("onboardFinish") : t("onboardNext");
+  }
+
+function onboardingNext() {
+    if (onboardingSlideIndex >= ONBOARDING_SLIDE_COUNT - 1) {
+      finishOnboarding();
+      return;
+    }
+    onboardingSlideIndex++;
+    showOnboardingSlide(onboardingSlideIndex);
+  }
+
+function finishOnboarding() {
+    try {
+      localStorage.setItem("bakkal_onboarding_seen", "true");
+    } catch (e) {}
+    document.getElementById("onboardingModal").style.display = "none";
+  }
+
+  // ==================== 20-navigation.js ====================
+/**
+ * 20-navigation.js
+ * Ana render döngüsü ve sekme (tab) geçiş mantığı.
+ */
+
+function renderAll() {
+    const searchEl = document.getElementById("searchBox");
+    const search = (searchEl ? searchEl.value : "").toLowerCase().trim();
+    const list = document.getElementById("productList");
+    const empty = document.getElementById("emptyState");
+
+    const filtered = products.filter((p) => p.name.toLowerCase().includes(search) || p.category.toLowerCase().includes(search));
+
+    if (!filtered.length) {
+      list.innerHTML = "";
+      empty.style.display = "block";
+    } else {
+      empty.style.display = "none";
+      list.innerHTML = filtered.map(productRowHtml).join("");
+    }
+
+    list.querySelectorAll(".product-row").forEach((row) => {
+      row.addEventListener("click", () => openModal(row.dataset.id));
+    });
+
+    // Order list
+    const orderList = document.getElementById("orderList");
+    const orderEmpty = document.getElementById("orderEmptyState");
+    const needsOrder = products
+      .filter((p) => getStatus(p) !== "yeterli")
+      .sort((a, b) => (getStatus(a) === "tukendi" ? 0 : 1) - (getStatus(b) === "tukendi" ? 0 : 1));
+
+    if (!needsOrder.length) {
+      orderList.innerHTML = "";
+      orderEmpty.style.display = "block";
+    } else {
+      orderEmpty.style.display = "none";
+      orderList.innerHTML = needsOrder.map(productRowHtml).join("");
+      orderList.querySelectorAll(".product-row").forEach((row) => {
+        row.addEventListener("click", () => openModal(row.dataset.id));
+      });
+    }
+
+    document.getElementById("statTotal").textContent = products.length;
+    document.getElementById("statOrder").textContent = needsOrder.length;
+
+    renderCart();
+    renderSales();
+    renderCustomers();
+    renderReminders();
+    renderSuppliers();
+    renderBreadStatus();
+    renderPriceChanges();
+    renderAuditLog();
+    renderStaffList();
+    renderOwnerPinStatus();
+    renderDataSize();
+    renderFiscalSettings();
+    renderAiPanel();
+    translateMissingProductNames();
+  }
+
+function switchTab(tabId) {
+    document.querySelectorAll(".tab-panel").forEach((el) => el.classList.remove("active"));
+    document.getElementById(tabId).classList.add("active");
+    document.querySelectorAll(".nav-btn").forEach((btn) => {
+      btn.classList.toggle("active", btn.dataset.tab === tabId);
+    });
+    if (tabId !== "tab-scan" && scanning) stopScan();
+    if (tabId !== "tab-kasa" && scanningKasa) stopScanKasa();
+    if (tabId === "tab-branches" && !viewingBranchUid) {
+      loadBranches();
+      renderCatalogList();
+    }
+    if (tabId === "tab-settings") {
+      loadAutoBackups();
+    }
+  }
+
+  // ==================== 99-main.js ====================
+/**
+ * 99-main.js
+ * Olay bağlama (event wiring) ve uygulamanın başlatma sırası. Bu dosya HER ZAMAN derlenen çıktının sonunda olmalıdır — çünkü burada çağrılan tüm fonksiyonlar diğer modüllerde tanımlıdır (JavaScript'in fonksiyon 'hoisting' özelliği sayesinde bu güvenlidir).
+ */
+
+if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.addEventListener("message", (event) => {
+      if (event.data && event.data.type === "BAKKAL_SYNC_RECONNECTED") {
+        showToast(t("syncReconnected"), "success");
+      }
+    });
+  }
+
+document.getElementById("addBtn").addEventListener("click", addProduct);
+
+document.querySelectorAll(".voice-mic-btn").forEach((btn) => {
+    btn.addEventListener("click", () => startVoiceInput(btn.dataset.target, btn));
+  });
+
+document.querySelectorAll(".voice-lang-toggle").forEach((container) => {
+    container.querySelectorAll(".voice-lang-btn").forEach((btn) => {
+      btn.addEventListener("click", () => setVoiceLang(container, btn.dataset.lang));
+    });
+  });
+
+document.getElementById("newQty").addEventListener("keydown", (e) => {
+    if (e.key === "Enter") addProduct();
+  });
+
+document.getElementById("searchBox").addEventListener("input", renderAll);
+
+document.getElementById("resetBtn").addEventListener("click", () => {
+    if (confirm(t("confirmResetAll"))) resetAll();
+  });
+
+document.getElementById("breadWhatsAppBtn").addEventListener("click", sendBreadWhatsApp);
+
+document.getElementById("notifEnableBtn").addEventListener("click", enableNotifications);
+
+document.getElementById("breadConfigAddBtn").addEventListener("click", addBreadConfig);
+
+document.getElementById("breadWhatsAppNumber").addEventListener("change", (e) => {
+    breadWhatsAppNumber = e.target.value.trim();
+    save();
+  });
+
+document.getElementById("closeModalBtn").addEventListener("click", closeModal);
+
+document.getElementById("detailModal").addEventListener("click", (e) => {
+    if (e.target.id === "detailModal") closeModal();
+  });
+
+document.getElementById("qtyPlusBtn").addEventListener("click", () => {
+    const p = products.find((x) => x.id === activeProductId);
+    adjustQty(activeProductId, p && p.unit === "kg" ? 0.1 : 1);
+  });
+
+document.getElementById("qtyMinusBtn").addEventListener("click", () => {
+    const p = products.find((x) => x.id === activeProductId);
+    adjustQty(activeProductId, p && p.unit === "kg" ? -0.1 : -1);
+  });
+
+document.getElementById("modalQtyInput").addEventListener("change", (e) => {
+    const newQty = parseFloat(String(e.target.value).replace(",", "."));
+    setQtyManually(activeProductId, newQty);
+  });
+
+document.getElementById("saveEditBtn").addEventListener("click", saveEdit);
+
+document.getElementById("deleteProductBtn").addEventListener("click", () => {
+    if (confirm(t("confirmDeleteProduct"))) deleteProduct(activeProductId);
+  });
+
+document.getElementById("printQrBtn").addEventListener("click", printQr);
+
+document.getElementById("printAllQrBtn").addEventListener("click", printAllQrCodes);
+
+document.getElementById("scanNewBarcodeBtn").addEventListener("click", () => openQuickBarcodeScan("newBarcode"));
+
+document.getElementById("scanEditBarcodeBtn").addEventListener("click", () => openQuickBarcodeScan("editBarcode"));
+
+document.getElementById("closeBarcodeModalBtn").addEventListener("click", closeQuickBarcodeScan);
+
+document.getElementById("shelfPhotoBtn").addEventListener("click", () => {
+    document.getElementById("shelfPhotoInput").click();
+  });
+
+document.getElementById("shelfPhotoInput").addEventListener("change", (e) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length) handleShelfPhotos(files);
+    e.target.value = "";
+  });
+
+document.getElementById("closeBulkScanModalBtn").addEventListener("click", closeBulkScanModal);
+
+document.getElementById("bulkScanModal").addEventListener("click", (e) => {
+    if (e.target.id === "bulkScanModal") closeBulkScanModal();
+  });
+
+document.getElementById("bulkAddAllBtn").addEventListener("click", addAllBulkScanProducts);
+
+document.getElementById("invoicePhotoBtn").addEventListener("click", () => {
+    document.getElementById("invoicePhotoInput").click();
+  });
+
+document.getElementById("csvImportBtn").addEventListener("click", () => {
+    document.getElementById("csvImportInput").click();
+  });
+
+document.getElementById("csvImportInput").addEventListener("change", (e) => {
+    const file = e.target.files[0];
+    if (file) handleCsvImportFile(file);
+    e.target.value = "";
+  });
+
+document.getElementById("invoicePhotoInput").addEventListener("change", (e) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length) handleInvoicePhotos(files);
+    e.target.value = "";
+  });
+
+document.getElementById("closeInvoiceScanModalBtn").addEventListener("click", closeInvoiceScanModal);
+
+document.getElementById("invoiceScanModal").addEventListener("click", (e) => {
+    if (e.target.id === "invoiceScanModal") closeInvoiceScanModal();
+  });
+
+document.getElementById("invoiceApplyBtn").addEventListener("click", applyInvoiceScan);
+
+document.getElementById("barcodeScanModal").addEventListener("click", (e) => {
+    if (e.target.id === "barcodeScanModal") closeQuickBarcodeScan();
+  });
+
+document.getElementById("startScanBtn").addEventListener("click", startScan);
+
+document.getElementById("stopScanBtn").addEventListener("click", stopScan);
+
+document.getElementById("manualAddSearch").addEventListener("input", renderManualAddResults);
+
+document.getElementById("startKasaScanBtn").addEventListener("click", startScanKasa);
+
+document.getElementById("stopKasaScanBtn").addEventListener("click", stopScanKasa);
+
+document.getElementById("clearCartBtn").addEventListener("click", () => {
+    if (!cart.length || confirm(t("confirmClearCart"))) clearCart();
+  });
+
+document.getElementById("completeSaleBtn").addEventListener("click", completeSale);
+
+document.getElementById("cartDiscount").addEventListener("input", renderCart);
+
+document.getElementById("payNakitBtn").addEventListener("click", () => setPaymentType("nakit"));
+
+document.getElementById("payKartBtn").addEventListener("click", () => setPaymentType("kart"));
+
+document.getElementById("payVeresiyeBtn").addEventListener("click", () => setPaymentType("veresiye"));
+
+document.getElementById("veresiyeCustomerSearch").addEventListener("input", (e) => {
+    selectedVeresiyeCustomerId = null;
+    document.getElementById("veresiyeCustomerSelectedId").value = "";
+    renderVeresiyeCustomerResults(e.target.value);
+  });
+
+document.getElementById("veresiyeCustomerSearch").addEventListener("focus", (e) => {
+    renderVeresiyeCustomerResults(e.target.value);
+  });
+
+document.addEventListener("click", (e) => {
+    const wrapper = document.getElementById("veresiyeCustomerRow");
+    if (wrapper && !wrapper.contains(e.target)) {
+      document.getElementById("veresiyeCustomerResults").classList.remove("show");
+    }
+  });
+
+document.querySelectorAll(".period-btn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      currentSalesPeriod = btn.dataset.period;
+      document.querySelectorAll(".period-btn").forEach((b) => b.classList.toggle("active", b === btn));
+      renderSales();
+    });
+  });
+
+document.getElementById("addCustomerBtn").addEventListener("click", addCustomer);
+
+document.getElementById("closeCustomerModalBtn").addEventListener("click", closeCustomerModal);
+
+document.getElementById("customerModal").addEventListener("click", (e) => {
+    if (e.target.id === "customerModal") closeCustomerModal();
+  });
+
+document.getElementById("recordPaymentBtn").addEventListener("click", recordPayment);
+
+document.getElementById("saveCustomerEditBtn").addEventListener("click", saveCustomerEdit);
+
+document.getElementById("deleteCustomerBtn").addEventListener("click", () => {
+    if (confirm(t("confirmDeleteCustomer"))) deleteCustomer(activeCustomerId);
+  });
+
+document.querySelectorAll(".nav-btn").forEach((btn) => {
+    btn.addEventListener("click", () => switchTab(btn.dataset.tab));
+  });
+
+document.getElementById("authSubmitBtn").addEventListener("click", submitAuth);
+
+document.getElementById("authPassword").addEventListener("keydown", (e) => {
+    if (e.key === "Enter") submitAuth();
+  });
+
+document.getElementById("forgotPasswordBtn").addEventListener("click", forgotPassword);
+
+document.getElementById("logoutBtn").addEventListener("click", logout);
+
+document.getElementById("switchUserBtn").addEventListener("click", switchUser);
+
+document.getElementById("adminCreateBtn").addEventListener("click", createAdminBusiness);
+
+document.getElementById("importBackupBtn").addEventListener("click", importLocalBackup);
+
+document.querySelectorAll(".lang-btn").forEach((btn) => {
+    btn.addEventListener("click", () => window.i18n.setLang(btn.dataset.lang));
+  });
+
+window.onLangChanged = function () {
     renderAll();
     translateMissingProductNames();
   };
 
-  window.i18n.applyLang(window.i18n.getLang());
+window.i18n.applyLang(window.i18n.getLang());
 
-  document.getElementById("themeLightBtn").addEventListener("click", () => applyTheme("light"));
-  document.getElementById("themeDarkBtn").addEventListener("click", () => applyTheme("dark"));
-  document.getElementById("navBottomBtn").addEventListener("click", () => applyNavPosition("bottom"));
-  document.getElementById("navSideBtn").addEventListener("click", () => applyNavPosition("side"));
-  document.getElementById("fontNormalBtn").addEventListener("click", () => applyFontSize("normal"));
-  document.getElementById("fontLargeBtn").addEventListener("click", () => applyFontSize("large"));
-  document.getElementById("simpleModeBtn").addEventListener("click", () => applySimpleMode("simple"));
-  document.getElementById("advancedModeBtn").addEventListener("click", () => applySimpleMode("advanced"));
-  document.getElementById("onboardingNextBtn").addEventListener("click", onboardingNext);
-  document.getElementById("onboardingSkipBtn").addEventListener("click", finishOnboarding);
-  document.getElementById("downloadBackupBtn").addEventListener("click", downloadBackup);
-  document.getElementById("staffAddBtn").addEventListener("click", addStaffMember);
-  document.getElementById("ownerPinSaveBtn").addEventListener("click", saveOwnerPin);
-  document.getElementById("fiscalEnabledToggle").addEventListener("change", (e) => toggleFiscalEnabled(e.target.checked));
-  document.getElementById("fiscalSaveBtn").addEventListener("click", saveFiscalSettings);
-  document.getElementById("feedbackSendBtn").addEventListener("click", sendFeedback);
-  document.getElementById("staffOwnerBtn").addEventListener("click", enterAsOwner);
-  document.getElementById("staffPickerBackBtn").addEventListener("click", staffPickerGoBack);
-  document.getElementById("staffPickerPinSubmitBtn").addEventListener("click", submitStaffPickerPin);
-  document.getElementById("staffPickerPinInput").addEventListener("keydown", (e) => {
+document.getElementById("themeLightBtn").addEventListener("click", () => applyTheme("light"));
+
+document.getElementById("themeDarkBtn").addEventListener("click", () => applyTheme("dark"));
+
+document.getElementById("navBottomBtn").addEventListener("click", () => applyNavPosition("bottom"));
+
+document.getElementById("navSideBtn").addEventListener("click", () => applyNavPosition("side"));
+
+document.getElementById("fontNormalBtn").addEventListener("click", () => applyFontSize("normal"));
+
+document.getElementById("fontLargeBtn").addEventListener("click", () => applyFontSize("large"));
+
+document.getElementById("simpleModeBtn").addEventListener("click", () => applySimpleMode("simple"));
+
+document.getElementById("advancedModeBtn").addEventListener("click", () => applySimpleMode("advanced"));
+
+document.getElementById("onboardingNextBtn").addEventListener("click", onboardingNext);
+
+document.getElementById("onboardingSkipBtn").addEventListener("click", finishOnboarding);
+
+document.getElementById("downloadBackupBtn").addEventListener("click", downloadBackup);
+
+document.getElementById("staffAddBtn").addEventListener("click", addStaffMember);
+
+document.getElementById("ownerPinSaveBtn").addEventListener("click", saveOwnerPin);
+
+document.getElementById("fiscalEnabledToggle").addEventListener("change", (e) => toggleFiscalEnabled(e.target.checked));
+
+document.getElementById("fiscalSaveBtn").addEventListener("click", saveFiscalSettings);
+
+document.getElementById("feedbackSendBtn").addEventListener("click", sendFeedback);
+
+document.getElementById("staffOwnerBtn").addEventListener("click", enterAsOwner);
+
+document.getElementById("staffPickerBackBtn").addEventListener("click", staffPickerGoBack);
+
+document.getElementById("staffPickerPinSubmitBtn").addEventListener("click", submitStaffPickerPin);
+
+document.getElementById("staffPickerPinInput").addEventListener("keydown", (e) => {
     if (e.key === "Enter") submitStaffPickerPin();
   });
-  document.getElementById("advisorAskBtn").addEventListener("click", askAiAdvisor);
-  document.getElementById("branchCreateBtn").addEventListener("click", createBranch);
-  document.getElementById("catalogAddBtn").addEventListener("click", addCatalogItem);
-  document.getElementById("exitBranchViewBtn").addEventListener("click", exitBranchView);
-  document.getElementById("closeBranchEditModalBtn").addEventListener("click", closeBranchEditModal);
-  document.getElementById("supplierAddBtn").addEventListener("click", addSupplier);
-  document.getElementById("closeSupplierModalBtn").addEventListener("click", closeSupplierModal);
-  document.getElementById("supplierModal").addEventListener("click", (e) => {
+
+document.getElementById("advisorAskBtn").addEventListener("click", askAiAdvisor);
+
+document.getElementById("branchCreateBtn").addEventListener("click", createBranch);
+
+document.getElementById("catalogAddBtn").addEventListener("click", addCatalogItem);
+
+document.getElementById("exitBranchViewBtn").addEventListener("click", exitBranchView);
+
+document.getElementById("closeBranchEditModalBtn").addEventListener("click", closeBranchEditModal);
+
+document.getElementById("supplierAddBtn").addEventListener("click", addSupplier);
+
+document.getElementById("closeSupplierModalBtn").addEventListener("click", closeSupplierModal);
+
+document.getElementById("supplierModal").addEventListener("click", (e) => {
     if (e.target.id === "supplierModal") closeSupplierModal();
   });
-  document.getElementById("supplierAddDebtBtn").addEventListener("click", addSupplierDebt);
-  document.getElementById("supplierAddPaymentBtn").addEventListener("click", addSupplierPayment);
-  document.getElementById("deleteSupplierBtn").addEventListener("click", deleteSupplier);
-  document.getElementById("closeReturnModalBtn").addEventListener("click", closeReturnModal);
-  document.getElementById("returnModal").addEventListener("click", (e) => {
+
+document.getElementById("supplierAddDebtBtn").addEventListener("click", addSupplierDebt);
+
+document.getElementById("supplierAddPaymentBtn").addEventListener("click", addSupplierPayment);
+
+document.getElementById("deleteSupplierBtn").addEventListener("click", deleteSupplier);
+
+document.getElementById("closeReturnModalBtn").addEventListener("click", closeReturnModal);
+
+document.getElementById("returnModal").addEventListener("click", (e) => {
     if (e.target.id === "returnModal") closeReturnModal();
   });
-  document.getElementById("confirmReturnBtn").addEventListener("click", confirmReturn);
-  document.getElementById("voiceCommandBtn").addEventListener("click", startVoiceCommand);
-  document.getElementById("voiceCommandConfirmYes").addEventListener("click", confirmVoiceAction);
-  document.getElementById("voiceCommandConfirmNo").addEventListener("click", hideVoiceCommandConfirm);
-  document.getElementById("orderEngineCreateBtn").addEventListener("click", createOrderFromEngine);
-  document.getElementById("branchEditModal").addEventListener("click", (e) => {
+
+document.getElementById("confirmReturnBtn").addEventListener("click", confirmReturn);
+
+document.getElementById("voiceCommandBtn").addEventListener("click", startVoiceCommand);
+
+document.getElementById("voiceCommandConfirmYes").addEventListener("click", confirmVoiceAction);
+
+document.getElementById("voiceCommandConfirmNo").addEventListener("click", hideVoiceCommandConfirm);
+
+document.getElementById("orderEngineCreateBtn").addEventListener("click", createOrderFromEngine);
+
+document.getElementById("branchEditModal").addEventListener("click", (e) => {
     if (e.target.id === "branchEditModal") closeBranchEditModal();
   });
-  document.getElementById("branchEditSaveBtn").addEventListener("click", saveBranchEdit);
-  initSettings();
 
-  // Ana ekran kısayollarından (manifest.json "shortcuts") gelen ?tab= parametresini işle
-  const requestedTab = new URLSearchParams(window.location.search).get("tab");
-  if (requestedTab && document.getElementById(requestedTab)) {
+document.getElementById("branchEditSaveBtn").addEventListener("click", saveBranchEdit);
+
+initSettings();
+
+if (requestedTab && document.getElementById(requestedTab)) {
     switchTab(requestedTab);
   }
 
-  checkForSharedPhoto();
-  checkForLaunchedFile();
-  checkForProtocolLaunch();
-  checkForNoteTakingLaunch();
-  registerPeriodicSync();
+checkForSharedPhoto();
 
-  load();
+checkForLaunchedFile();
+
+checkForProtocolLaunch();
+
+checkForNoteTakingLaunch();
+
+registerPeriodicSync();
+
+load();
+
 })();

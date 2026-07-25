@@ -5,5 +5,5 @@
 // Kurulum adımları README.md'de anlatılıyor.
 
 const chainConfig = {
-  workerUrl: "https://bakkal-chain-api.abdulrazakdaas0.workers.dev"
+  workerUrl: "BURAYA_CHAIN_WORKER_URL"
 };

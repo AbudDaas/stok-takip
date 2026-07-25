@@ -1,0 +1,41 @@
+{
+  "type": "AdaptiveCard",
+  "version": "1.5",
+  "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
+  "body": [
+    {
+      "type": "TextBlock",
+      "text": "Bakkal Stok Takip",
+      "weight": "Bolder",
+      "size": "Medium"
+    },
+    {
+      "type": "ColumnSet",
+      "columns": [
+        {
+          "type": "Column",
+          "width": "stretch",
+          "items": [
+            { "type": "TextBlock", "text": "Toplam Ürün", "isSubtle": true, "size": "Small" },
+            { "type": "TextBlock", "text": "${totalProducts}", "size": "ExtraLarge", "weight": "Bolder", "color": "Accent" }
+          ]
+        },
+        {
+          "type": "Column",
+          "width": "stretch",
+          "items": [
+            { "type": "TextBlock", "text": "Sipariş Gerekli", "isSubtle": true, "size": "Small" },
+            { "type": "TextBlock", "text": "${orderNeeded}", "size": "ExtraLarge", "weight": "Bolder", "color": "Attention" }
+          ]
+        }
+      ]
+    }
+  ],
+  "actions": [
+    {
+      "type": "Action.OpenUrl",
+      "title": "Uygulamayı Aç",
+      "url": "https://abuddaas.github.io/stok-takip/"
+    }
+  ]
+}
