@@ -2260,7 +2260,64 @@
     } catch (e) {}
   }
 
+  // ---------- Hızlı Yerel Ayrıştırıcı (basit "X sat/ekle" komutları için AI'a hiç gitmeden anında işler) ----------
+  const TURKISH_NUMBER_WORDS = {
+    bir: 1, iki: 2, üç: 3, uc: 3, dört: 4, dort: 4, beş: 5, bes: 5,
+    altı: 6, alti: 6, yedi: 7, sekiz: 8, dokuz: 9, on: 10
+  };
+  const VOICE_STOPWORDS = [
+    "sat", "satıyorum", "satiyorum", "sattım", "sattim", "ekle", "ekliyorum", "ekledim",
+    "al", "alıyorum", "aliyorum", "tane", "adet", "lütfen", "lutfen"
+  ];
+
+  function tryLocalVoiceParse(transcript) {
+    const lower = transcript.trim().toLowerCase();
+
+    // Karmaşık/başka türde bir komuma benziyorsa, yerelde çözmeye çalışma — AI'a bırak.
+    const complexHints = [
+      "veresiye", "borç", "borc", "tamamla", "temizle", "boşalt", "bosalt",
+      "indirim", "yeni ürün", "yeni urun", "stok var", "kaç tane", "kac tane", "ne kadar var"
+    ];
+    if (complexHints.some((hint) => lower.includes(hint))) return false;
+
+    let working = lower;
+    VOICE_STOPWORDS.forEach((w) => {
+      working = working.replace(new RegExp(`\\b${w}\\b`, "g"), " ");
+    });
+
+    // Baştaki sayıyı (rakam ya da Türkçe sayı kelimesi) çıkar
+    let qty = 1;
+    const trimmed = working.trim();
+    const digitMatch = trimmed.match(/^(\d+)\s*(.*)$/);
+    const wordMatch = trimmed.match(/^(\p{L}+)\s+(.*)$/u);
+
+    let remainder = trimmed;
+    if (digitMatch) {
+      qty = Number(digitMatch[1]) || 1;
+      remainder = digitMatch[2];
+    } else if (wordMatch && TURKISH_NUMBER_WORDS[wordMatch[1]]) {
+      qty = TURKISH_NUMBER_WORDS[wordMatch[1]];
+      remainder = wordMatch[2];
+    }
+
+    remainder = remainder.trim();
+    if (!remainder) return false;
+
+    const product = findProductByFuzzyName(remainder);
+    if (!product) return false;
+
+    // Net bir ürün eşleşmesi bulundu — AI'a hiç gitmeden anında sepete ekle.
+    addToCart(product, qty);
+    switchTab("tab-kasa");
+    const msg = `${qty} ${product.name} ${t("voiceAddedToCart")}`;
+    showToast(msg, "success");
+    speakFeedback(msg);
+    return true;
+  }
+
   function processVoiceCommand(transcript) {
+    if (tryLocalVoiceParse(transcript)) return;
+
     if (!isBulkScanConfigured()) {
       showToast(t("voiceCommandNotConfigured"), "error");
       return;
@@ -3790,7 +3847,47 @@
       .catch(() => {});
   }
 
-  // ---------- Toplu fotoğraf tarama (Google Gemini ücretsiz API ile raf tanıma) ----------
+  // ---------- Open Food Facts: isimden barkod arama (en iyi çaba, garanti değil) ----------
+  function searchBarcodeByName(productName) {
+    if (!productName || !productName.trim()) return Promise.resolve(null);
+    const query = encodeURIComponent(productName.trim());
+    return fetch(`https://world.openfoodfacts.org/cgi/search.pl?search_terms=${query}&json=true&page_size=5`)
+      .then((r) => r.json())
+      .then((data) => {
+        if (!data || !data.products || !data.products.length) return null;
+        const normalized = productName.trim().toLowerCase();
+        // İsmi en yakın eşleşen sonucu bul (tam ya da kısmi eşleşme)
+        const match =
+          data.products.find((p) => (p.product_name || "").toLowerCase().trim() === normalized) ||
+          data.products.find((p) => (p.product_name || "").toLowerCase().includes(normalized) || normalized.includes((p.product_name || "").toLowerCase()));
+        return match && match.code ? match.code : null;
+      })
+      .catch(() => null);
+  }
+
+  function findBarcodesOnlineForCandidates(candidates, onUpdate) {
+    // Dakikada 10 istek sınırı olduğu için sırayla, aralıklarla deniyoruz.
+    let index = 0;
+    function next() {
+      if (index >= candidates.length) return;
+      const candidate = candidates[index];
+      index++;
+      if (candidate.barcode) {
+        setTimeout(next, 300);
+        return;
+      }
+      searchBarcodeByName(candidate.name).then((code) => {
+        if (code) {
+          candidate.barcode = code;
+          candidate.barcodeFromWeb = true;
+          onUpdate();
+        }
+        setTimeout(next, 700);
+      });
+    }
+    next();
+  }
+
   let bulkScanCandidates = [];
 
   function isBulkScanConfigured() {
@@ -4159,6 +4256,7 @@
           return;
         }
         renderBulkScanModal();
+        findBarcodesOnlineForCandidates(bulkScanCandidates, renderBulkScanModal);
         return;
       }
 
@@ -4181,15 +4279,23 @@
     titleEl.textContent = t("bulkScanFoundTitle").replace("{n}", bulkScanCandidates.length);
 
     const listEl = document.getElementById("bulkScanResultsList");
+    // Yeniden çizerken kullanıcının işaretlerini koru (arka planda barkod arama tekrar çizdirebiliyor)
+    const previousChecks = {};
+    listEl.querySelectorAll(".bulk-result-check").forEach((chk) => {
+      previousChecks[chk.dataset.index] = chk.checked;
+    });
+
     listEl.innerHTML = bulkScanCandidates
       .map((p, i) => {
         const metaParts = [p.brand, p.category].filter(Boolean).join(" · ");
         const priceStr = p.price ? formatTL(p.price) : "";
         const qtyStr = `${p.qty || 1} ${t("unitAdetShort")}`;
-        const barcodeStr = p.barcode ? ` · ${t("barcodeDetectedLabel")}: ${escapeHtml(p.barcode)}` : "";
+        const barcodeLabel = p.barcodeFromWeb ? t("barcodeFoundOnlineLabel") : t("barcodeDetectedLabel");
+        const barcodeStr = p.barcode ? ` · ${barcodeLabel}: ${escapeHtml(p.barcode)}` : "";
+        const isChecked = i in previousChecks ? previousChecks[i] : true;
         return `
           <label class="bulk-result-row">
-            <input type="checkbox" class="bulk-result-check" data-index="${i}" checked />
+            <input type="checkbox" class="bulk-result-check" data-index="${i}" ${isChecked ? "checked" : ""} />
             <div class="bulk-result-info">
               <p class="bulk-result-name">${escapeHtml(p.name)}</p>
               <p class="bulk-result-meta">${escapeHtml(metaParts)}${priceStr ? " · " + priceStr : ""} · ${qtyStr}${barcodeStr}</p>
@@ -4392,6 +4498,7 @@
           return;
         }
         renderInvoiceScanModal();
+        findBarcodesOnlineForCandidates(invoiceScanCandidates, renderInvoiceScanModal);
         return;
       }
 
@@ -4414,8 +4521,19 @@
     titleEl.textContent = t("invoiceScanFoundTitle").replace("{n}", invoiceScanCandidates.length);
 
     const listEl = document.getElementById("invoiceScanResultsList");
+    // Yeniden çizerken kullanıcının işaretlerini ve girdiği kâr oranlarını koru
+    const previousChecks = {};
+    const previousMarkups = {};
+    listEl.querySelectorAll(".invoice-result-check").forEach((chk) => {
+      previousChecks[chk.dataset.index] = chk.checked;
+    });
+    listEl.querySelectorAll(".invoice-markup-input").forEach((inp) => {
+      previousMarkups[inp.dataset.index] = inp.value;
+    });
+
     listEl.innerHTML = invoiceScanCandidates
       .map((item, i) => {
+        if (i in previousMarkups) item.markupPercent = Number(previousMarkups[i]) || item.markupPercent;
         const statusHtml = item.matchedProductId
           ? `<span class="invoice-status-badge invoice-status-existing">${t("invoiceExistingLabel").replace("{qty}", item.qty)}</span>`
           : `<span class="invoice-status-badge invoice-status-new">${t("invoiceNewLabel")}</span>`;
@@ -4429,10 +4547,12 @@
             </div>`
           : "";
         const noteHtml = item.unitNote ? `<p class="invoice-uncertainty-note">⚠️ ${escapeHtml(item.unitNote)}</p>` : "";
-        const barcodeHtml = item.barcode ? `<p class="invoice-uncertainty-note" style="color:var(--green-text);">✓ ${t("barcodeDetectedLabel")}: ${escapeHtml(item.barcode)}</p>` : "";
+        const barcodeLabel = item.barcodeFromWeb ? t("barcodeFoundOnlineLabel") : t("barcodeDetectedLabel");
+        const barcodeHtml = item.barcode ? `<p class="invoice-uncertainty-note" style="color:var(--green-text);">✓ ${barcodeLabel}: ${escapeHtml(item.barcode)}</p>` : "";
+        const isChecked = i in previousChecks ? previousChecks[i] : true;
         return `
           <label class="bulk-result-row">
-            <input type="checkbox" class="invoice-result-check" data-index="${i}" checked />
+            <input type="checkbox" class="invoice-result-check" data-index="${i}" ${isChecked ? "checked" : ""} />
             <div class="bulk-result-info">
               <p class="bulk-result-name">${escapeHtml(item.name)}</p>
               <p class="bulk-result-meta">${item.qty} adet${costStr ? " · Geliş: " + costStr : ""}${priceStr ? " · Satış: <span class=\"invoice-price-preview\" data-index=\"" + i + "\">" + priceStr + "</span>" : ""}</p>
