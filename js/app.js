@@ -3007,6 +3007,35 @@
       });
   }
 
+  function orderListRowHtml(p) {
+    const status = getStatus(p);
+    const priceLabel = p.unit === "kg" ? formatTL(p.price) + t("perKgSuffix") : formatTL(p.price);
+    const altBadge = p.needsAlternativeSource
+      ? `<p class="alt-source-note">⚠️ ${t("altSourceBadge")}</p>`
+      : "";
+    const altBtnLabel = p.needsAlternativeSource ? t("altSourceUndoBtn") : t("altSourceBtn");
+    return `
+      <div class="product-row" data-id="${p.id}">
+        <div class="product-info">
+          <p class="product-name">${escapeHtml(getDisplayName(p))}</p>
+          <p class="product-meta">${escapeHtml(p.category)} · ${t("stockShortLabel")}: ${formatQty(p)} · ${priceLabel}</p>
+          ${altBadge}
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;">
+          <span class="status-badge ${STATUS_CLASS[status]}">${getStatusLabel(status)}</span>
+          <button class="alt-source-toggle-btn" data-id="${p.id}">${altBtnLabel}</button>
+        </div>
+      </div>`;
+  }
+
+  function toggleNeedsAlternativeSource(productId) {
+    const p = products.find((x) => x.id === productId);
+    if (!p) return;
+    p.needsAlternativeSource = !p.needsAlternativeSource;
+    save();
+    renderAll();
+  }
+
   function productRowHtml(p) {
     const status = getStatus(p);
     const priceLabel = p.unit === "kg" ? formatTL(p.price) + t("perKgSuffix") : formatTL(p.price);
@@ -3043,8 +3072,19 @@
     // Order list
     const orderList = document.getElementById("orderList");
     const orderEmpty = document.getElementById("orderEmptyState");
+    const supplierFilterEl = document.getElementById("orderListSupplierFilter");
+    if (supplierFilterEl) {
+      const currentFilterValue = supplierFilterEl.value;
+      supplierFilterEl.innerHTML =
+        `<option value="">${t("orderFilterAll")}</option>` +
+        suppliers.map((s) => `<option value="${s.id}">${escapeHtml(s.name)}</option>`).join("");
+      supplierFilterEl.value = currentFilterValue;
+    }
+    const selectedSupplierFilter = supplierFilterEl ? supplierFilterEl.value : "";
+
     const needsOrder = products
       .filter((p) => getStatus(p) !== "yeterli")
+      .filter((p) => !selectedSupplierFilter || p.supplierId === selectedSupplierFilter)
       .sort((a, b) => (getStatus(a) === "tukendi" ? 0 : 1) - (getStatus(b) === "tukendi" ? 0 : 1));
 
     if (!needsOrder.length) {
@@ -3052,9 +3092,15 @@
       orderEmpty.style.display = "block";
     } else {
       orderEmpty.style.display = "none";
-      orderList.innerHTML = needsOrder.map(productRowHtml).join("");
+      orderList.innerHTML = needsOrder.map(orderListRowHtml).join("");
       orderList.querySelectorAll(".product-row").forEach((row) => {
         row.addEventListener("click", () => openModal(row.dataset.id));
+      });
+      orderList.querySelectorAll(".alt-source-toggle-btn").forEach((btn) => {
+        btn.addEventListener("click", (e) => {
+          e.stopPropagation();
+          toggleNeedsAlternativeSource(btn.dataset.id);
+        });
       });
     }
 
@@ -4964,7 +5010,16 @@
         if (daysLeft > 7) return null;
         const suggestedOrder = Math.max(0, Math.ceil(avgDaily * 14 - p.qty));
         if (suggestedOrder <= 0) return null;
-        return { name: p.name, daysLeft, avgDaily, suggestedOrder, unit: p.unit };
+        return {
+          productId: p.id,
+          name: p.name,
+          daysLeft,
+          avgDaily,
+          suggestedOrder,
+          unit: p.unit,
+          supplierId: p.supplierId || null,
+          needsAlternativeSource: !!p.needsAlternativeSource
+        };
       })
       .filter(Boolean)
       .sort((a, b) => a.daysLeft - b.daysLeft);
@@ -4975,7 +5030,11 @@
     const emptyEl = document.getElementById("orderEngineEmptyState");
     if (!listEl) return;
 
-    const suggestions = calcOrderSuggestions(() => true);
+    renderOrderEngineFilterSelect();
+    const filterValue = document.getElementById("orderEngineFilterSelect").value;
+
+    const allSuggestions = calcOrderSuggestions(() => true);
+    const suggestions = filterValue ? allSuggestions.filter((s) => s.supplierId === filterValue) : allSuggestions;
 
     if (!suggestions.length) {
       listEl.innerHTML = "";
@@ -4987,23 +5046,58 @@
     listEl.innerHTML = suggestions
       .map((s, i) => {
         const daysLabel = s.daysLeft <= 0 ? t("orderEngineToday") : `${Math.ceil(s.daysLeft)} ${t("orderEngineDaysLeft")}`;
+        const showTransferBtn = !!filterValue; // sadece belirli bir tedarikçi seçiliyken anlamlı
+        const transferBtnHtml = showTransferBtn
+          ? `<button type="button" class="order-engine-transfer-btn" data-product-id="${s.productId}">${t("orderEngineTransferBtn")}</button>`
+          : "";
+        const altBadgeHtml =
+          !filterValue && s.needsAlternativeSource ? `<span class="order-engine-alt-badge">${t("orderEngineAltBadge")}</span>` : "";
         return `
           <label class="order-engine-row">
             <input type="checkbox" class="order-engine-check" data-index="${i}" checked />
             <div class="order-engine-info">
               <p class="order-engine-name">${escapeHtml(s.name)}</p>
               <p class="order-engine-meta">${t("orderEngineRunsOut")}: ${daysLabel}</p>
+              ${altBadgeHtml}
             </div>
             <div class="order-engine-suggestion">
               <span class="order-engine-qty">${s.suggestedOrder}</span>
               <span class="order-engine-unit">${s.unit === "kg" ? t("unitKgShort") : t("unitAdetShort")}</span>
             </div>
+            ${transferBtnHtml}
           </label>`;
       })
       .join("");
 
+    listEl.querySelectorAll(".order-engine-transfer-btn").forEach((btn) => {
+      btn.addEventListener("click", (e) => {
+        e.preventDefault();
+        markNeedsAlternativeSource(btn.dataset.productId);
+      });
+    });
+
     orderEngineSuggestionsCache = suggestions;
     renderOrderEngineSupplierSelect();
+  }
+
+  function renderOrderEngineFilterSelect() {
+    const selectEl = document.getElementById("orderEngineFilterSelect");
+    if (!selectEl) return;
+    const currentValue = selectEl.value;
+    selectEl.innerHTML =
+      `<option value="">${t("orderEngineFilterAll")}</option>` +
+      suppliers.map((s) => `<option value="${s.id}">${escapeHtml(s.name)}</option>`).join("");
+    selectEl.value = currentValue;
+  }
+
+  function markNeedsAlternativeSource(productId) {
+    const p = products.find((x) => x.id === productId);
+    if (!p) return;
+    p.needsAlternativeSource = true;
+    logAudit("Ana sipariş listesine aktarıldı", p.name);
+    save();
+    renderOrderEngine();
+    showToast(t("orderEngineTransferDone"), "success");
   }
 
   let orderEngineSuggestionsCache = [];
@@ -5340,6 +5434,7 @@
     if (e.key === "Enter") addProduct();
   });
   document.getElementById("searchBox").addEventListener("input", renderAll);
+  document.getElementById("orderListSupplierFilter").addEventListener("change", renderAll);
   document.getElementById("resetBtn").addEventListener("click", () => {
     if (confirm(t("confirmResetAll"))) resetAll();
   });
@@ -5823,6 +5918,7 @@
   document.getElementById("voiceCommandConfirmYes").addEventListener("click", confirmVoiceAction);
   document.getElementById("voiceCommandConfirmNo").addEventListener("click", hideVoiceCommandConfirm);
   document.getElementById("orderEngineCreateBtn").addEventListener("click", createOrderFromEngine);
+  document.getElementById("orderEngineFilterSelect").addEventListener("change", renderOrderEngine);
   document.getElementById("branchEditModal").addEventListener("click", (e) => {
     if (e.target.id === "branchEditModal") closeBranchEditModal();
   });
