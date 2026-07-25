@@ -1517,6 +1517,97 @@
     closeSupplierModal();
   }
 
+  // ---------- Hatırlatma / Pazarlama (WhatsApp) ----------
+  function renderReminders() {
+    const debtListEl = document.getElementById("reminderDebtList");
+    const debtEmptyEl = document.getElementById("reminderDebtEmptyState");
+    const inactiveListEl = document.getElementById("reminderInactiveList");
+    const inactiveEmptyEl = document.getElementById("reminderInactiveEmptyState");
+    if (!debtListEl) return;
+
+    // Borcu olan müşteriler
+    const withDebt = customers
+      .map((c) => ({ customer: c, debt: getCustomerDebt(c.id) }))
+      .filter((x) => x.debt > 0 && x.customer.phone)
+      .sort((a, b) => b.debt - a.debt);
+
+    if (!withDebt.length) {
+      debtListEl.innerHTML = "";
+      debtEmptyEl.style.display = "block";
+    } else {
+      debtEmptyEl.style.display = "none";
+      debtListEl.innerHTML = withDebt
+        .map(
+          (x) => `
+          <div class="reminder-row">
+            <div>
+              <p class="reminder-name">${escapeHtml(x.customer.name)}</p>
+              <p class="reminder-meta">${formatTL(x.debt)}</p>
+            </div>
+            <button class="reminder-send-btn" data-type="debt" data-id="${x.customer.id}">
+              <i class="fa-brands fa-whatsapp" aria-hidden="true"></i> ${t("reminderSendBtn")}
+            </button>
+          </div>`
+        )
+        .join("");
+    }
+
+    // Uzun süredir (30+ gün) alışveriş yapmamış müşteriler
+    const cutoff = Date.now() - 30 * 86400000;
+    const inactive = customers
+      .filter((c) => c.phone)
+      .map((c) => {
+        const customerSales = sales.filter((s) => s.customerId === c.id);
+        const lastSale = customerSales.length ? new Date(Math.max(...customerSales.map((s) => new Date(s.timestamp)))) : null;
+        return { customer: c, lastSale };
+      })
+      .filter((x) => x.lastSale && x.lastSale.getTime() < cutoff);
+
+    if (!inactive.length) {
+      inactiveListEl.innerHTML = "";
+      inactiveEmptyEl.style.display = "block";
+    } else {
+      inactiveEmptyEl.style.display = "none";
+      inactiveListEl.innerHTML = inactive
+        .map((x) => {
+          const daysAgo = Math.round((Date.now() - x.lastSale.getTime()) / 86400000);
+          return `
+          <div class="reminder-row">
+            <div>
+              <p class="reminder-name">${escapeHtml(x.customer.name)}</p>
+              <p class="reminder-meta">${daysAgo} ${t("reminderDaysAgo")}</p>
+            </div>
+            <button class="reminder-send-btn" data-type="inactive" data-id="${x.customer.id}">
+              <i class="fa-brands fa-whatsapp" aria-hidden="true"></i> ${t("reminderSendBtn")}
+            </button>
+          </div>`;
+        })
+        .join("");
+    }
+
+    document.querySelectorAll(".reminder-send-btn").forEach((btn) => {
+      btn.addEventListener("click", () => sendReminderWhatsApp(btn.dataset.type, btn.dataset.id));
+    });
+  }
+
+  function sendReminderWhatsApp(type, customerId) {
+    const c = customers.find((x) => x.id === customerId);
+    if (!c || !c.phone) return;
+
+    let message;
+    if (type === "debt") {
+      const debt = getCustomerDebt(customerId);
+      message = `${t("reminderDebtMsgPrefix")} ${c.name}, ${t("reminderDebtMsgBody")} ${formatTL(debt)}. ${t("reminderDebtMsgSuffix")}`;
+    } else {
+      message = `${t("reminderInactiveMsgPrefix")} ${c.name}! ${t("reminderInactiveMsgBody")}`;
+    }
+
+    const cleanPhone = c.phone.replace(/[^\d]/g, "");
+    const url = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`;
+    window.open(url, "_blank");
+    logAudit("Hatırlatma gönderildi", `${c.name} (${type === "debt" ? "borç" : "özledik"})`);
+  }
+
   function renderCustomers() {
     const list = document.getElementById("customerList");
     const empty = document.getElementById("customerEmptyState");
@@ -2722,10 +2813,19 @@
     renderAll();
   }
 
+  function updateOutOfStockTracking(p) {
+    if (p.qty <= 0) {
+      if (!p.wentOutOfStockAt) p.wentOutOfStockAt = new Date().toISOString();
+    } else {
+      p.wentOutOfStockAt = null;
+    }
+  }
+
   function adjustQty(id, delta) {
     const p = products.find((x) => x.id === id);
     if (!p) return;
     p.qty = Math.max(0, Math.round((p.qty + delta) * 1000) / 1000);
+    updateOutOfStockTracking(p);
     logAudit("Stok güncellendi", `${p.name}: ${delta > 0 ? "+" : ""}${delta} → ${p.qty}`);
     save();
     renderAll();
@@ -2742,6 +2842,7 @@
     }
     const oldQty = p.qty;
     p.qty = Math.round(newQty * 1000) / 1000;
+    updateOutOfStockTracking(p);
     logAudit("Stok elle güncellendi", `${p.name}: ${oldQty} → ${p.qty}`);
     save();
     renderAll();
@@ -2894,6 +2995,7 @@
     renderCart();
     renderSales();
     renderCustomers();
+    renderReminders();
     renderSuppliers();
     renderBreadStatus();
     renderPriceChanges();
@@ -3524,7 +3626,10 @@
 
     cart.forEach((item) => {
       const p = products.find((x) => x.id === item.productId);
-      if (p) p.qty = Math.max(0, p.qty - item.qty);
+      if (p) {
+        p.qty = Math.max(0, p.qty - item.qty);
+        updateOutOfStockTracking(p);
+      }
     });
 
     const newSale = {
@@ -4716,6 +4821,58 @@
   }
 
   // ---------- 2) AI Sipariş Motoru (satış hızına göre) ----------
+  // ---------- 2b) Kayıp Satış Hesaplayıcısı ----------
+  function renderLostSales() {
+    const listEl = document.getElementById("lostSalesList");
+    const emptyEl = document.getElementById("lostSalesEmptyState");
+    const totalEl = document.getElementById("lostSalesTotalValue");
+    if (!listEl) return;
+
+    const cutoff = new Date(Date.now() - 14 * 86400000);
+    const recentSales = sales.filter((s) => new Date(s.timestamp) >= cutoff);
+    const salesByProduct = {};
+    recentSales.forEach((s) => {
+      s.items.forEach((item) => {
+        salesByProduct[item.name] = (salesByProduct[item.name] || 0) + item.qty;
+      });
+    });
+
+    const outOfStock = products
+      .filter((p) => p.qty <= 0 && p.wentOutOfStockAt)
+      .map((p) => {
+        const daysOut = Math.max(0, (Date.now() - new Date(p.wentOutOfStockAt).getTime()) / 86400000);
+        const avgDaily = (salesByProduct[p.name] || 0) / 14;
+        const lostRevenue = avgDaily * p.price * daysOut;
+        return { name: p.name, daysOut, lostRevenue };
+      })
+      .filter((x) => x.lostRevenue > 0)
+      .sort((a, b) => b.lostRevenue - a.lostRevenue);
+
+    const totalLost = outOfStock.reduce((sum, x) => sum + x.lostRevenue, 0);
+    totalEl.textContent = formatTL(totalLost);
+
+    if (!outOfStock.length) {
+      listEl.innerHTML = "";
+      emptyEl.style.display = "block";
+      return;
+    }
+    emptyEl.style.display = "none";
+
+    listEl.innerHTML = outOfStock
+      .map((x) => {
+        const daysLabel = Math.round(x.daysOut * 10) / 10;
+        return `
+          <div class="lost-sales-row">
+            <div>
+              <p class="lost-sales-name">${escapeHtml(x.name)}</p>
+              <p class="lost-sales-meta">${daysLabel} ${t("lostSalesDaysOut")}</p>
+            </div>
+            <span class="lost-sales-amount">${formatTL(x.lostRevenue)}</span>
+          </div>`;
+      })
+      .join("");
+  }
+
   function renderOrderEngine() {
     const listEl = document.getElementById("orderEngineList");
     const emptyEl = document.getElementById("orderEngineEmptyState");
@@ -4815,6 +4972,82 @@
   }
 
   // ---------- 3) Son Kullanma Tarihi Takibi ----------
+  // ---------- Akıllı Fiyat Önerisi ----------
+  function renderPriceSuggestions() {
+    const listEl = document.getElementById("priceSuggestList");
+    const emptyEl = document.getElementById("priceSuggestEmptyState");
+    if (!listEl) return;
+
+    const now = Date.now();
+    const recentCutoff = new Date(now - 14 * 86400000);
+    const olderCutoff = new Date(now - 28 * 86400000);
+
+    const recentSalesByProduct = {};
+    const olderSalesByProduct = {};
+    sales.forEach((s) => {
+      const d = new Date(s.timestamp);
+      s.items.forEach((item) => {
+        if (d >= recentCutoff) {
+          recentSalesByProduct[item.name] = (recentSalesByProduct[item.name] || 0) + item.qty;
+        } else if (d >= olderCutoff) {
+          olderSalesByProduct[item.name] = (olderSalesByProduct[item.name] || 0) + item.qty;
+        }
+      });
+    });
+
+    const suggestions = [];
+    products.forEach((p) => {
+      if (!p.price || !p.costPrice) return;
+      const recentQty = recentSalesByProduct[p.name] || 0;
+      const olderQty = olderSalesByProduct[p.name] || 0;
+      const margin = (p.price - p.costPrice) / p.price;
+
+      // Talep düşüyor + marj iyi → küçük bir indirim öner (satış hızını artırmak için)
+      if (olderQty >= 4 && recentQty > 0 && recentQty < olderQty * 0.6 && margin > 0.15) {
+        const newPrice = Math.round(p.price * 0.96 * 100) / 100;
+        suggestions.push({
+          name: p.name, oldPrice: p.price, newPrice, direction: "down",
+          reason: t("priceSuggestReasonSlow")
+        });
+        return;
+      }
+
+      // Talep yüksek + stok az → küçük bir zam öner (marjı artırmak için)
+      if (recentQty >= 8 && p.qty > 0 && p.qty <= p.min * 1.5) {
+        const newPrice = Math.round(p.price * 1.04 * 100) / 100;
+        suggestions.push({
+          name: p.name, oldPrice: p.price, newPrice, direction: "up",
+          reason: t("priceSuggestReasonHighDemand")
+        });
+      }
+    });
+
+    if (!suggestions.length) {
+      listEl.innerHTML = "";
+      emptyEl.style.display = "block";
+      return;
+    }
+    emptyEl.style.display = "none";
+
+    listEl.innerHTML = suggestions
+      .slice(0, 15)
+      .map((s) => {
+        const dirClass = s.direction === "up" ? "price-suggest-up" : "price-suggest-down";
+        return `
+          <div class="price-suggest-row">
+            <div>
+              <p class="price-suggest-name">${escapeHtml(s.name)}</p>
+              <p class="price-suggest-reason">${escapeHtml(s.reason)}</p>
+            </div>
+            <div class="price-suggest-prices">
+              <span class="price-suggest-old">${formatTL(s.oldPrice)}</span>
+              <span class="price-suggest-new ${dirClass}">${formatTL(s.newPrice)}</span>
+            </div>
+          </div>`;
+      })
+      .join("");
+  }
+
   function renderExpiryTracking() {
     const listEl = document.getElementById("expiryList");
     const emptyEl = document.getElementById("expiryEmptyState");
@@ -4948,7 +5181,9 @@
     if (!document.getElementById("tab-ai")) return;
     renderDailyReportAndHealth();
     renderOrderEngine();
+    renderLostSales();
     renderExpiryTracking();
+    renderPriceSuggestions();
     renderAnomalyDetection();
     renderShelfCheckAlert();
   }
@@ -4965,6 +5200,7 @@
         const p = products.find((x) => x.id === item.matchedProductId);
         if (p) {
           p.qty = Math.round((p.qty + item.qty) * 1000) / 1000;
+          updateOutOfStockTracking(p);
           if (item.barcode && !p.barcode) p.barcode = item.barcode;
           if (item.unitCost) {
             const oldPrice = p.price;
