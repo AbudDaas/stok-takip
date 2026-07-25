@@ -493,6 +493,11 @@
           <i class="fa-solid fa-arrows-rotate" aria-hidden="true"></i> <span data-i18n="resetAllBtn">Tümünü sıfırla</span>
         </button>
       </div>
+      <div class="form-row">
+        <select id="orderListSupplierFilter">
+          <option value="" data-i18n="orderFilterAll">Tümü (bütün tedarikçiler)</option>
+        </select>
+      </div>
       <div id="orderList" class="list"></div>
       <p id="orderEmptyState" class="empty-state" data-i18n="emptyOrders">Şu anda sipariş edilmesi gereken ürün yok.</p>
     </section>
@@ -614,6 +619,12 @@
       <div class="card">
         <p class="card-title" data-i18n="orderEngineTitle">📦 Akıllı Sipariş Önerileri</p>
         <p class="card-subtitle" data-i18n="orderEngineSubtitle">Son 14 günlük satış hızına göre hesaplanır.</p>
+        <div class="form-row">
+          <label class="field-label" data-i18n="orderEngineFilterLabel">Tedarikçiye göre filtrele</label>
+          <select id="orderEngineFilterSelect">
+            <option value="" data-i18n="orderEngineFilterAll">Tüm Tedarikçiler</option>
+          </select>
+        </div>
         <div id="orderEngineList" class="list"></div>
         <p id="orderEngineEmptyState" class="empty-state" data-i18n="orderEngineEmpty">Şu an acil sipariş önerisi yok.</p>
         <div class="form-row" style="margin-top:10px;">
