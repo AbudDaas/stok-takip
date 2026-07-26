@@ -1,6 +1,6 @@
 import { state } from './00-state.js';
 import { save } from './01-firebase-core.js';
-import { escapeHtml, formatQty, formatTL, getStatus, getStatusLabel, mkProduct, showToast } from './02-utils.js';
+import { escapeHtml, formatQty, formatTL, getStatus, getStatusLabel, mkProduct, printOrderListAsPdf, showToast } from './02-utils.js';
 import { logAudit } from './03-staff-roles.js';
 import { callGeminiWithRetry } from './16-bulk-scan-ai.js';
 import { renderAll } from './20-navigation.js';
@@ -194,6 +194,32 @@ export function translateMissingProductNames() {
       .finally(() => {
         state.translationInFlight = false;
       });
+  }
+
+export function selfSourceRowHtml(p) {
+    const status = getStatus(p);
+    const priceLabel = p.unit === "kg" ? formatTL(p.price) + state.t("perKgSuffix") : formatTL(p.price);
+    const reasonNote = p.needsAlternativeSource
+      ? state.t("altSourceBadge")
+      : state.t("noSupplierGetYourselfNote");
+    return `
+      <div class="product-row" data-id="${p.id}">
+        <div class="product-info">
+          <p class="product-name">${escapeHtml(getDisplayName(p))}</p>
+          <p class="product-meta">${escapeHtml(p.category)} · ${state.t("stockShortLabel")}: ${formatQty(p)} · ${priceLabel}</p>
+          <p class="alt-source-note">🛒 ${reasonNote}</p>
+        </div>
+        <span class="status-badge ${state.STATUS_CLASS[status]}">${getStatusLabel(status)}</span>
+      </div>`;
+  }
+
+export function printSelfSourceList() {
+    const items = state.products
+      .filter((p) => getStatus(p) !== "yeterli")
+      .filter((p) => !p.supplierId || p.needsAlternativeSource)
+      .map((p) => ({ name: getDisplayName(p), suggestedOrder: p.min || 1, unit: p.unit }));
+    if (!items.length) return;
+    printOrderListAsPdf(state.t("selfSourceListTitle"), items);
   }
 
 export function orderListRowHtml(p) {

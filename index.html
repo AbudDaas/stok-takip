@@ -500,6 +500,16 @@
       </div>
       <div id="orderList" class="list"></div>
       <p id="orderEmptyState" class="empty-state" data-i18n="emptyOrders">Şu anda sipariş edilmesi gereken ürün yok.</p>
+
+      <div class="card" style="margin-top:16px;">
+        <p class="card-title" data-i18n="selfSourceListTitle">🛒 Kendim Temin Edeceğim Ürünler</p>
+        <p class="card-subtitle" data-i18n="selfSourceListSubtitle">Tedarikçisi olmayan ürünler ve "Başka Yerden Bulunmalı" işaretlenenler — hal/gatemden kendin alacağın liste.</p>
+        <div id="selfSourceList" class="list"></div>
+        <p id="selfSourceEmptyState" class="empty-state" data-i18n="selfSourceEmpty">Şu an kendin temin etmen gereken bir ürün yok.</p>
+        <button id="selfSourcePrintBtn" class="btn btn-block" style="display:none;">
+          <i class="fa-solid fa-print" aria-hidden="true"></i> <span data-i18n="printOrderListBtn">Yazdır / PDF Kaydet</span>
+        </button>
+      </div>
     </section>
 
     <!-- SEKME: TEDARİKÇİLER -->
