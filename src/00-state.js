@@ -95,6 +95,10 @@ const ADMIN_UID = "NaVl26qq6kXas90Qm9e2kCZDaIp2";
 
 let staffPickerPendingSelection = null;
 
+const SUGGESTED_SUPPLIERS = ["Coca-Cola", "Pepsi", "Eti", "Ülker", "Dimes", "Lay's", "Algida", "Sütaş"];
+
+let supplierOrderSuggestionsCache = [];
+
 let selectedVeresiyeCustomerId = null;
 
 let originalDocRef = null;

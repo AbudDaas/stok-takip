@@ -1,6 +1,6 @@
 /**
  * 05-products.js
- * Ürün CRUD işlemleri, barkod/QR kodu, stok takibi, ürün detay modalı.
+ * Ürün CRUD işlemleri, barkod/QR kodu, stok takibi, ürün detay modalı, tedarikçi ataması.
  */
 
 function findProductByExactName(name) {
@@ -100,6 +100,14 @@ function setQtyManually(id, newQty) {
     if (activeProductId === id) updateModalContent(p);
   }
 
+function populateEditSupplierSelect(currentSupplierId) {
+    const selectEl = document.getElementById("editSupplierId");
+    selectEl.innerHTML =
+      `<option value="">${t("editSupplierNone")}</option>` +
+      suppliers.map((s) => `<option value="${s.id}">${escapeHtml(s.name)}</option>`).join("");
+    selectEl.value = currentSupplierId || "";
+  }
+
 function saveEdit() {
     const p = products.find((x) => x.id === activeProductId);
     if (!p) return;
@@ -116,6 +124,7 @@ function saveEdit() {
     p.bulkDiscountQty = Number(document.getElementById("editBulkQty").value) || 0;
     p.bulkDiscountType = document.getElementById("editBulkType").value;
     p.bulkDiscountValue = Number(document.getElementById("editBulkValue").value) || 0;
+    p.supplierId = document.getElementById("editSupplierId").value || null;
     logAudit("Ürün düzenlendi", `${name} (${formatTL(p.price)})`);
     save();
     renderAll();
@@ -185,6 +194,35 @@ function translateMissingProductNames() {
       });
   }
 
+function orderListRowHtml(p) {
+    const status = getStatus(p);
+    const priceLabel = p.unit === "kg" ? formatTL(p.price) + t("perKgSuffix") : formatTL(p.price);
+    const altBadge = p.needsAlternativeSource
+      ? `<p class="alt-source-note">⚠️ ${t("altSourceBadge")}</p>`
+      : "";
+    const altBtnLabel = p.needsAlternativeSource ? t("altSourceUndoBtn") : t("altSourceBtn");
+    return `
+      <div class="product-row" data-id="${p.id}">
+        <div class="product-info">
+          <p class="product-name">${escapeHtml(getDisplayName(p))}</p>
+          <p class="product-meta">${escapeHtml(p.category)} · ${t("stockShortLabel")}: ${formatQty(p)} · ${priceLabel}</p>
+          ${altBadge}
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;">
+          <span class="status-badge ${STATUS_CLASS[status]}">${getStatusLabel(status)}</span>
+          <button class="alt-source-toggle-btn" data-id="${p.id}">${altBtnLabel}</button>
+        </div>
+      </div>`;
+  }
+
+function toggleNeedsAlternativeSource(productId) {
+    const p = products.find((x) => x.id === productId);
+    if (!p) return;
+    p.needsAlternativeSource = !p.needsAlternativeSource;
+    save();
+    renderAll();
+  }
+
 function productRowHtml(p) {
     const status = getStatus(p);
     const priceLabel = p.unit === "kg" ? formatTL(p.price) + t("perKgSuffix") : formatTL(p.price);
@@ -213,6 +251,7 @@ function openModal(id) {
     document.getElementById("editBulkQty").value = p.bulkDiscountQty || "";
     document.getElementById("editBulkType").value = p.bulkDiscountType || "percent";
     document.getElementById("editBulkValue").value = p.bulkDiscountValue || "";
+    populateEditSupplierSelect(p.supplierId);
     updateModalContent(p);
     document.getElementById("detailModal").style.display = "flex";
     renderQrCode(p.id);

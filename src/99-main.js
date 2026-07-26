@@ -29,6 +29,8 @@ document.getElementById("newQty").addEventListener("keydown", (e) => {
 
 document.getElementById("searchBox").addEventListener("input", renderAll);
 
+document.getElementById("orderListSupplierFilter").addEventListener("change", renderAll);
+
 document.getElementById("resetBtn").addEventListener("click", () => {
     if (confirm(t("confirmResetAll"))) resetAll();
   });
@@ -281,6 +283,8 @@ document.getElementById("closeBranchEditModalBtn").addEventListener("click", clo
 
 document.getElementById("supplierAddBtn").addEventListener("click", addSupplier);
 
+document.getElementById("addSuggestedSuppliersBtn").addEventListener("click", addSuggestedSuppliers);
+
 document.getElementById("closeSupplierModalBtn").addEventListener("click", closeSupplierModal);
 
 document.getElementById("supplierModal").addEventListener("click", (e) => {
@@ -290,6 +294,12 @@ document.getElementById("supplierModal").addEventListener("click", (e) => {
 document.getElementById("supplierAddDebtBtn").addEventListener("click", addSupplierDebt);
 
 document.getElementById("supplierAddPaymentBtn").addEventListener("click", addSupplierPayment);
+
+document.getElementById("supplierOrderSendBtn").addEventListener("click", sendSupplierOrderWhatsApp);
+
+document.getElementById("supplierProductSearch").addEventListener("input", renderSupplierProductPicker);
+
+document.getElementById("supplierAssignProductsBtn").addEventListener("click", assignSelectedProductsToSupplier);
 
 document.getElementById("deleteSupplierBtn").addEventListener("click", deleteSupplier);
 
@@ -308,6 +318,8 @@ document.getElementById("voiceCommandConfirmYes").addEventListener("click", conf
 document.getElementById("voiceCommandConfirmNo").addEventListener("click", hideVoiceCommandConfirm);
 
 document.getElementById("orderEngineCreateBtn").addEventListener("click", createOrderFromEngine);
+
+document.getElementById("orderEngineFilterSelect").addEventListener("change", renderOrderEngine);
 
 document.getElementById("branchEditModal").addEventListener("click", (e) => {
     if (e.target.id === "branchEditModal") closeBranchEditModal();

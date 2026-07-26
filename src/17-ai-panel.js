@@ -1,6 +1,6 @@
 /**
  * 17-ai-panel.js
- * AI Panel: günlük rapor, market sağlık skoru, akıllı sipariş motoru, kayıp satış hesaplayıcısı, akıllı fiyat önerisi, AI danışman.
+ * AI Panel: günlük rapor, market sağlık skoru, akıllı sipariş motoru (tedarikçi filtresi dahil), kayıp satış hesaplayıcısı, akıllı fiyat önerisi, AI danışman.
  */
 
 function renderDailyReportAndHealth() {
@@ -128,11 +128,7 @@ function renderLostSales() {
       .join("");
   }
 
-function renderOrderEngine() {
-    const listEl = document.getElementById("orderEngineList");
-    const emptyEl = document.getElementById("orderEngineEmptyState");
-    if (!listEl) return;
-
+function calcOrderSuggestions(productFilter) {
     const cutoff = new Date(Date.now() - 14 * 86400000);
     const recentSales = sales.filter((s) => new Date(s.timestamp) >= cutoff);
 
@@ -143,7 +139,8 @@ function renderOrderEngine() {
       });
     });
 
-    const suggestions = products
+    return products
+      .filter(productFilter)
       .map((p) => {
         const totalSold = salesByProduct[p.name] || 0;
         const avgDaily = totalSold / 14;
@@ -152,10 +149,31 @@ function renderOrderEngine() {
         if (daysLeft > 7) return null;
         const suggestedOrder = Math.max(0, Math.ceil(avgDaily * 14 - p.qty));
         if (suggestedOrder <= 0) return null;
-        return { name: p.name, daysLeft, avgDaily, suggestedOrder, unit: p.unit };
+        return {
+          productId: p.id,
+          name: p.name,
+          daysLeft,
+          avgDaily,
+          suggestedOrder,
+          unit: p.unit,
+          supplierId: p.supplierId || null,
+          needsAlternativeSource: !!p.needsAlternativeSource
+        };
       })
       .filter(Boolean)
       .sort((a, b) => a.daysLeft - b.daysLeft);
+  }
+
+function renderOrderEngine() {
+    const listEl = document.getElementById("orderEngineList");
+    const emptyEl = document.getElementById("orderEngineEmptyState");
+    if (!listEl) return;
+
+    renderOrderEngineFilterSelect();
+    const filterValue = document.getElementById("orderEngineFilterSelect").value;
+
+    const allSuggestions = calcOrderSuggestions(() => true);
+    const suggestions = filterValue ? allSuggestions.filter((s) => s.supplierId === filterValue) : allSuggestions;
 
     if (!suggestions.length) {
       listEl.innerHTML = "";
@@ -167,23 +185,58 @@ function renderOrderEngine() {
     listEl.innerHTML = suggestions
       .map((s, i) => {
         const daysLabel = s.daysLeft <= 0 ? t("orderEngineToday") : `${Math.ceil(s.daysLeft)} ${t("orderEngineDaysLeft")}`;
+        const showTransferBtn = !!filterValue; // sadece belirli bir tedarikçi seçiliyken anlamlı
+        const transferBtnHtml = showTransferBtn
+          ? `<button type="button" class="order-engine-transfer-btn" data-product-id="${s.productId}">${t("orderEngineTransferBtn")}</button>`
+          : "";
+        const altBadgeHtml =
+          !filterValue && s.needsAlternativeSource ? `<span class="order-engine-alt-badge">${t("orderEngineAltBadge")}</span>` : "";
         return `
           <label class="order-engine-row">
             <input type="checkbox" class="order-engine-check" data-index="${i}" checked />
             <div class="order-engine-info">
               <p class="order-engine-name">${escapeHtml(s.name)}</p>
               <p class="order-engine-meta">${t("orderEngineRunsOut")}: ${daysLabel}</p>
+              ${altBadgeHtml}
             </div>
             <div class="order-engine-suggestion">
               <span class="order-engine-qty">${s.suggestedOrder}</span>
               <span class="order-engine-unit">${s.unit === "kg" ? t("unitKgShort") : t("unitAdetShort")}</span>
             </div>
+            ${transferBtnHtml}
           </label>`;
       })
       .join("");
 
+    listEl.querySelectorAll(".order-engine-transfer-btn").forEach((btn) => {
+      btn.addEventListener("click", (e) => {
+        e.preventDefault();
+        markNeedsAlternativeSource(btn.dataset.productId);
+      });
+    });
+
     orderEngineSuggestionsCache = suggestions;
     renderOrderEngineSupplierSelect();
+  }
+
+function renderOrderEngineFilterSelect() {
+    const selectEl = document.getElementById("orderEngineFilterSelect");
+    if (!selectEl) return;
+    const currentValue = selectEl.value;
+    selectEl.innerHTML =
+      `<option value="">${t("orderEngineFilterAll")}</option>` +
+      suppliers.map((s) => `<option value="${s.id}">${escapeHtml(s.name)}</option>`).join("");
+    selectEl.value = currentValue;
+  }
+
+function markNeedsAlternativeSource(productId) {
+    const p = products.find((x) => x.id === productId);
+    if (!p) return;
+    p.needsAlternativeSource = true;
+    logAudit("Ana sipariş listesine aktarıldı", p.name);
+    save();
+    renderOrderEngine();
+    showToast(t("orderEngineTransferDone"), "success");
   }
 
 function renderOrderEngineSupplierSelect() {

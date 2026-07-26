@@ -38,7 +38,8 @@ module.exports = {
     "findExistingProductByName", "findProductByFuzzyName", "openModal",
     "updateModalContent", "closeModal", "renderQrCode", "printQr", "printAllQrCodes",
     "findProductByScan", "importProductsFromRows", "importProductsFromCsv",
-    "handleCsvImportFile"
+    "handleCsvImportFile", "populateEditSupplierSelect", "orderListRowHtml",
+    "toggleNeedsAlternativeSource"
   ],
 
   "06-veresiye.js": [
@@ -67,7 +68,10 @@ module.exports = {
   "09-suppliers.js": [
     "getSupplierBalance", "renderSuppliers", "addSupplier", "openSupplierModal",
     "closeSupplierModal", "renderSupplierHistory", "addSupplierDebt",
-    "addSupplierPayment", "deleteSupplier"
+    "addSupplierPayment", "deleteSupplier", "addSuggestedSuppliers",
+    "renderSupplierOrderList", "sendSupplierOrderWhatsApp",
+    "renderSupplierProductPicker", "getSupplierNameById",
+    "assignSelectedProductsToSupplier"
   ],
 
   "10-reminders.js": [
@@ -117,7 +121,8 @@ module.exports = {
   "17-ai-panel.js": [
     "renderDailyReportAndHealth", "daysUntil", "renderLostSales", "renderOrderEngine",
     "renderOrderEngineSupplierSelect", "createOrderFromEngine", "renderPriceSuggestions",
-    "renderExpiryTracking", "renderAnomalyDetection", "askAiAdvisor", "renderAiPanel"
+    "renderExpiryTracking", "renderAnomalyDetection", "askAiAdvisor", "renderAiPanel",
+    "calcOrderSuggestions", "renderOrderEngineFilterSelect", "markNeedsAlternativeSource"
   ],
 
   "18-settings-backup.js": [

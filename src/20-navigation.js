@@ -26,8 +26,19 @@ function renderAll() {
     // Order list
     const orderList = document.getElementById("orderList");
     const orderEmpty = document.getElementById("orderEmptyState");
+    const supplierFilterEl = document.getElementById("orderListSupplierFilter");
+    if (supplierFilterEl) {
+      const currentFilterValue = supplierFilterEl.value;
+      supplierFilterEl.innerHTML =
+        `<option value="">${t("orderFilterAll")}</option>` +
+        suppliers.map((s) => `<option value="${s.id}">${escapeHtml(s.name)}</option>`).join("");
+      supplierFilterEl.value = currentFilterValue;
+    }
+    const selectedSupplierFilter = supplierFilterEl ? supplierFilterEl.value : "";
+
     const needsOrder = products
       .filter((p) => getStatus(p) !== "yeterli")
+      .filter((p) => !selectedSupplierFilter || p.supplierId === selectedSupplierFilter)
       .sort((a, b) => (getStatus(a) === "tukendi" ? 0 : 1) - (getStatus(b) === "tukendi" ? 0 : 1));
 
     if (!needsOrder.length) {
@@ -35,9 +46,15 @@ function renderAll() {
       orderEmpty.style.display = "block";
     } else {
       orderEmpty.style.display = "none";
-      orderList.innerHTML = needsOrder.map(productRowHtml).join("");
+      orderList.innerHTML = needsOrder.map(orderListRowHtml).join("");
       orderList.querySelectorAll(".product-row").forEach((row) => {
         row.addEventListener("click", () => openModal(row.dataset.id));
+      });
+      orderList.querySelectorAll(".alt-source-toggle-btn").forEach((btn) => {
+        btn.addEventListener("click", (e) => {
+          e.stopPropagation();
+          toggleNeedsAlternativeSource(btn.dataset.id);
+        });
       });
     }
 
