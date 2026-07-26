@@ -296,7 +296,7 @@ export function analyzeOneInvoicePhoto(file) {
       "görünen KDV oranını da (varsa, örn. %10, %20) ayrı bir alanda bildir.",
       "",
       "Her satır için şu alanları çıkar:",
-      '- name: ürün adı (faturada yazdığı gibi, örn. "Pepsi 1 Lt")',
+      '- name: SADECE ürünün gerçek adı (faturada yazdığı gibi, örn. "Pepsi 1 Lt"). Faturada ürün adından ÖNCE gelen sıra numarası, stok kodu, satır numarası gibi rakamları/kodları KESİNLİKLE dahil etme — sadece ürünü tanımlayan gerçek ismi al.',
       "- qty: yukarıdaki mantığa göre hesapladığın GERÇEK TEKİL ADET sayısı (sayı olarak)",
       "- unitCost: TEKİL ADET başına, İSKONTO DÜŞÜLMÜŞ ve KDV HARİÇ alış fiyatı (sayı olarak). Faturada kutu/koli fiyatı yazıyorsa, bunu senin hesapladığın gerçek adet sayısına bölerek adet başı fiyatı bul.",
       "- kdvRate: bu satır/fatura için geçerli KDV oranı (sayı olarak, örn. 10 ya da 20). Faturada belirtilmiyorsa null bırak.",
