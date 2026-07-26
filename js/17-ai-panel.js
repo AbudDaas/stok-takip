@@ -1,6 +1,6 @@
 import { state } from './00-state.js';
 import { locale, save } from './01-firebase-core.js';
-import { escapeHtml, formatTL, printOrderListAsPdf, showToast } from './02-utils.js';
+import { escapeHtml, formatTL, getStatus, printOrderListAsPdf, showToast } from './02-utils.js';
 import { logAudit } from './03-staff-roles.js';
 import { renderShelfCheckAlert } from './12-push-notifications.js';
 import { callGeminiWithRetry } from './16-bulk-scan-ai.js';
@@ -146,7 +146,27 @@ export function calcOrderSuggestions(productFilter) {
       .map((p) => {
         const totalSold = salesByProduct[p.name] || 0;
         const avgDaily = totalSold / 14;
-        if (avgDaily <= 0) return null;
+
+        if (avgDaily <= 0) {
+          // Son 14 günde hiç satılmamış (belki zaten stokta yoktu, satılamadı).
+          // Satış hızına dayalı öneri yapamayız ama basit stok durumuna göre
+          // yine de listeye eklemeliyiz — yoksa "eksik" bir ürün, sırf yakın
+          // zamanda satılmadı diye bu listeden tamamen kaybolur.
+          const status = getStatus(p);
+          if (status === "yeterli") return null;
+          const suggestedOrder = Math.max(1, (p.min || 5) * 2 - p.qty);
+          return {
+            productId: p.id,
+            name: p.name,
+            daysLeft: 0,
+            avgDaily: 0,
+            suggestedOrder,
+            unit: p.unit,
+            supplierId: p.supplierId || null,
+            needsAlternativeSource: !!p.needsAlternativeSource
+          };
+        }
+
         const daysLeft = p.qty / avgDaily;
         if (daysLeft > 7) return null;
         const suggestedOrder = Math.max(0, Math.ceil(avgDaily * 14 - p.qty));
