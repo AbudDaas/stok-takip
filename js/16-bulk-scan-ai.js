@@ -282,16 +282,31 @@ export function analyzeOneInvoicePhoto(file) {
       "4. Hiçbir şekilde emin olamıyorsan, faturadaki ham sayıyı olduğu gibi kullan ama unitNote alanında 'kutu miktarı belirsiz, kontrol et' gibi bir uyarı ekle.",
       "Sakın kör bir formülle (sadece parantez içindeki sayıları çarparak) hareket etme — gerçekten faturayı ve ürünü anlamaya çalış, mantıklı bir sonuca var.",
       "",
+      "İSKONTO (İNDİRİM) — ÇOK ÖNEMLİ:",
+      "Bazı faturalarda her ürün satırının yanında ayrı bir 'İskonto' veya 'İsk.' sütunu olur",
+      "(yüzde olarak, örn. '%10', ya da tutar olarak). Bu satıra özel bir iskonto varsa,",
+      "unitCost hesabını YAPARKEN bu iskontoyu MUTLAKA düş — yani unitCost, iskonto",
+      "SONRASI gerçek birim maliyeti yansıtmalı, faturadaki brüt (iskontosuz) birim",
+      "fiyat değil. İskonto satır bazında değil de faturanın en altında GENEL bir",
+      "iskonto olarak yazıyorsa, bunu TÜM satırlara oranlı şekilde dağıt.",
+      "",
+      "KDV — ÖNEMLİ:",
+      "unitCost alanı KDV HARİÇ (mal bedeli) olmalı — faturadaki 'KDV Hariç Birim",
+      "Fiyat' ya da 'Matrah' sütununu esas al, KDV dahil tutarı DEĞİL. Faturada",
+      "görünen KDV oranını da (varsa, örn. %10, %20) ayrı bir alanda bildir.",
+      "",
       "Her satır için şu alanları çıkar:",
       '- name: ürün adı (faturada yazdığı gibi, örn. "Pepsi 1 Lt")',
       "- qty: yukarıdaki mantığa göre hesapladığın GERÇEK TEKİL ADET sayısı (sayı olarak)",
-      "- unitCost: TEKİL ADET başına alış fiyatı (sayı olarak). Faturada kutu/koli fiyatı yazıyorsa, bunu senin hesapladığın gerçek adet sayısına bölerek adet başı fiyatı bul.",
+      "- unitCost: TEKİL ADET başına, İSKONTO DÜŞÜLMÜŞ ve KDV HARİÇ alış fiyatı (sayı olarak). Faturada kutu/koli fiyatı yazıyorsa, bunu senin hesapladığın gerçek adet sayısına bölerek adet başı fiyatı bul.",
+      "- kdvRate: bu satır/fatura için geçerli KDV oranı (sayı olarak, örn. 10 ya da 20). Faturada belirtilmiyorsa null bırak.",
+      "- discountApplied: bu satıra bir iskonto uygulandıysa true, uygulanmadıysa false.",
       "- unitNote: emin olamadığın durumlar için kısa bir not (varsa), yoksa boş bırak",
       "- barcode: Bu ürün satırının yanında bir barkod (çizgili kod ya da altındaki rakamlar) ya da QR kod NET olarak basılıysa oku ve buraya yaz. Görünmüyorsa ya da emin değilsen boş string (\"\") bırak — ASLA rakam uydurma.",
       "",
       "SADECE geçerli bir JSON dizisi döndür, başka hiçbir açıklama veya metin ekleme.",
-      'Format: [{"name":"...","qty":24,"unitCost":16.5,"unitNote":"","barcode":""}]',
-      "Ürün satırı olmayan (toplam, KDV, tarih gibi) satırları dahil etme."
+      'Format: [{"name":"...","qty":24,"unitCost":16.5,"kdvRate":10,"discountApplied":true,"unitNote":"","barcode":""}]',
+      "Ürün satırı olmayan (fatura toplamı, tarih, firma bilgisi gibi) satırları dahil etme — ama KDV oranı ve iskonto bilgisini, ait olduğu ürün satırına yukarıdaki gibi işleyerek kullan."
     ].join("\n");
 
     return fileToBase64(file)
@@ -339,12 +354,14 @@ export function handleInvoicePhotos(files) {
           if (!line.name) return;
           const key = line.name.trim().toLowerCase();
           if (!merged[key]) {
-            merged[key] = { name: line.name, qty: 0, unitCost: line.unitCost || 0, unitNote: line.unitNote || "", barcode: line.barcode || "" };
+            merged[key] = { name: line.name, qty: 0, unitCost: line.unitCost || 0, unitNote: line.unitNote || "", barcode: line.barcode || "", kdvRate: line.kdvRate || null, discountApplied: !!line.discountApplied };
           }
           merged[key].qty += Number(line.qty) || 0;
           if (line.unitCost) merged[key].unitCost = line.unitCost;
           if (line.unitNote) merged[key].unitNote = line.unitNote;
           if (line.barcode) merged[key].barcode = line.barcode;
+          if (line.kdvRate) merged[key].kdvRate = line.kdvRate;
+          if (line.discountApplied) merged[key].discountApplied = true;
         });
 
         // Not: Gerçek adet hesabı artık yapay zekanın kendisi tarafından
@@ -359,6 +376,8 @@ export function handleInvoicePhotos(files) {
             unitCost: line.unitCost,
             unitNote: line.unitNote,
             barcode: line.barcode,
+            kdvRate: line.kdvRate,
+            discountApplied: line.discountApplied,
             matchedProductId: existing ? existing.id : null,
             matchedProductName: existing ? existing.name : null,
             markupPercent: 20
@@ -422,6 +441,7 @@ export function renderInvoiceScanModal() {
         const barcodeLabel = item.barcodeFromWeb ? state.t("barcodeFoundOnlineLabel") : state.t("barcodeDetectedLabel");
         const barcodeHtml = item.barcode ? `<p class="invoice-uncertainty-note" style="color:var(--green-text);">✓ ${barcodeLabel}: ${escapeHtml(item.barcode)}</p>` : "";
         const isChecked = i in previousChecks ? previousChecks[i] : true;
+        const kdvHtml = item.kdvRate ? `<p class="invoice-uncertainty-note" style="color:var(--text-muted);">KDV: %${item.kdvRate}${item.discountApplied ? " · " + state.t("invoiceDiscountAppliedLabel") : ""}</p>` : "";
         return `
           <label class="bulk-result-row">
             <input type="checkbox" class="invoice-result-check" data-index="${i}" ${isChecked ? "checked" : ""} />
@@ -430,6 +450,7 @@ export function renderInvoiceScanModal() {
               <p class="bulk-result-meta">${item.qty} adet${costStr ? " · Geliş: " + costStr : ""}${priceStr ? " · Satış: <span class=\"invoice-price-preview\" data-index=\"" + i + "\">" + priceStr + "</span>" : ""}</p>
               ${noteHtml}
               ${barcodeHtml}
+              ${kdvHtml}
               ${markupHtml}
               ${statusHtml}
             </div>

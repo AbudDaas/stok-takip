@@ -159,5 +159,13 @@ export function sleep_(ms) {
 
 export function calcSellingPrice(costPrice, percent) {
     const p = percent != null ? percent : 20;
-    return Math.round(costPrice * (1 + p / 100) * 100) / 100;
+    const raw = costPrice * (1 + p / 100);
+    // 10 TL ve üzeri fiyatlarda, "güzel" bir rakam olsun diye en yakın 5'in
+    // katına YUKARI yuvarlıyoruz (örn. 12.23 -> 15). Daha ucuz ürünlerde bu
+    // kuralı uygulamıyoruz çünkü orantısız bir zam olurdu (örn. 1.20 TL'lik
+    // bir ürünü 5 TL yapmak gibi).
+    if (raw >= 10) {
+      return Math.ceil(raw / 5) * 5;
+    }
+    return Math.round(raw * 100) / 100;
   }
