@@ -254,9 +254,56 @@ export function openModal(id) {
     document.getElementById("editBulkType").value = p.bulkDiscountType || "percent";
     document.getElementById("editBulkValue").value = p.bulkDiscountValue || "";
     populateEditSupplierSelect(p.supplierId);
+    renderExtraBarcodesList();
     updateModalContent(p);
     document.getElementById("detailModal").style.display = "flex";
     renderQrCode(p.id);
+  }
+
+export function renderExtraBarcodesList() {
+    const listEl = document.getElementById("extraBarcodesList");
+    if (!listEl) return;
+    const p = state.products.find((x) => x.id === state.activeProductId);
+    const codes = (p && p.extraBarcodes) || [];
+    if (!codes.length) {
+      listEl.innerHTML = "";
+      return;
+    }
+    listEl.innerHTML = codes
+      .map(
+        (code, i) => `
+        <div class="extra-barcode-row">
+          <span class="extra-barcode-value">${escapeHtml(code)}</span>
+          <button class="extra-barcode-remove-btn" data-index="${i}" aria-label="Sil"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button>
+        </div>`
+      )
+      .join("");
+    listEl.querySelectorAll(".extra-barcode-remove-btn").forEach((btn) => {
+      btn.addEventListener("click", () => removeExtraBarcode(Number(btn.dataset.index)));
+    });
+  }
+
+export function addExtraBarcode() {
+    const input = document.getElementById("newExtraBarcode");
+    const code = input.value.trim();
+    if (!code) return;
+    const p = state.products.find((x) => x.id === state.activeProductId);
+    if (!p) return;
+    if (!Array.isArray(p.extraBarcodes)) p.extraBarcodes = [];
+    if (p.extraBarcodes.includes(code) || p.barcode === code) {
+      showToast(state.t("extraBarcodeDuplicate"), "error");
+      return;
+    }
+    p.extraBarcodes.push(code);
+    input.value = "";
+    renderExtraBarcodesList();
+  }
+
+export function removeExtraBarcode(index) {
+    const p = state.products.find((x) => x.id === state.activeProductId);
+    if (!p || !Array.isArray(p.extraBarcodes)) return;
+    p.extraBarcodes.splice(index, 1);
+    renderExtraBarcodesList();
   }
 
 export function updateModalContent(p) {
@@ -419,7 +466,9 @@ export function printAllQrCodes() {
   }
 
 export function findProductByScan(code) {
-    return state.products.find((p) => p.id === code || (p.barcode && p.barcode === code));
+    return state.products.find(
+      (p) => p.id === code || (p.barcode && p.barcode === code) || (Array.isArray(p.extraBarcodes) && p.extraBarcodes.includes(code))
+    );
   }
 
 export function productAlreadyExists(name) {
