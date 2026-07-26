@@ -140,17 +140,17 @@ export function attachFirestoreListener() {
     );
   }
 
-export function setSyncStatus(state) {
+export function setSyncStatus(status) {
     const icon = document.getElementById("syncIcon");
     const text = document.getElementById("syncText");
     if (!icon || !text) return;
-    if (state === "connected") {
+    if (status === "connected") {
       icon.className = "fa-solid fa-circle-check";
       text.textContent = state.t("syncConnected");
-    } else if (state === "connecting") {
+    } else if (status === "connecting") {
       icon.className = "fa-solid fa-arrows-rotate";
       text.textContent = state.t("syncConnecting");
-    } else if (state === "error") {
+    } else if (status === "error") {
       icon.className = "fa-solid fa-triangle-exclamation";
       text.textContent = state.t("syncError");
     } else {
