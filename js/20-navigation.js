@@ -2,7 +2,7 @@ import { state } from './00-state.js';
 import { escapeHtml, getStatus } from './02-utils.js';
 import { renderAuditLog, renderOwnerPinStatus, renderStaffList } from './03-staff-roles.js';
 import { renderFiscalSettings } from './04-fiscal.js';
-import { openModal, orderListRowHtml, productRowHtml, toggleNeedsAlternativeSource, translateMissingProductNames } from './05-products.js';
+import { openModal, orderListRowHtml, productRowHtml, selfSourceRowHtml, toggleNeedsAlternativeSource, translateMissingProductNames } from './05-products.js';
 import { renderCustomers } from './06-veresiye.js';
 import { renderCart, stopScan, stopScanKasa } from './07-kasa-checkout.js';
 import { renderSales } from './08-sales-returns.js';
@@ -66,6 +66,31 @@ export function renderAll() {
           toggleNeedsAlternativeSource(btn.dataset.id);
         });
       });
+    }
+
+    // "Kendim Temin Edeceğim Ürünler" — tedarikçisi olmayan VEYA
+    // "Başka Yerden Bulunmalı" işaretlenmiş, sipariş gereken ürünler.
+    const selfSourceList = document.getElementById("selfSourceList");
+    const selfSourceEmpty = document.getElementById("selfSourceEmptyState");
+    const selfSourcePrintBtn = document.getElementById("selfSourcePrintBtn");
+    if (selfSourceList) {
+      const selfSourceItems = state.products
+        .filter((p) => getStatus(p) !== "yeterli")
+        .filter((p) => !p.supplierId || p.needsAlternativeSource)
+        .sort((a, b) => (getStatus(a) === "tukendi" ? 0 : 1) - (getStatus(b) === "tukendi" ? 0 : 1));
+
+      if (!selfSourceItems.length) {
+        selfSourceList.innerHTML = "";
+        selfSourceEmpty.style.display = "block";
+        if (selfSourcePrintBtn) selfSourcePrintBtn.style.display = "none";
+      } else {
+        selfSourceEmpty.style.display = "none";
+        if (selfSourcePrintBtn) selfSourcePrintBtn.style.display = "block";
+        selfSourceList.innerHTML = selfSourceItems.map(selfSourceRowHtml).join("");
+        selfSourceList.querySelectorAll(".product-row").forEach((row) => {
+          row.addEventListener("click", () => openModal(row.dataset.id));
+        });
+      }
     }
 
     document.getElementById("statTotal").textContent = state.products.length;
