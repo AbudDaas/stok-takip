@@ -1764,3 +1764,8 @@ body.font-large{zoom:1.18;}
   background:none;border:none;color:var(--red-text);cursor:pointer;
   font-size:14px;padding:2px 6px;
 }
+
+.no-supplier-note{
+  font-size:11px;color:var(--text-muted);font-style:italic;
+  max-width:110px;text-align:right;
+}

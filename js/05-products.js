@@ -202,7 +202,14 @@ export function orderListRowHtml(p) {
     const altBadge = p.needsAlternativeSource
       ? `<p class="alt-source-note">⚠️ ${state.t("altSourceBadge")}</p>`
       : "";
+    // "Başka Yerden Bulunmalı" butonu SADECE bir tedarikçisi olan ürünlerde
+    // anlamlı ("bu tedarikçide yoktu" demek). Tedarikçisi olmayan ürünler
+    // zaten örtük olarak "işletme sahibi kendisi hal/gatemden getirmeli"
+    // demektir — bunlarda bu buton kafa karıştırır, göstermiyoruz.
     const altBtnLabel = p.needsAlternativeSource ? state.t("altSourceUndoBtn") : state.t("altSourceBtn");
+    const altBtnHtml = p.supplierId
+      ? `<button class="alt-source-toggle-btn" data-id="${p.id}">${altBtnLabel}</button>`
+      : `<span class="no-supplier-note">${state.t("noSupplierGetYourselfNote")}</span>`;
     return `
       <div class="product-row" data-id="${p.id}">
         <div class="product-info">
@@ -212,7 +219,7 @@ export function orderListRowHtml(p) {
         </div>
         <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;">
           <span class="status-badge ${state.STATUS_CLASS[status]}">${getStatusLabel(status)}</span>
-          <button class="alt-source-toggle-btn" data-id="${p.id}">${altBtnLabel}</button>
+          ${altBtnHtml}
         </div>
       </div>`;
   }
