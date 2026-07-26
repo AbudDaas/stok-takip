@@ -1,6 +1,6 @@
 import { state } from './00-state.js';
 import { locale, save } from './01-firebase-core.js';
-import { escapeHtml, formatTL, showToast } from './02-utils.js';
+import { escapeHtml, formatTL, printOrderListAsPdf, showToast } from './02-utils.js';
 import { logAudit } from './03-staff-roles.js';
 import { renderShelfCheckAlert } from './12-push-notifications.js';
 import { callGeminiWithRetry } from './16-bulk-scan-ai.js';
@@ -277,6 +277,19 @@ export function createOrderFromEngine() {
         .catch(() => showToast(message, "info"));
     }
     logAudit("Sipariş oluşturuldu", `${selected.length} ürün${supplier ? " · " + supplier.name : ""}`);
+  }
+
+export function printOrderEngineList() {
+    const checks = document.querySelectorAll(".order-engine-check");
+    const selected = [];
+    checks.forEach((chk) => {
+      if (chk.checked) selected.push(state.orderEngineSuggestionsCache[Number(chk.dataset.index)]);
+    });
+    if (!selected.length) {
+      showToast(state.t("orderEngineNoneSelected"), "error");
+      return;
+    }
+    printOrderListAsPdf(state.t("orderEngineMessageTitle"), selected);
   }
 
 export function renderPriceSuggestions() {

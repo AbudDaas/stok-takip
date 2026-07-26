@@ -7,14 +7,14 @@ import { addExtraBarcode, addProduct, adjustQty, closeModal, deleteProduct, hand
 import { addCustomer, closeCustomerModal, deleteCustomer, recordPayment, renderVeresiyeCustomerResults, saveCustomerEdit } from './06-veresiye.js';
 import { clearCart, closeQuickBarcodeScan, completeSale, openQuickBarcodeScan, renderCart, renderManualAddResults, setPaymentType, startScan, startScanKasa, stopScan, stopScanKasa } from './07-kasa-checkout.js';
 import { closeReturnModal, confirmReturn, renderSales } from './08-sales-returns.js';
-import { addSuggestedSuppliers, addSupplier, addSupplierDebt, addSupplierPayment, assignSelectedProductsToSupplier, closeSupplierModal, deleteSupplier, renderSupplierProductPicker, sendSupplierOrderWhatsApp } from './09-suppliers.js';
+import { addSuggestedSuppliers, addSupplier, addSupplierDebt, addSupplierPayment, assignSelectedProductsToSupplier, closeSupplierModal, deleteSupplier, printSupplierOrderList, renderSupplierProductPicker, sendSupplierOrderWhatsApp } from './09-suppliers.js';
 import { addBreadConfig, sendBreadWhatsApp } from './11-bread-orders.js';
 import { enableNotifications } from './12-push-notifications.js';
 import { addCatalogItem, closeBranchEditModal, createBranch, exitBranchView, saveBranchEdit } from './13-branches-chain.js';
 import { createAdminBusiness } from './14-admin-panel.js';
 import { confirmVoiceAction, hideVoiceCommandConfirm, setVoiceLang, startVoiceCommand, startVoiceInput } from './15-voice-commands.js';
 import { addAllBulkScanProducts, applyInvoiceScan, checkForLaunchedFile, checkForNoteTakingLaunch, checkForProtocolLaunch, checkForSharedPhoto, closeBulkScanModal, closeInvoiceScanModal, handleInvoicePhotos, handleShelfPhotos } from './16-bulk-scan-ai.js';
-import { askAiAdvisor, createOrderFromEngine, renderOrderEngine } from './17-ai-panel.js';
+import { askAiAdvisor, createOrderFromEngine, printOrderEngineList, renderOrderEngine } from './17-ai-panel.js';
 import { applyFontSize, applyNavPosition, applySimpleMode, applyTheme, downloadBackup, initSettings, sendFeedback } from './18-settings-backup.js';
 import { finishOnboarding, onboardingNext } from './19-onboarding.js';
 import { renderAll, switchTab } from './20-navigation.js';
@@ -321,6 +321,7 @@ document.getElementById("supplierAddDebtBtn").addEventListener("click", addSuppl
 document.getElementById("supplierAddPaymentBtn").addEventListener("click", addSupplierPayment);
 
 document.getElementById("supplierOrderSendBtn").addEventListener("click", sendSupplierOrderWhatsApp);
+document.getElementById("supplierOrderPrintBtn").addEventListener("click", printSupplierOrderList);
 
 document.getElementById("supplierProductSearch").addEventListener("input", renderSupplierProductPicker);
 
@@ -343,6 +344,7 @@ document.getElementById("voiceCommandConfirmYes").addEventListener("click", conf
 document.getElementById("voiceCommandConfirmNo").addEventListener("click", hideVoiceCommandConfirm);
 
 document.getElementById("orderEngineCreateBtn").addEventListener("click", createOrderFromEngine);
+document.getElementById("orderEnginePrintBtn").addEventListener("click", printOrderEngineList);
 
 document.getElementById("orderEngineFilterSelect").addEventListener("change", renderOrderEngine);
 

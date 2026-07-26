@@ -169,3 +169,55 @@ export function calcSellingPrice(costPrice, percent) {
     }
     return Math.round(raw * 100) / 100;
   }
+
+// ---------- Yazdırılabilir / PDF Olarak Kaydedilebilir Sipariş Listesi ----------
+// Not: WhatsApp'a otomatik PDF EKİ göndermek mümkün değil (WhatsApp bunu API
+// üzerinden desteklemiyor). Bunun yerine tarayıcının yazdırma penceresini
+// açıyoruz — kullanıcı burada gerçek bir yazıcı seçebilir YA DA "PDF olarak
+// kaydet" seçeneğiyle bir PDF dosyası indirip, onu telefonun paylaş menüsünden
+// WhatsApp'a elle ekleyebilir.
+export function printOrderListAsPdf(title, items) {
+  const printWindow = window.open("", "_blank");
+  if (!printWindow) return;
+
+  const dateStr = new Date().toLocaleDateString(locale());
+  const rows = items
+    .map(
+      (item) => `
+        <tr>
+          <td>${escapeHtml(item.name)}</td>
+          <td style="text-align:right;">${item.suggestedOrder ?? item.qty} ${item.unit === "kg" ? "kg" : "adet"}</td>
+        </tr>`
+    )
+    .join("");
+
+  printWindow.document.write(`
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <meta charset="utf-8" />
+        <title>${escapeHtml(title)}</title>
+        <style>
+          body { font-family: -apple-system, Arial, sans-serif; padding: 24px; color: #222; }
+          h1 { font-size: 18px; margin-bottom: 4px; }
+          p.date { color: #777; font-size: 13px; margin-top: 0; }
+          table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+          th, td { border: 1px solid #ccc; padding: 8px 10px; font-size: 14px; }
+          th { background: #f2f2f2; text-align: left; }
+          @media print { body { padding: 0; } }
+        </style>
+      </head>
+      <body>
+        <h1>${escapeHtml(title)}</h1>
+        <p class="date">${dateStr}</p>
+        <table>
+          <thead><tr><th>Ürün</th><th style="text-align:right;">Miktar</th></tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </body>
+    </html>
+  `);
+  printWindow.document.close();
+  printWindow.focus();
+  setTimeout(() => printWindow.print(), 300);
+}

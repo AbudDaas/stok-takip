@@ -1,6 +1,6 @@
 import { state } from './00-state.js';
 import { locale, save } from './01-firebase-core.js';
-import { escapeHtml, formatTL, genId, showPrompt, showToast } from './02-utils.js';
+import { escapeHtml, formatTL, genId, printOrderListAsPdf, showPrompt, showToast } from './02-utils.js';
 import { logAudit } from './03-staff-roles.js';
 import { calcOrderSuggestions } from './17-ai-panel.js';
 
@@ -94,6 +94,7 @@ export function renderSupplierOrderList(supplierId) {
     const listEl = document.getElementById("supplierOrderList");
     const emptyEl = document.getElementById("supplierOrderListEmptyState");
     const sendBtn = document.getElementById("supplierOrderSendBtn");
+    const printBtn = document.getElementById("supplierOrderPrintBtn");
     if (!listEl) return;
 
     const suggestions = calcOrderSuggestions((p) => p.supplierId === supplierId);
@@ -103,10 +104,12 @@ export function renderSupplierOrderList(supplierId) {
       listEl.innerHTML = "";
       emptyEl.style.display = "block";
       sendBtn.style.display = "none";
+      if (printBtn) printBtn.style.display = "none";
       return;
     }
     emptyEl.style.display = "none";
     sendBtn.style.display = "block";
+    if (printBtn) printBtn.style.display = "block";
 
     listEl.innerHTML = suggestions
       .map((s) => {
@@ -145,6 +148,12 @@ export function sendSupplierOrderWhatsApp() {
         .catch(() => showToast(message, "info"));
     }
     logAudit("Tedarikçiye sipariş listesi gönderildi", s.name);
+  }
+
+export function printSupplierOrderList() {
+    const s = state.suppliers.find((x) => x.id === state.activeSupplierId);
+    if (!s || !state.supplierOrderSuggestionsCache.length) return;
+    printOrderListAsPdf(`${state.t("orderEngineMessageTitle")} — ${s.name}`, state.supplierOrderSuggestionsCache);
   }
 
 export function renderSupplierProductPicker() {
