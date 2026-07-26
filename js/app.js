@@ -1400,6 +1400,23 @@
     });
   }
 
+  const SUGGESTED_SUPPLIERS = ["Coca-Cola", "Pepsi", "Eti", "Ülker", "Dimes", "Lay's", "Algida", "Sütaş"];
+
+  function addSuggestedSuppliers() {
+    const existingNames = suppliers.map((s) => s.name.trim().toLowerCase());
+    const toAdd = SUGGESTED_SUPPLIERS.filter((name) => !existingNames.includes(name.toLowerCase()));
+    if (!toAdd.length) {
+      showToast(t("suggestedSuppliersAllAdded"), "info");
+      return;
+    }
+    toAdd.forEach((name) => {
+      suppliers.push({ id: genId(), name, phone: "" });
+    });
+    save();
+    renderSuppliers();
+    showToast(t("suggestedSuppliersAdded").replace("{n}", toAdd.length), "success");
+  }
+
   function addSupplier() {
     const name = document.getElementById("supplierName").value.trim();
     const phone = document.getElementById("supplierPhone").value.trim();
@@ -1423,6 +1440,8 @@
     document.getElementById("supplierModalDebt").textContent = formatTL(getSupplierBalance(supplierId));
     renderSupplierHistory(supplierId);
     renderSupplierOrderList(supplierId);
+    document.getElementById("supplierProductSearch").value = "";
+    renderSupplierProductPicker();
     document.getElementById("supplierModal").style.display = "flex";
   }
 
@@ -1488,6 +1507,59 @@
         .catch(() => showToast(message, "info"));
     }
     logAudit("Tedarikçiye sipariş listesi gönderildi", s.name);
+  }
+
+  function renderSupplierProductPicker() {
+    const pickerEl = document.getElementById("supplierProductPicker");
+    if (!pickerEl || !activeSupplierId) return;
+    const search = document.getElementById("supplierProductSearch").value.toLowerCase().trim();
+
+    const filtered = products.filter((p) => !search || p.name.toLowerCase().includes(search));
+
+    pickerEl.innerHTML = filtered
+      .map((p) => {
+        const isAssignedHere = p.supplierId === activeSupplierId;
+        const assignedElsewhereNote =
+          p.supplierId && !isAssignedHere
+            ? `<p class="supplier-picker-note">${t("supplierProductAssignedElsewhere")}: ${escapeHtml(getSupplierNameById(p.supplierId))}</p>`
+            : "";
+        return `
+          <label class="supplier-picker-row">
+            <input type="checkbox" class="supplier-picker-check" data-id="${p.id}" ${isAssignedHere ? "checked" : ""} />
+            <div>
+              <p class="supplier-picker-name">${escapeHtml(p.name)}</p>
+              ${assignedElsewhereNote}
+            </div>
+          </label>`;
+      })
+      .join("");
+  }
+
+  function getSupplierNameById(supplierId) {
+    const s = suppliers.find((x) => x.id === supplierId);
+    return s ? s.name : "";
+  }
+
+  function assignSelectedProductsToSupplier() {
+    if (!activeSupplierId) return;
+    const checks = document.querySelectorAll(".supplier-picker-check");
+    let assignedCount = 0;
+    let unassignedCount = 0;
+    checks.forEach((chk) => {
+      const p = products.find((x) => x.id === chk.dataset.id);
+      if (!p) return;
+      if (chk.checked && p.supplierId !== activeSupplierId) {
+        p.supplierId = activeSupplierId;
+        assignedCount++;
+      } else if (!chk.checked && p.supplierId === activeSupplierId) {
+        p.supplierId = null;
+        unassignedCount++;
+      }
+    });
+    save();
+    renderSupplierOrderList(activeSupplierId);
+    renderSupplierProductPicker();
+    showToast(t("supplierProductsAssigned").replace("{n}", assignedCount), "success");
   }
 
   function renderSupplierHistory(supplierId) {
@@ -5901,6 +5973,7 @@
   document.getElementById("exitBranchViewBtn").addEventListener("click", exitBranchView);
   document.getElementById("closeBranchEditModalBtn").addEventListener("click", closeBranchEditModal);
   document.getElementById("supplierAddBtn").addEventListener("click", addSupplier);
+  document.getElementById("addSuggestedSuppliersBtn").addEventListener("click", addSuggestedSuppliers);
   document.getElementById("closeSupplierModalBtn").addEventListener("click", closeSupplierModal);
   document.getElementById("supplierModal").addEventListener("click", (e) => {
     if (e.target.id === "supplierModal") closeSupplierModal();
@@ -5908,6 +5981,8 @@
   document.getElementById("supplierAddDebtBtn").addEventListener("click", addSupplierDebt);
   document.getElementById("supplierAddPaymentBtn").addEventListener("click", addSupplierPayment);
   document.getElementById("supplierOrderSendBtn").addEventListener("click", sendSupplierOrderWhatsApp);
+  document.getElementById("supplierProductSearch").addEventListener("input", renderSupplierProductPicker);
+  document.getElementById("supplierAssignProductsBtn").addEventListener("click", assignSelectedProductsToSupplier);
   document.getElementById("deleteSupplierBtn").addEventListener("click", deleteSupplier);
   document.getElementById("closeReturnModalBtn").addEventListener("click", closeReturnModal);
   document.getElementById("returnModal").addEventListener("click", (e) => {
