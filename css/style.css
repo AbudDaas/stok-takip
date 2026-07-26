@@ -1753,3 +1753,14 @@ body.font-large{zoom:1.18;}
 .supplier-picker-row:last-child{border-bottom:none;}
 .supplier-picker-name{margin:0;font-size:13px;font-weight:600;}
 .supplier-picker-note{margin:2px 0 0;font-size:11px;color:var(--amber-text);}
+
+/* Ek Barkodlar */
+.extra-barcode-row{
+  display:flex;align-items:center;justify-content:space-between;gap:8px;
+  background:var(--bg);border-radius:8px;padding:8px 10px;margin-bottom:6px;
+}
+.extra-barcode-value{font-size:13px;font-family:monospace;}
+.extra-barcode-remove-btn{
+  background:none;border:none;color:var(--red-text);cursor:pointer;
+  font-size:14px;padding:2px 6px;
+}
