@@ -1085,6 +1085,18 @@
               <i class="fa-solid fa-barcode" aria-hidden="true"></i>
             </button>
           </div>
+          <label class="field-label" data-i18n="extraBarcodesLabel">Ek Barkodlar (opsiyonel)</label>
+          <p class="card-subtitle" data-i18n="extraBarcodesSubtitle" style="margin-top:0;">Aynı ürünün farklı çeşitleri/ambalajları varsa, hepsinin barkodunu buraya ekle — hangisini okutursan okut bu ürün eşleşir.</p>
+          <div id="extraBarcodesList" class="list" style="margin-bottom:8px;"></div>
+          <div class="form-row barcode-row">
+            <input id="newExtraBarcode" type="text" data-i18n-placeholder="extraBarcodePh" placeholder="Yeni ek barkod" />
+            <button id="scanExtraBarcodeBtn" type="button" class="btn btn-icon-only" data-i18n-aria="scanBarcodeAria" aria-label="Barkod tara">
+              <i class="fa-solid fa-barcode" aria-hidden="true"></i>
+            </button>
+            <button id="addExtraBarcodeBtn" type="button" class="btn btn-icon-only" aria-label="Ekle">
+              <i class="fa-solid fa-plus" aria-hidden="true"></i>
+            </button>
+          </div>
           <button id="saveEditBtn" class="btn btn-primary btn-block" data-i18n="saveBtn">Kaydet</button>
           <button id="deleteProductBtn" class="btn btn-danger btn-block">
             <i class="fa-solid fa-trash" aria-hidden="true"></i> <span data-i18n="deleteProductBtn">Ürünü sil</span>
