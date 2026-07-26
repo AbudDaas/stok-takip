@@ -1,16 +1,17 @@
 {
   "name": "bakkal-stok-takip",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "description": "Bakkal ve marketler icin stok, kasa ve isletme yonetim uygulamasi",
   "private": true,
   "scripts": {
-    "build": "node build.js",
-    "verify": "node verify.js && node verify-order.js",
-    "test": "node tests/logic.test.js",
-    "lint": "eslint js/app.js"
+    "test": "node tests/logic.test.mjs",
+    "lint": "eslint js/",
+    "verify-imports": "node verify-esm-imports.js"
   },
   "devDependencies": {
-    "acorn": "^8.17.0",
-    "eslint": "^10.8.0"
+    "acorn": "^8.15.0",
+    "acorn-walk": "^8.3.4",
+    "eslint": "^10.8.0",
+    "eslint-scope": "^8.4.0"
   }
 }
