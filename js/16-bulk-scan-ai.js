@@ -513,7 +513,7 @@ export function applyInvoiceScan() {
       } else {
         const costPrice = item.unitCost || 0;
         const price = costPrice ? calcSellingPrice(costPrice, item.markupPercent) : 0;
-        state.products.push(mkProduct(item.name, state.t("categoryOtherDefault"), item.qty, 5, price, item.barcode || "", "adet", costPrice));
+        state.products.push(mkProduct(item.name, item.category || state.t("categoryOtherDefault"), item.qty, 5, price, item.barcode || "", "adet", costPrice));
       }
       appliedCount++;
     });
@@ -522,4 +522,216 @@ export function applyInvoiceScan() {
     renderAll();
     closeInvoiceScanModal();
     showToast(state.t("invoiceAppliedAlert").replace("{n}", appliedCount), "success");
+  }
+
+// ---------- Tedarikçi Kataloğu PDF Tarama ----------
+// Not: Bu katalog PDF'leri (örn. Eti tavsiye fiyat listesi) her ürünü bir
+// kart halinde; Kategori, Ürün Kodu, Ürün Barkodu, Birim Fiyat (KDV hariç),
+// Kdv Dahil ve Öneri Satış Fiyat alanlarıyla gösterir. Bunları okumak için
+// PDF'in her sayfasını istemci tarafında (pdf.js ile) bir görsele çevirip,
+// aynen rafı/fatura fotoğraflarında olduğu gibi Gemini worker'ına gönderiyoruz
+// — worker tarafında herhangi bir değişikliğe gerek yok, o zaten prompt+resmi
+// olduğu gibi iletiyor.
+//
+// pdf.js CDN'den dinamik import() ile yükleniyor (sabit <script> etiketi
+// yerine) — böylece CDN'e erişilemezse sadece bu özellik çalışmaz, uygulamanın
+// geri kalanı etkilenmez. Yükleme sonucu önbelleğe alınıyor ki her PDF için
+// tekrar indirilmesin.
+
+let pdfJsPromise = null;
+
+function loadPdfJs() {
+    if (!pdfJsPromise) {
+      pdfJsPromise = import("https://cdnjs.cloudflare.com/ajax/libs/pdf.js/6.1.200/pdf.min.mjs").then((pdfjsLib) => {
+        pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/6.1.200/pdf.worker.min.mjs";
+        return pdfjsLib;
+      });
+    }
+    return pdfJsPromise;
+  }
+
+function renderPdfPageToImageFile(pdf, pageNumber) {
+    return pdf.getPage(pageNumber).then((page) => {
+      const viewport = page.getViewport({ scale: 2 });
+      const canvas = document.createElement("canvas");
+      canvas.width = viewport.width;
+      canvas.height = viewport.height;
+      const ctx = canvas.getContext("2d");
+      return page.render({ canvasContext: ctx, viewport }).promise.then(
+        () =>
+          new Promise((resolve) => {
+            canvas.toBlob(
+              (blob) => resolve(new File([blob], `katalog-sayfa-${pageNumber}.jpg`, { type: "image/jpeg" })),
+              "image/jpeg",
+              0.92
+            );
+          })
+      );
+    });
+  }
+
+function convertPdfToImageFiles(pdfjsLib, file) {
+    return file.arrayBuffer().then((buffer) =>
+      pdfjsLib.getDocument({ data: buffer }).promise.then((pdf) => {
+        let images = [];
+        function next(pageNumber) {
+          if (pageNumber > pdf.numPages) return Promise.resolve(images);
+          return renderPdfPageToImageFile(pdf, pageNumber).then((img) => {
+            images.push(img);
+            return next(pageNumber + 1);
+          });
+        }
+        return next(1);
+      })
+    );
+  }
+
+function convertPdfFilesToImageFiles(pdfjsLib, files) {
+    let allImages = [];
+    let index = 0;
+    function next() {
+      if (index >= files.length) return Promise.resolve(allImages);
+      return convertPdfToImageFiles(pdfjsLib, files[index]).then((images) => {
+        allImages = allImages.concat(images);
+        index++;
+        return next();
+      });
+    }
+    return next();
+  }
+
+export function analyzeOneCatalogPhoto(file) {
+    const prompt = [
+      "Bu bir tedarikçi ürün kataloğu / tavsiye fiyat listesi sayfasının görüntüsü (örn. Eti ürünleri).",
+      "Sayfada birden fazla ürün kartı var. Her dolu kartta genellikle şu bilgiler bulunur: Kategori, Ürün Kodu,",
+      "Ürün Barkodu, Birim Fiyat (KDV hariç), Kdv Dahil fiyat, Öneri Satış Fiyat, Raf Ömrü, Koli Fiyatı Brüt",
+      "ve bir ürün görseli + Ürün Adı.",
+      "",
+      "Barkodu VE fiyatı dolu olan HER ürün kartı için ayrı ayrı çıkar. Barkodu veya fiyatı boş/eksik olan",
+      "(ör. '₺0,00' yazan ya da hücreleri boş olan) kartları ATLA.",
+      "",
+      "Her ürün için şu alanları çıkar:",
+      '- name: Ürün Adı (kartla ilişkili gerçek ürün ismi, örn. "CANGA 45GX16 TV")',
+      "- barcode: Ürün Barkodu alanındaki rakamlar (genelde 13 haneli EAN barkodu)",
+      "- category: Kategori alanındaki değer (örn. Bar, Kek, Bisküvi, Çikolata, Kraker)",
+      "- unitCost: Birim Fiyat alanındaki sayı (KDV HARİÇ fiyat — 'Kdv Dahil' ya da 'Öneri Satış Fiyat' DEĞİL)",
+      "- suggestedPrice: Öneri Satış Fiyat alanındaki sayı",
+      "",
+      "SADECE geçerli bir JSON dizisi döndür, başka hiçbir açıklama veya metin ekleme.",
+      'Format: [{"name":"...","barcode":"...","category":"...","unitCost":17.82,"suggestedPrice":22.5}]'
+    ].join("\n");
+
+    return fileToBase64(file)
+      .then((base64) => callGeminiWithRetry(base64, prompt))
+      .then((data) => {
+        const rawText = data && data.candidates && data.candidates[0] && data.candidates[0].content.parts[0].text;
+        if (!rawText) {
+          console.error("Gemini yanıtı beklenmedik formatta:", data);
+          return [];
+        }
+        try {
+          const cleaned = rawText.replace(/```json|```/g, "").trim();
+          return JSON.parse(cleaned);
+        } catch (e) {
+          console.error("JSON ayrıştırma hatası:", e, rawText);
+          return [];
+        }
+      })
+      .catch((e) => {
+        console.error(e);
+        return [];
+      });
+  }
+
+function finalizeCatalogCandidates(allLines) {
+    // Aynı barkod birden fazla sayfada/kartta tekrar geçebilir (örn. taşan sayfa) — tekilleştir.
+    const merged = {};
+    allLines.forEach((line) => {
+      const barcode = (line.barcode || "").trim();
+      const name = (line.name || "").trim();
+      if (!barcode || !name) return;
+      if (!merged[barcode]) merged[barcode] = { ...line, name, barcode };
+    });
+
+    state.invoiceScanCandidates = Object.values(merged).map((line) => {
+      const unitCost = Number(line.unitCost) || 0;
+      const suggestedPrice = Number(line.suggestedPrice) || 0;
+      // Kataloğun kendi Öneri Satış Fiyat'ını hedef alıp, oradan geriye markup
+      // yüzdesini türetiyoruz — böylece mevcut fatura tarama ekranı (markup %
+      // girilebilen, calcSellingPrice ile aynı "10 TL üstünü 5'e yukarı
+      // yuvarla" kuralını uygulayan) aynen yeniden kullanılabiliyor.
+      const markupPercent =
+        unitCost > 0 && suggestedPrice > 0 ? Math.round((suggestedPrice / unitCost - 1) * 10000) / 100 : 20;
+      const existing = findExistingProductByName(line.name);
+      return {
+        name: line.name,
+        category: line.category || "",
+        qty: 0,
+        unitCost,
+        unitNote: "",
+        barcode: line.barcode,
+        kdvRate: null,
+        discountApplied: false,
+        matchedProductId: existing ? existing.id : null,
+        matchedProductName: existing ? existing.name : null,
+        markupPercent
+      };
+    });
+
+    if (!state.invoiceScanCandidates.length) {
+      showToast(state.t("catalogScanNoItems"), "info");
+      return;
+    }
+    renderInvoiceScanModal();
+    findBarcodesOnlineForCandidates(state.invoiceScanCandidates, renderInvoiceScanModal);
+  }
+
+export function handleCatalogPdfs(files) {
+    if (!isBulkScanConfigured()) {
+      showToast(state.t("invoiceScanNotConfigured"), "error");
+      return;
+    }
+
+    const loadingEl = document.getElementById("catalogScanLoading");
+    const loadingText = loadingEl.querySelector("span");
+    loadingEl.style.display = "flex";
+    if (loadingText) loadingText.textContent = state.t("catalogScanConverting");
+
+    loadPdfJs().then(
+      (pdfjsLib) => {
+        convertPdfFilesToImageFiles(pdfjsLib, files)
+          .then((pageImages) => {
+            let allLines = [];
+            let index = 0;
+
+            function processNext() {
+              if (index >= pageImages.length) {
+                loadingEl.style.display = "none";
+                finalizeCatalogCandidates(allLines);
+                return;
+              }
+              if (loadingText) {
+                loadingText.textContent = `${state.t("catalogScanAnalyzing")} (${index + 1}/${pageImages.length})`;
+              }
+              analyzeOneCatalogPhoto(pageImages[index]).then((lines) => {
+                if (Array.isArray(lines)) allLines = allLines.concat(lines);
+                index++;
+                processNext();
+              });
+            }
+
+            processNext();
+          })
+          .catch((e) => {
+            console.error(e);
+            loadingEl.style.display = "none";
+            showToast(state.t("catalogScanPdfError"), "error");
+          });
+      },
+      (e) => {
+        console.error(e);
+        loadingEl.style.display = "none";
+        showToast(state.t("catalogScanPdfLibMissing"), "error");
+      }
+    );
   }

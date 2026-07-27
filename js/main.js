@@ -13,7 +13,7 @@ import { enableNotifications } from './12-push-notifications.js';
 import { addCatalogItem, closeBranchEditModal, createBranch, exitBranchView, saveBranchEdit } from './13-branches-chain.js';
 import { createAdminBusiness } from './14-admin-panel.js';
 import { confirmVoiceAction, hideVoiceCommandConfirm, setVoiceLang, startVoiceCommand, startVoiceInput } from './15-voice-commands.js';
-import { addAllBulkScanProducts, applyInvoiceScan, checkForLaunchedFile, checkForNoteTakingLaunch, checkForProtocolLaunch, checkForSharedPhoto, closeBulkScanModal, closeInvoiceScanModal, handleInvoicePhotos, handleShelfPhotos } from './16-bulk-scan-ai.js';
+import { addAllBulkScanProducts, applyInvoiceScan, checkForLaunchedFile, checkForNoteTakingLaunch, checkForProtocolLaunch, checkForSharedPhoto, closeBulkScanModal, closeInvoiceScanModal, handleCatalogPdfs, handleInvoicePhotos, handleShelfPhotos } from './16-bulk-scan-ai.js';
 import { askAiAdvisor, createOrderFromEngine, printOrderEngineList, renderOrderEngine } from './17-ai-panel.js';
 import { applyFontSize, applyNavPosition, applySimpleMode, applyTheme, downloadBackup, initSettings, sendFeedback } from './18-settings-backup.js';
 import { finishOnboarding, onboardingNext } from './19-onboarding.js';
@@ -144,6 +144,16 @@ document.getElementById("csvImportInput").addEventListener("change", (e) => {
 document.getElementById("invoicePhotoInput").addEventListener("change", (e) => {
     const files = Array.from(e.target.files || []);
     if (files.length) handleInvoicePhotos(files);
+    e.target.value = "";
+  });
+
+document.getElementById("catalogPdfBtn").addEventListener("click", () => {
+    document.getElementById("catalogPdfInput").click();
+  });
+
+document.getElementById("catalogPdfInput").addEventListener("change", (e) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length) handleCatalogPdfs(files);
     e.target.value = "";
   });
 

@@ -222,6 +222,19 @@
         </div>
       </div>
 
+      <div class="card">
+        <p class="card-title" data-i18n="catalogScanTitle">Tedarikçi kataloğundan ürün ekle (PDF)</p>
+        <p class="card-subtitle" data-i18n="catalogScanSubtitle">Tedarikçinin fiyat listesi/katalog PDF'ini seç, yapay zeka her sayfadaki ürünleri okuyup barkot ve fiyatıyla ürün listenize eklesin (stok adedi 0 başlar).</p>
+        <input id="catalogPdfInput" type="file" accept="application/pdf" multiple style="display:none;" />
+        <button id="catalogPdfBtn" class="btn btn-primary btn-block">
+          <i class="fa-solid fa-book-open" aria-hidden="true"></i> <span data-i18n="catalogScanBtn">Katalog PDF'i seç</span>
+        </button>
+        <div id="catalogScanLoading" class="bulk-scan-loading" style="display:none;">
+          <i class="fa-solid fa-spinner spin" aria-hidden="true"></i>
+          <span data-i18n="catalogScanAnalyzing">Katalog analiz ediliyor...</span>
+        </div>
+      </div>
+
       <div class="section-header">
         <p class="card-title" data-i18n="allProductsTitle">Tüm ürünler</p>
         <input id="searchBox" type="text" class="search-input" data-i18n-placeholder="searchPh" placeholder="Ürün ara..." />

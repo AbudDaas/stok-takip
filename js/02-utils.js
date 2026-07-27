@@ -157,17 +157,20 @@ export function sleep_(ms) {
     return new Promise((resolve) => setTimeout(resolve, ms));
   }
 
-export function calcSellingPrice(costPrice, percent) {
-    const p = percent != null ? percent : 20;
-    const raw = costPrice * (1 + p / 100);
+export function roundUpTo5(n) {
     // 10 TL ve üzeri fiyatlarda, "güzel" bir rakam olsun diye en yakın 5'in
     // katına YUKARI yuvarlıyoruz (örn. 12.23 -> 15). Daha ucuz ürünlerde bu
     // kuralı uygulamıyoruz çünkü orantısız bir zam olurdu (örn. 1.20 TL'lik
     // bir ürünü 5 TL yapmak gibi).
-    if (raw >= 10) {
-      return Math.ceil(raw / 5) * 5;
+    if (n >= 10) {
+      return Math.ceil(n / 5) * 5;
     }
-    return Math.round(raw * 100) / 100;
+    return Math.round(n * 100) / 100;
+  }
+
+export function calcSellingPrice(costPrice, percent) {
+    const p = percent != null ? percent : 20;
+    return roundUpTo5(costPrice * (1 + p / 100));
   }
 
 // ---------- Yazdırılabilir / PDF Olarak Kaydedilebilir Sipariş Listesi ----------
