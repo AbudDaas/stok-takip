@@ -4,6 +4,7 @@ import { escapeHtml, formatQty, formatTL, genId, showPrompt, showToast } from '.
 import { logAudit } from './03-staff-roles.js';
 import { attemptSendToFiscalProvider } from './04-fiscal.js';
 import { adjustQty, findProductByScan, getDisplayName, updateOutOfStockTracking } from './05-products.js';
+import { measurePerf } from './22-perf-logger.js';
 import { clearVeresiyeCustomerSelection } from './06-veresiye.js';
 import { renderAll } from './20-navigation.js';
 
@@ -489,7 +490,7 @@ export function setPaymentType(type) {
     document.getElementById("veresiyeCustomerRow").style.display = type === "veresiye" ? "block" : "none";
   }
 
-export function completeSale() {
+function completeSaleImpl() {
     if (!state.cart.length) {
       showToast(state.t("alertEmptyCart"), "error");
       return;
@@ -558,6 +559,10 @@ export function completeSale() {
     save();
     renderAll();
     showToast(`${state.t("alertSaleComplete")} ${formatTL(total)}${customerName ? " (" + state.t("veresiyeLabel") + ": " + customerName + ")" : ""}`, "success");
+  }
+
+export function completeSale() {
+    measurePerf("completeSale", completeSaleImpl);
   }
 
 export function openQuickBarcodeScan(targetInputId) {

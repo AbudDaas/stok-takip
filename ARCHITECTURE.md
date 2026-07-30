@@ -31,6 +31,7 @@ bakkal-app/
 │   ├── 18-settings-backup.js   ← Ayarlar/yedekleme
 │   ├── 19-onboarding.js        ← İlk kullanım rehberi
 │   ├── 20-navigation.js        ← Ana render/sekme geçişi
+│   ├── 21-perf-logger.js       ← Performans/hata loglama + chunk'lı işleme yardımcıları
 │   ├── i18n.js                 ← Çeviri metinleri (ayrı, modül değil)
 │   └── *-config.js              ← Firebase/worker adresleri (ayrı, modül değil)
 ├── tests/

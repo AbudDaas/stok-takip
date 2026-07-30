@@ -100,6 +100,21 @@ export function attachFirestoreListener() {
           state.suppliers = data.suppliers || [];
           state.supplierTransactions = data.supplierTransactions || [];
           state.returns = data.returns || [];
+          state.expenses = data.expenses || [];
+
+          // ---- Çakışma tespiti ----
+          // Bu koda ulaşan her anlık görüntü, KENDİ yazdığımız bir kayıt
+          // DEĞİLDİR (kendi yazdığımız kayıtlar suppressNextSnapshot ile
+          // yukarıda filtreleniyor). Yani buraya ulaşan, ya ilk yükleme ya da
+          // BAŞKA bir cihazdan gelen bir değişikliktir. Daha önce zaten veri
+          // yüklemişsek ve gelen "_rev" sayacı bizim bildiğimizden farklıysa,
+          // bu, başka bir cihazın araya girip veri değiştirdiği anlamına gelir.
+          const incomingRev = data._rev || 0;
+          if (state._hasLoadedOnce && incomingRev !== state._rev) {
+            showToast(state.t("dataChangedElsewhereWarning"), "info");
+          }
+          state._rev = incomingRev;
+          state._hasLoadedOnce = true;
           state.accountType = data.accountType || "standalone";
           state.auditLog = data.auditLog || [];
           state.staffMembers = data.staffMembers || [];
@@ -243,17 +258,18 @@ export function load() {
   }
 
 export function save() {
+    state._rev = (state._rev || 0) + 1;
     if (state.cloudEnabled) {
       if (!state.docRef) return;
       state.suppressNextSnapshot = true;
-      state.docRef.set({ products: state.products, sales: state.sales, customers: state.customers, payments: state.payments, dailyResetConfig: state.dailyResetConfig, breadWhatsAppNumber: state.breadWhatsAppNumber, priceChangeLog: state.priceChangeLog, auditLog: state.auditLog, staffMembers: state.staffMembers, suppliers: state.suppliers, supplierTransactions: state.supplierTransactions, returns: state.returns }, { merge: true }).catch((e) => {
+      state.docRef.set({ products: state.products, sales: state.sales, customers: state.customers, payments: state.payments, dailyResetConfig: state.dailyResetConfig, breadWhatsAppNumber: state.breadWhatsAppNumber, priceChangeLog: state.priceChangeLog, auditLog: state.auditLog, staffMembers: state.staffMembers, suppliers: state.suppliers, supplierTransactions: state.supplierTransactions, returns: state.returns, expenses: state.expenses, _rev: state._rev }, { merge: true }).catch((e) => {
         console.error("Bulut kaydetme hatası", e);
         setSyncStatus("error");
         registerBackgroundSync();
       });
     } else {
       try {
-        localStorage.setItem(state.STORAGE_KEY, JSON.stringify({ products: state.products, sales: state.sales, customers: state.customers, payments: state.payments, dailyResetConfig: state.dailyResetConfig, breadWhatsAppNumber: state.breadWhatsAppNumber, priceChangeLog: state.priceChangeLog, auditLog: state.auditLog, staffMembers: state.staffMembers, suppliers: state.suppliers, supplierTransactions: state.supplierTransactions, returns: state.returns }));
+        localStorage.setItem(state.STORAGE_KEY, JSON.stringify({ products: state.products, sales: state.sales, customers: state.customers, payments: state.payments, dailyResetConfig: state.dailyResetConfig, breadWhatsAppNumber: state.breadWhatsAppNumber, priceChangeLog: state.priceChangeLog, auditLog: state.auditLog, staffMembers: state.staffMembers, suppliers: state.suppliers, supplierTransactions: state.supplierTransactions, returns: state.returns, expenses: state.expenses, _rev: state._rev }));
       } catch (e) {
         console.error("Yerel kaydetme hatası", e);
       }

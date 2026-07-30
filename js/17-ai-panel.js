@@ -312,6 +312,8 @@ export function printOrderEngineList() {
     printOrderListAsPdf(state.t("orderEngineMessageTitle"), selected);
   }
 
+const PRICE_SUGGEST_CHUNK_SIZE = 500;
+
 export function renderPriceSuggestions() {
     const listEl = document.getElementById("priceSuggestList");
     const emptyEl = document.getElementById("priceSuggestEmptyState");
@@ -323,68 +325,94 @@ export function renderPriceSuggestions() {
 
     const recentSalesByProduct = {};
     const olderSalesByProduct = {};
-    state.sales.forEach((s) => {
-      const d = new Date(s.timestamp);
-      s.items.forEach((item) => {
-        if (d >= recentCutoff) {
-          recentSalesByProduct[item.name] = (recentSalesByProduct[item.name] || 0) + item.qty;
-        } else if (d >= olderCutoff) {
-          olderSalesByProduct[item.name] = (olderSalesByProduct[item.name] || 0) + item.qty;
+
+    // Satış geçmişi büyüdükçe (1-2 yıl sonra binlerce kayıt), bunu TEK
+    // seferde taramak arayüzü kısa süreliğine kilitleyebiliyor. Bunun yerine
+    // küçük parçalara (chunk) bölüp, her parça arasında tarayıcıya "nefes
+    // aldırarak" (setTimeout ile) işliyoruz.
+    const salesSnapshot = state.sales;
+    let index = 0;
+
+    function processChunk() {
+      const end = Math.min(index + PRICE_SUGGEST_CHUNK_SIZE, salesSnapshot.length);
+      for (; index < end; index++) {
+        const s = salesSnapshot[index];
+        const d = new Date(s.timestamp);
+        s.items.forEach((item) => {
+          if (d >= recentCutoff) {
+            recentSalesByProduct[item.name] = (recentSalesByProduct[item.name] || 0) + item.qty;
+          } else if (d >= olderCutoff) {
+            olderSalesByProduct[item.name] = (olderSalesByProduct[item.name] || 0) + item.qty;
+          }
+        });
+      }
+
+      if (index < salesSnapshot.length) {
+        setTimeout(processChunk, 0);
+      } else {
+        finalizeSuggestions();
+      }
+    }
+
+    function finalizeSuggestions() {
+      const suggestions = [];
+      state.products.forEach((p) => {
+        if (!p.price || !p.costPrice) return;
+        const recentQty = recentSalesByProduct[p.name] || 0;
+        const olderQty = olderSalesByProduct[p.name] || 0;
+        const margin = (p.price - p.costPrice) / p.price;
+
+        // Talep düşüyor + marj iyi → küçük bir indirim öner (satış hızını artırmak için)
+        if (olderQty >= 4 && recentQty > 0 && recentQty < olderQty * 0.6 && margin > 0.15) {
+          const newPrice = Math.round(p.price * 0.96 * 100) / 100;
+          suggestions.push({
+            name: p.name, oldPrice: p.price, newPrice, direction: "down",
+            reason: state.t("priceSuggestReasonSlow")
+          });
+          return;
+        }
+
+        // Talep yüksek + stok az → küçük bir zam öner (marjı artırmak için)
+        if (recentQty >= 8 && p.qty > 0 && p.qty <= p.min * 1.5) {
+          const newPrice = Math.round(p.price * 1.04 * 100) / 100;
+          suggestions.push({
+            name: p.name, oldPrice: p.price, newPrice, direction: "up",
+            reason: state.t("priceSuggestReasonHighDemand")
+          });
         }
       });
-    });
 
-    const suggestions = [];
-    state.products.forEach((p) => {
-      if (!p.price || !p.costPrice) return;
-      const recentQty = recentSalesByProduct[p.name] || 0;
-      const olderQty = olderSalesByProduct[p.name] || 0;
-      const margin = (p.price - p.costPrice) / p.price;
-
-      // Talep düşüyor + marj iyi → küçük bir indirim öner (satış hızını artırmak için)
-      if (olderQty >= 4 && recentQty > 0 && recentQty < olderQty * 0.6 && margin > 0.15) {
-        const newPrice = Math.round(p.price * 0.96 * 100) / 100;
-        suggestions.push({
-          name: p.name, oldPrice: p.price, newPrice, direction: "down",
-          reason: state.t("priceSuggestReasonSlow")
-        });
+      if (!suggestions.length) {
+        listEl.innerHTML = "";
+        emptyEl.style.display = "block";
         return;
       }
+      emptyEl.style.display = "none";
 
-      // Talep yüksek + stok az → küçük bir zam öner (marjı artırmak için)
-      if (recentQty >= 8 && p.qty > 0 && p.qty <= p.min * 1.5) {
-        const newPrice = Math.round(p.price * 1.04 * 100) / 100;
-        suggestions.push({
-          name: p.name, oldPrice: p.price, newPrice, direction: "up",
-          reason: state.t("priceSuggestReasonHighDemand")
-        });
-      }
-    });
+      listEl.innerHTML = suggestions
+        .slice(0, 15)
+        .map((s) => {
+          const dirClass = s.direction === "up" ? "price-suggest-up" : "price-suggest-down";
+          return `
+            <div class="price-suggest-row">
+              <div>
+                <p class="price-suggest-name">${escapeHtml(s.name)}</p>
+                <p class="price-suggest-reason">${escapeHtml(s.reason)}</p>
+              </div>
+              <div class="price-suggest-prices">
+                <span class="price-suggest-old">${formatTL(s.oldPrice)}</span>
+                <span class="price-suggest-new ${dirClass}">${formatTL(s.newPrice)}</span>
+              </div>
+            </div>`;
+        })
+        .join("");
+    }
 
-    if (!suggestions.length) {
-      listEl.innerHTML = "";
-      emptyEl.style.display = "block";
+    if (!salesSnapshot.length) {
+      finalizeSuggestions();
       return;
     }
-    emptyEl.style.display = "none";
-
-    listEl.innerHTML = suggestions
-      .slice(0, 15)
-      .map((s) => {
-        const dirClass = s.direction === "up" ? "price-suggest-up" : "price-suggest-down";
-        return `
-          <div class="price-suggest-row">
-            <div>
-              <p class="price-suggest-name">${escapeHtml(s.name)}</p>
-              <p class="price-suggest-reason">${escapeHtml(s.reason)}</p>
-            </div>
-            <div class="price-suggest-prices">
-              <span class="price-suggest-old">${formatTL(s.oldPrice)}</span>
-              <span class="price-suggest-new ${dirClass}">${formatTL(s.newPrice)}</span>
-            </div>
-          </div>`;
-      })
-      .join("");
+    processChunk();
   }
 
 export function renderExpiryTracking() {

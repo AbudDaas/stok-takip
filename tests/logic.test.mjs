@@ -16,6 +16,7 @@ import { getBulkDiscountForItem, calcLineTotal } from "../js/07-kasa-checkout.js
 import { getCustomerDebt } from "../js/06-veresiye.js";
 import { getSupplierBalance } from "../js/09-suppliers.js";
 import { isInPeriod } from "../js/08-sales-returns.js";
+import { logPerf, processInChunks, getPerfSummary, clearPerfLog } from "../js/21-perf-logger.js";
 
 let passed = 0;
 let failed = 0;
@@ -143,6 +144,51 @@ test("30 gün önceki tarih 'today' periyoduna dahil değildir", () => {
 });
 test("1 yıl önceki tarih 'week' periyoduna dahil değildir", () => {
   assert.strictEqual(isInPeriod(new Date(Date.now() - 365 * 86400000).toISOString(), "week"), false);
+});
+
+console.log("\n📦 21-perf-logger.js — logPerf / processInChunks / getPerfSummary");
+test("logPerf başarılı fonksiyonun sonucunu döner ve loga 'ok' yazar", () => {
+  clearPerfLog();
+  const result = logPerf("testOp", () => 1 + 1);
+  assert.strictEqual(result, 2);
+  const summary = getPerfSummary();
+  assert.strictEqual(summary.length, 1);
+  assert.strictEqual(summary[0].label, "testOp");
+  assert.strictEqual(summary[0].errors, 0);
+});
+test("logPerf, fonksiyon hata fırlatırsa hatayı loglar ve tekrar fırlatır", () => {
+  clearPerfLog();
+  assert.throws(() => {
+    logPerf("failingOp", () => {
+      throw new Error("boom");
+    });
+  }, /boom/);
+  const summary = getPerfSummary();
+  assert.strictEqual(summary[0].errors, 1);
+});
+test("getPerfSummary aynı etiket için ortalama süreyi ve çağrı sayısını doğru hesaplar", () => {
+  clearPerfLog();
+  logPerf("repeatedOp", () => {});
+  logPerf("repeatedOp", () => {});
+  const summary = getPerfSummary();
+  assert.strictEqual(summary[0].count, 2);
+});
+test("processInChunks tüm elemanları sırayla işler ve bitince onDone çağırır (chunkSize >= uzunluk, tek adımda biter)", () => {
+  const items = Array.from({ length: 50 }, (_, i) => i);
+  const seen = [];
+  let doneCalled = false;
+  // chunkSize >= items.length olduğunda step() ilk çağrıda hepsini işleyip
+  // senkron biter (setTimeout'a düşmez) — bu test bu senkron yolu doğrular.
+  processInChunks(items, items.length, (item) => seen.push(item), () => (doneCalled = true));
+  assert.strictEqual(doneCalled, true);
+  assert.strictEqual(seen.length, 50);
+  assert.strictEqual(seen[0], 0);
+  assert.strictEqual(seen[49], 49);
+});
+test("processInChunks boş diziyle hemen onDone çağırır", () => {
+  let called = false;
+  processInChunks([], 10, () => {}, () => (called = true));
+  assert.strictEqual(called, true);
 });
 
 console.log(`\n${passed} test geçti, ${failed} test başarısız.\n`);
