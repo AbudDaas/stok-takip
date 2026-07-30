@@ -4,7 +4,7 @@ import { escapeHtml, formatQty, formatTL, genId, showPrompt, showToast } from '.
 import { logAudit } from './03-staff-roles.js';
 import { attemptSendToFiscalProvider } from './04-fiscal.js';
 import { adjustQty, findProductByCaseScan, findProductByScan, getDisplayName, updateOutOfStockTracking } from './05-products.js';
-import { measurePerf } from './21-perf-logger.js';
+import { measurePerf } from './22-perf-logger.js';
 import { clearVeresiyeCustomerSelection } from './06-veresiye.js';
 import { renderAll } from './20-navigation.js';
 
