@@ -3,7 +3,7 @@ import { locale, save } from './01-firebase-core.js';
 import { escapeHtml, formatQty, formatTL, genId, showPrompt, showToast } from './02-utils.js';
 import { logAudit } from './03-staff-roles.js';
 import { attemptSendToFiscalProvider } from './04-fiscal.js';
-import { adjustQty, findProductByScan, getDisplayName, updateOutOfStockTracking } from './05-products.js';
+import { adjustQty, findProductByCaseScan, findProductByScan, getDisplayName, updateOutOfStockTracking } from './05-products.js';
 import { measurePerf } from './22-perf-logger.js';
 import { clearVeresiyeCustomerSelection } from './06-veresiye.js';
 import { renderAll } from './20-navigation.js';
@@ -139,6 +139,19 @@ export function stopScan() {
 
 export function onScanSuccess(decodedText) {
     if (state.stokScanCooldown) return;
+
+    // Önce KOLİ barkodu mu diye bak — eşleşirse, kaç adet olduğunu sormadan
+    // direkt koli içindeki adet kadarını ekle/çıkar (sadece yön sorulur).
+    const caseProduct = findProductByCaseScan(decodedText);
+    if (caseProduct) {
+      stopScan();
+      const action = confirm(
+        `${caseProduct.name}\n${state.t("caseBarcodeDetected")}: ${caseProduct.caseQty} ${state.t("unitAdetShort")}\n\n${state.t("confirmStockDirection")}`
+      );
+      adjustQty(caseProduct.id, action ? caseProduct.caseQty : -caseProduct.caseQty);
+      return;
+    }
+
     const p = findProductByScan(decodedText);
     if (!p) {
       showToast(state.t("alertNotRegistered"), "error");
@@ -228,6 +241,19 @@ export function playBeepSound() {
 
 export function onScanSuccessKasa(decodedText) {
     if (state.kasaScanCooldown) return;
+
+    const caseProduct = findProductByCaseScan(decodedText);
+    if (caseProduct) {
+      playBeepSound();
+      addToCart(caseProduct, caseProduct.caseQty);
+      state.kasaScanCooldown = true;
+      showKasaScanFeedback(`${caseProduct.name} (${caseProduct.caseQty} ${state.t("unitAdetShort")})`);
+      setTimeout(() => {
+        state.kasaScanCooldown = false;
+      }, 3000);
+      return;
+    }
+
     const p = findProductByScan(decodedText);
     if (!p) {
       showToast(state.t("alertNotRegistered"), "error");

@@ -127,6 +127,8 @@ export function saveEdit() {
     p.bulkDiscountType = document.getElementById("editBulkType").value;
     p.bulkDiscountValue = Number(document.getElementById("editBulkValue").value) || 0;
     p.supplierId = document.getElementById("editSupplierId").value || null;
+    p.caseBarcode = document.getElementById("editCaseBarcode").value.trim() || null;
+    p.caseQty = Number(document.getElementById("editCaseQty").value) || null;
     logAudit("Ürün düzenlendi", `${name} (${formatTL(p.price)})`);
     save();
     renderAll();
@@ -287,6 +289,8 @@ export function openModal(id) {
     document.getElementById("editBulkType").value = p.bulkDiscountType || "percent";
     document.getElementById("editBulkValue").value = p.bulkDiscountValue || "";
     populateEditSupplierSelect(p.supplierId);
+    document.getElementById("editCaseBarcode").value = p.caseBarcode || "";
+    document.getElementById("editCaseQty").value = p.caseQty || "";
     renderExtraBarcodesList();
     updateModalContent(p);
     document.getElementById("detailModal").style.display = "flex";
@@ -502,6 +506,10 @@ export function findProductByScan(code) {
     return state.products.find(
       (p) => p.id === code || (p.barcode && p.barcode === code) || (Array.isArray(p.extraBarcodes) && p.extraBarcodes.includes(code))
     );
+  }
+
+export function findProductByCaseScan(code) {
+    return state.products.find((p) => p.caseBarcode && p.caseBarcode === code && p.caseQty);
   }
 
 export function productAlreadyExists(name) {

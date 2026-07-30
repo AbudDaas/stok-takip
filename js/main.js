@@ -8,12 +8,13 @@ import { addCustomer, closeCustomerModal, deleteCustomer, recordPayment, renderV
 import { clearCart, closeQuickBarcodeScan, completeSale, openQuickBarcodeScan, renderCart, renderManualAddResults, setPaymentType, startScan, startScanKasa, stopScan, stopScanKasa } from './07-kasa-checkout.js';
 import { closeReturnModal, confirmReturn, renderSales } from './08-sales-returns.js';
 import { addSuggestedSuppliers, addSupplier, addSupplierDebt, addSupplierPayment, assignSelectedProductsToSupplier, closeSupplierModal, deleteSupplier, printSupplierOrderList, renderSupplierProductPicker, sendSupplierOrderWhatsApp } from './09-suppliers.js';
+import { addExpense } from './21-expenses.js';
 import { addBreadConfig, sendBreadWhatsApp } from './11-bread-orders.js';
 import { enableNotifications } from './12-push-notifications.js';
 import { addCatalogItem, closeBranchEditModal, createBranch, exitBranchView, saveBranchEdit } from './13-branches-chain.js';
 import { createAdminBusiness } from './14-admin-panel.js';
 import { confirmVoiceAction, hideVoiceCommandConfirm, setVoiceLang, startVoiceCommand, startVoiceInput } from './15-voice-commands.js';
-import { addAllBulkScanProducts, applyInvoiceScan, checkForLaunchedFile, checkForNoteTakingLaunch, checkForProtocolLaunch, checkForSharedPhoto, closeBulkScanModal, closeInvoiceScanModal, handleCatalogPdfs, handleInvoicePhotos, handleShelfPhotos } from './16-bulk-scan-ai.js';
+import { addAllBulkScanProducts, applyInvoiceScan, checkForLaunchedFile, checkForNoteTakingLaunch, checkForProtocolLaunch, checkForSharedPhoto, closeBulkScanModal, closeInvoiceScanModal, handleInvoicePhotos, handleShelfPhotos } from './16-bulk-scan-ai.js';
 import { askAiAdvisor, createOrderFromEngine, printOrderEngineList, renderOrderEngine } from './17-ai-panel.js';
 import { applyFontSize, applyNavPosition, applySimpleMode, applyTheme, downloadBackup, initSettings, sendFeedback } from './18-settings-backup.js';
 import { finishOnboarding, onboardingNext } from './19-onboarding.js';
@@ -102,6 +103,7 @@ document.getElementById("scanNewBarcodeBtn").addEventListener("click", () => ope
 
 document.getElementById("scanEditBarcodeBtn").addEventListener("click", () => openQuickBarcodeScan("editBarcode"));
 document.getElementById("scanExtraBarcodeBtn").addEventListener("click", () => openQuickBarcodeScan("newExtraBarcode"));
+document.getElementById("scanCaseBarcodeBtn").addEventListener("click", () => openQuickBarcodeScan("editCaseBarcode"));
 document.getElementById("addExtraBarcodeBtn").addEventListener("click", addExtraBarcode);
 document.getElementById("newExtraBarcode").addEventListener("keydown", (e) => {
   if (e.key === "Enter") addExtraBarcode();
@@ -144,16 +146,6 @@ document.getElementById("csvImportInput").addEventListener("change", (e) => {
 document.getElementById("invoicePhotoInput").addEventListener("change", (e) => {
     const files = Array.from(e.target.files || []);
     if (files.length) handleInvoicePhotos(files);
-    e.target.value = "";
-  });
-
-document.getElementById("catalogPdfBtn").addEventListener("click", () => {
-    document.getElementById("catalogPdfInput").click();
-  });
-
-document.getElementById("catalogPdfInput").addEventListener("change", (e) => {
-    const files = Array.from(e.target.files || []);
-    if (files.length) handleCatalogPdfs(files);
     e.target.value = "";
   });
 
@@ -318,6 +310,7 @@ document.getElementById("exitBranchViewBtn").addEventListener("click", exitBranc
 document.getElementById("closeBranchEditModalBtn").addEventListener("click", closeBranchEditModal);
 
 document.getElementById("supplierAddBtn").addEventListener("click", addSupplier);
+document.getElementById("expenseAddBtn").addEventListener("click", addExpense);
 
 document.getElementById("addSuggestedSuppliersBtn").addEventListener("click", addSuggestedSuppliers);
 

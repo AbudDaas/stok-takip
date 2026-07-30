@@ -222,19 +222,6 @@
         </div>
       </div>
 
-      <div class="card">
-        <p class="card-title" data-i18n="catalogScanTitle">Tedarikçi kataloğundan ürün ekle (PDF)</p>
-        <p class="card-subtitle" data-i18n="catalogScanSubtitle">Tedarikçinin fiyat listesi/katalog PDF'ini seç, yapay zeka her sayfadaki ürünleri okuyup barkot ve fiyatıyla ürün listenize eklesin (stok adedi 0 başlar).</p>
-        <input id="catalogPdfInput" type="file" accept="application/pdf" multiple style="display:none;" />
-        <button id="catalogPdfBtn" class="btn btn-primary btn-block">
-          <i class="fa-solid fa-book-open" aria-hidden="true"></i> <span data-i18n="catalogScanBtn">Katalog PDF'i seç</span>
-        </button>
-        <div id="catalogScanLoading" class="bulk-scan-loading" style="display:none;">
-          <i class="fa-solid fa-spinner spin" aria-hidden="true"></i>
-          <span data-i18n="catalogScanAnalyzing">Katalog analiz ediliyor...</span>
-        </div>
-      </div>
-
       <div class="section-header">
         <p class="card-title" data-i18n="allProductsTitle">Tüm ürünler</p>
         <input id="searchBox" type="text" class="search-input" data-i18n-placeholder="searchPh" placeholder="Ürün ara..." />
@@ -546,6 +533,51 @@
       <p class="card-title" data-i18n="supplierListTitle">Tedarikçiler</p>
       <div id="supplierList" class="list"></div>
       <p id="supplierEmptyState" class="empty-state" data-i18n="supplierEmptyState">Henüz tedarikçi eklenmedi.</p>
+    </section>
+
+    <!-- SEKME: GİDERLER -->
+    <section id="tab-expenses" class="tab-panel">
+      <div class="card">
+        <p class="card-title" data-i18n="expenseAddTitle">Yeni gider ekle</p>
+        <p class="card-subtitle" data-i18n="expenseAddSubtitle">Kira, elektrik, personel maaşı gibi ürün dışı giderlerini kaydet — gerçek net kârını görebilmen için.</p>
+        <div class="form-row">
+          <select id="expenseCategory">
+            <option value="kira" data-i18n="expenseCategoryKira">Kira</option>
+            <option value="elektrik" data-i18n="expenseCategoryElektrik">Elektrik</option>
+            <option value="su" data-i18n="expenseCategorySu">Su</option>
+            <option value="dogalgaz" data-i18n="expenseCategoryDogalgaz">Doğalgaz</option>
+            <option value="personel" data-i18n="expenseCategoryPersonel">Personel Maaşı</option>
+            <option value="nakliye" data-i18n="expenseCategoryNakliye">Nakliye</option>
+            <option value="diger" data-i18n="categoryDiger">Diğer</option>
+          </select>
+        </div>
+        <div class="form-row">
+          <input id="expenseDescription" type="text" data-i18n-placeholder="expenseDescriptionPh" placeholder="Açıklama (opsiyonel)" />
+        </div>
+        <div class="form-row two-col">
+          <input id="expenseAmount" type="number" min="0" step="0.01" data-i18n-placeholder="expenseAmountPh" placeholder="Tutar (TL)" />
+          <input id="expenseDate" type="date" />
+        </div>
+        <button id="expenseAddBtn" class="btn btn-primary btn-block">
+          <i class="fa-solid fa-plus" aria-hidden="true"></i> <span data-i18n="expenseAddBtn">Gider ekle</span>
+        </button>
+      </div>
+
+      <div class="card">
+        <p class="card-title" data-i18n="expenseMonthTotalTitle">Bu Ay Toplam Gider</p>
+        <p class="lost-sales-total" id="expenseMonthTotal" style="color:var(--amber-text);">0,00 ₺</p>
+      </div>
+
+      <div class="card">
+        <p class="card-title" data-i18n="realNetProfitTitle">💰 Bu Ay Gerçek Net Kâr</p>
+        <p class="card-subtitle" data-i18n="realNetProfitSubtitle">Ürün kârından, ürün dışı giderlerin düşülmüş hali.</p>
+        <p class="lost-sales-total" id="realNetProfitValue">0,00 ₺</p>
+        <p class="card-subtitle" id="realNetProfitBreakdown" style="margin-top:4px;"></p>
+      </div>
+
+      <p class="card-title" data-i18n="expenseListTitle">Gider Geçmişi</p>
+      <div id="expenseList" class="list"></div>
+      <p id="expenseEmptyState" class="empty-state" data-i18n="expenseEmptyState">Henüz gider eklenmedi.</p>
     </section>
 
     <!-- TEDARİKÇİ DETAY MODAL -->
@@ -1126,6 +1158,17 @@
               <i class="fa-solid fa-plus" aria-hidden="true"></i>
             </button>
           </div>
+          <label class="field-label" data-i18n="caseBarcodeLabel">Koli Barkodu (opsiyonel)</label>
+          <p class="card-subtitle" data-i18n="caseBarcodeSubtitle" style="margin-top:0;">Ürünün dış kolisindeki barkod, tekli üründen farklıysa buraya ekle — koliyi okuttuğunda içindeki adet kadarı otomatik eklenir.</p>
+          <div class="form-row two-col">
+            <div class="form-row barcode-row" style="margin-bottom:0;">
+              <input id="editCaseBarcode" type="text" data-i18n-placeholder="caseBarcodePh" placeholder="Koli barkodu" />
+              <button id="scanCaseBarcodeBtn" type="button" class="btn btn-icon-only" data-i18n-aria="scanBarcodeAria" aria-label="Barkod tara">
+                <i class="fa-solid fa-barcode" aria-hidden="true"></i>
+              </button>
+            </div>
+            <input id="editCaseQty" type="number" min="1" step="1" data-i18n-placeholder="caseQtyPh" placeholder="Koli içi adet" />
+          </div>
           <button id="saveEditBtn" class="btn btn-primary btn-block" data-i18n="saveBtn">Kaydet</button>
           <button id="deleteProductBtn" class="btn btn-danger btn-block">
             <i class="fa-solid fa-trash" aria-hidden="true"></i> <span data-i18n="deleteProductBtn">Ürünü sil</span>
@@ -1305,6 +1348,10 @@
     <button class="nav-btn" data-tab="tab-suppliers">
       <i class="fa-solid fa-truck" aria-hidden="true"></i>
       <span data-i18n="navSuppliers">Tedarikçiler</span>
+    </button>
+    <button class="nav-btn" data-tab="tab-expenses">
+      <i class="fa-solid fa-file-invoice-dollar" aria-hidden="true"></i>
+      <span data-i18n="navExpenses">Giderler</span>
     </button>
     <button class="nav-btn" data-tab="tab-pricechanges">
       <i class="fa-solid fa-arrow-right-arrow-left" aria-hidden="true"></i>
