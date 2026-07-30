@@ -300,17 +300,29 @@ export function applyRoleRestrictionsUI() {
       applyAccountTypeUI();
       reapplySimpleModeIfSet();
       updateSwitchUserButtonVisibility();
+      const totalCard = document.getElementById("statPeriodTotalCard");
+      const profitCard = document.getElementById("netProfitCard");
+      if (totalCard) totalCard.style.display = "";
+      if (profitCard) profitCard.style.display = "";
       return;
     }
 
     // Kasiyer: sadece Kasa, Satışlar, Veresiye görünür.
-    const cashierBlockedTabs = ["tab-products", "tab-scan", "tab-orders", "tab-pricechanges", "tab-settings", "tab-branches", "tab-suppliers"];
+    const cashierBlockedTabs = ["tab-products", "tab-scan", "tab-orders", "tab-pricechanges", "tab-settings", "tab-branches", "tab-suppliers", "tab-expenses"];
     cashierBlockedTabs.forEach((tabId) => {
       const btn = document.querySelector(`.nav-btn[data-tab="${tabId}"]`);
       if (btn) btn.style.display = "none";
     });
     const adminBtn = document.getElementById("adminNavBtn");
     if (adminBtn) adminBtn.style.display = "none";
+
+    // Satışlar sekmesine girebilsin ama ciro/net kâr rakamlarını görmesin —
+    // satış geçmişi, işlem sayısı gibi diğer bilgiler görünmeye devam eder.
+    const totalCard = document.getElementById("statPeriodTotalCard");
+    const profitCard = document.getElementById("netProfitCard");
+    if (totalCard) totalCard.style.display = "none";
+    if (profitCard) profitCard.style.display = "none";
+
     updateSwitchUserButtonVisibility();
     switchTab("tab-kasa");
   }
