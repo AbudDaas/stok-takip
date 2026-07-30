@@ -302,8 +302,10 @@ export function applyRoleRestrictionsUI() {
       updateSwitchUserButtonVisibility();
       const totalCard = document.getElementById("statPeriodTotalCard");
       const profitCard = document.getElementById("netProfitCard");
+      const breakdownCard = document.getElementById("paymentBreakdownCard");
       if (totalCard) totalCard.style.display = "";
       if (profitCard) profitCard.style.display = "";
+      if (breakdownCard) breakdownCard.style.display = "";
       return;
     }
 
@@ -320,8 +322,10 @@ export function applyRoleRestrictionsUI() {
     // satış geçmişi, işlem sayısı gibi diğer bilgiler görünmeye devam eder.
     const totalCard = document.getElementById("statPeriodTotalCard");
     const profitCard = document.getElementById("netProfitCard");
+    const breakdownCard = document.getElementById("paymentBreakdownCard");
     if (totalCard) totalCard.style.display = "none";
     if (profitCard) profitCard.style.display = "none";
+    if (breakdownCard) breakdownCard.style.display = "none";
 
     updateSwitchUserButtonVisibility();
     switchTab("tab-kasa");
