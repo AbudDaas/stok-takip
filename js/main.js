@@ -100,6 +100,8 @@ document.getElementById("printQrBtn").addEventListener("click", printQr);
 document.getElementById("printAllQrBtn").addEventListener("click", printAllQrCodes);
 
 document.getElementById("scanNewBarcodeBtn").addEventListener("click", () => openQuickBarcodeScan("newBarcode"));
+document.getElementById("scanNewExtraBarcodeBtn").addEventListener("click", () => openQuickBarcodeScan("newExtraBarcodeSingle"));
+document.getElementById("scanNewCaseBarcodeBtn").addEventListener("click", () => openQuickBarcodeScan("newCaseBarcode"));
 
 document.getElementById("scanEditBarcodeBtn").addEventListener("click", () => openQuickBarcodeScan("editBarcode"));
 document.getElementById("scanExtraBarcodeBtn").addEventListener("click", () => openQuickBarcodeScan("newExtraBarcode"));

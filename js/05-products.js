@@ -28,6 +28,10 @@ export function addProduct() {
     const costPriceInput = document.getElementById("newCostPrice");
     const barcodeInput = document.getElementById("newBarcode");
     const unitInput = document.getElementById("newUnit");
+    const supplierInput = document.getElementById("newSupplierId");
+    const extraBarcodeInput = document.getElementById("newExtraBarcodeSingle");
+    const caseBarcodeInput = document.getElementById("newCaseBarcode");
+    const caseQtyInput = document.getElementById("newCaseQty");
 
     const name = nameInput.value.trim();
     if (!name) {
@@ -42,7 +46,17 @@ export function addProduct() {
     const barcode = barcodeInput.value.trim();
     const unit = unitInput.value;
 
-    state.products.push(mkProduct(name, category, qty, min, price, barcode, unit, costPrice));
+    const newProduct = mkProduct(name, category, qty, min, price, barcode, unit, costPrice);
+    newProduct.supplierId = supplierInput.value || null;
+    const extraBarcode = extraBarcodeInput.value.trim();
+    if (extraBarcode) newProduct.extraBarcodes = [extraBarcode];
+    const caseBarcode = caseBarcodeInput.value.trim();
+    if (caseBarcode) {
+      newProduct.caseBarcode = caseBarcode;
+      newProduct.caseQty = Number(caseQtyInput.value) || null;
+    }
+
+    state.products.push(newProduct);
     logAudit("Ürün eklendi", `${name} (${qty} adet, ${formatTL(price)})`);
     nameInput.value = "";
     catInput.value = "";
@@ -52,6 +66,10 @@ export function addProduct() {
     costPriceInput.value = "0";
     barcodeInput.value = "";
     unitInput.value = "adet";
+    supplierInput.value = "";
+    extraBarcodeInput.value = "";
+    caseBarcodeInput.value = "";
+    caseQtyInput.value = "";
     save();
     renderAll();
     nameInput.focus();
@@ -108,6 +126,16 @@ export function populateEditSupplierSelect(currentSupplierId) {
       `<option value="">${state.t("editSupplierNone")}</option>` +
       state.suppliers.map((s) => `<option value="${s.id}">${escapeHtml(s.name)}</option>`).join("");
     selectEl.value = currentSupplierId || "";
+  }
+
+export function populateNewProductSupplierSelect() {
+    const selectEl = document.getElementById("newSupplierId");
+    if (!selectEl) return;
+    const currentValue = selectEl.value;
+    selectEl.innerHTML =
+      `<option value="">${state.t("editSupplierNone")}</option>` +
+      state.suppliers.map((s) => `<option value="${s.id}">${escapeHtml(s.name)}</option>`).join("");
+    selectEl.value = currentValue;
   }
 
 export function saveEdit() {

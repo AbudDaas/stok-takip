@@ -2,7 +2,7 @@
 <html lang="tr">
 <head>
 <meta charset="UTF-8" />
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdnjs.cloudflare.com https://www.gstatic.com; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; img-src 'self' data: blob:; font-src 'self' https://cdnjs.cloudflare.com; connect-src 'self' https://*.googleapis.com https://*.google.com https://*.workers.dev https://identitytoolkit.googleapis.com https://www.gstatic.com wss://*.firebaseio.com; frame-src https://bakkal-stok.firebaseapp.com; worker-src 'self' blob: https://cdnjs.cloudflare.com; object-src 'none'; base-uri 'self';" />
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdnjs.cloudflare.com https://www.gstatic.com; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; img-src 'self' data: blob:; font-src 'self' https://cdnjs.cloudflare.com; connect-src 'self' https://*.googleapis.com https://*.google.com https://*.workers.dev https://identitytoolkit.googleapis.com https://www.gstatic.com wss://*.firebaseio.com; frame-src 'none'; object-src 'none'; base-uri 'self';" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <title>Bakkal Stok Takip</title>
 <meta name="theme-color" content="#1F3864" />
@@ -181,6 +181,29 @@
           <button id="scanNewBarcodeBtn" type="button" class="btn btn-icon-only" data-i18n-aria="scanBarcodeAria" aria-label="Barkod tara">
             <i class="fa-solid fa-barcode" aria-hidden="true"></i>
           </button>
+        </div>
+        <label class="field-label" data-i18n="editSupplierLabel">Tedarikçi (opsiyonel)</label>
+        <select id="newSupplierId">
+          <option value="" data-i18n="editSupplierNone">Tedarikçi seçilmedi</option>
+        </select>
+        <label class="field-label" data-i18n="extraBarcodesLabel">Ek Barkod (opsiyonel)</label>
+        <p class="card-subtitle" data-i18n="extraBarcodesSubtitle" style="margin-top:0;">Aynı ürünün farklı çeşitleri/ambalajları varsa, hepsinin barkodunu buraya ekle — hangisini okutursan okut bu ürün eşleşir.</p>
+        <div class="form-row barcode-row">
+          <input id="newExtraBarcodeSingle" type="text" data-i18n-placeholder="extraBarcodePh" placeholder="Yeni ek barkod" />
+          <button id="scanNewExtraBarcodeBtn" type="button" class="btn btn-icon-only" data-i18n-aria="scanBarcodeAria" aria-label="Barkod tara">
+            <i class="fa-solid fa-barcode" aria-hidden="true"></i>
+          </button>
+        </div>
+        <label class="field-label" data-i18n="caseBarcodeLabel">Koli Barkodu (opsiyonel)</label>
+        <p class="card-subtitle" data-i18n="caseBarcodeSubtitle" style="margin-top:0;">Ürünün dış kolisindeki barkod, tekli üründen farklıysa buraya ekle — koliyi okuttuğunda içindeki adet kadarı otomatik eklenir.</p>
+        <div class="form-row two-col">
+          <div class="form-row barcode-row" style="margin-bottom:0;">
+            <input id="newCaseBarcode" type="text" data-i18n-placeholder="caseBarcodePh" placeholder="Koli barkodu" />
+            <button id="scanNewCaseBarcodeBtn" type="button" class="btn btn-icon-only" data-i18n-aria="scanBarcodeAria" aria-label="Barkod tara">
+              <i class="fa-solid fa-barcode" aria-hidden="true"></i>
+            </button>
+          </div>
+          <input id="newCaseQty" type="number" min="1" step="1" data-i18n-placeholder="caseQtyPh" placeholder="Koli içi adet" />
         </div>
         <button id="addBtn" class="btn btn-primary btn-block">
           <i class="fa-solid fa-plus" aria-hidden="true"></i> <span data-i18n="addProductBtn">Ürün ekle</span>
