@@ -186,16 +186,21 @@
         <select id="newSupplierId">
           <option value="" data-i18n="editSupplierNone">Tedarikçi seçilmedi</option>
         </select>
-        <label class="field-label" data-i18n="extraBarcodesLabel">Ek Barkod (opsiyonel)</label>
+        <label class="field-label" data-i18n="extraBarcodesLabel">Ek Barkodlar (opsiyonel)</label>
         <p class="card-subtitle" data-i18n="extraBarcodesSubtitle" style="margin-top:0;">Aynı ürünün farklı çeşitleri/ambalajları varsa, hepsinin barkodunu buraya ekle — hangisini okutursan okut bu ürün eşleşir.</p>
+        <div id="pendingExtraBarcodesList" class="list" style="margin-bottom:8px;"></div>
         <div class="form-row barcode-row">
           <input id="newExtraBarcodeSingle" type="text" data-i18n-placeholder="extraBarcodePh" placeholder="Yeni ek barkod" />
           <button id="scanNewExtraBarcodeBtn" type="button" class="btn btn-icon-only" data-i18n-aria="scanBarcodeAria" aria-label="Barkod tara">
             <i class="fa-solid fa-barcode" aria-hidden="true"></i>
           </button>
+          <button id="addPendingExtraBarcodeBtn" type="button" class="btn btn-icon-only" aria-label="Ekle">
+            <i class="fa-solid fa-plus" aria-hidden="true"></i>
+          </button>
         </div>
-        <label class="field-label" data-i18n="caseBarcodeLabel">Koli Barkodu (opsiyonel)</label>
-        <p class="card-subtitle" data-i18n="caseBarcodeSubtitle" style="margin-top:0;">Ürünün dış kolisindeki barkod, tekli üründen farklıysa buraya ekle — koliyi okuttuğunda içindeki adet kadarı otomatik eklenir.</p>
+        <label class="field-label" data-i18n="caseBarcodeLabel">Koli Barkodları (opsiyonel)</label>
+        <p class="card-subtitle" data-i18n="caseBarcodeSubtitle" style="margin-top:0;">Ürünün dış kolisindeki barkod, tekli üründen farklıysa buraya ekle — koliyi okuttuğunda içindeki adet kadarı otomatik eklenir. Farklı koli boyutları için birden fazla ekleyebilirsin.</p>
+        <div id="pendingCaseBarcodesList" class="list" style="margin-bottom:8px;"></div>
         <div class="form-row two-col">
           <div class="form-row barcode-row" style="margin-bottom:0;">
             <input id="newCaseBarcode" type="text" data-i18n-placeholder="caseBarcodePh" placeholder="Koli barkodu" />
@@ -205,7 +210,10 @@
           </div>
           <input id="newCaseQty" type="number" min="1" step="1" data-i18n-placeholder="caseQtyPh" placeholder="Koli içi adet" />
         </div>
-        <button id="addBtn" class="btn btn-primary btn-block">
+        <button id="addPendingCaseBarcodeBtn" type="button" class="btn btn-block" style="margin-top:6px;">
+          <i class="fa-solid fa-plus" aria-hidden="true"></i> <span data-i18n="addCaseBarcodeBtn">Koli Barkodu Ekle</span>
+        </button>
+        <button id="addBtn" class="btn btn-primary btn-block" style="margin-top:14px;">
           <i class="fa-solid fa-plus" aria-hidden="true"></i> <span data-i18n="addProductBtn">Ürün ekle</span>
         </button>
       </div>
@@ -1181,8 +1189,9 @@
               <i class="fa-solid fa-plus" aria-hidden="true"></i>
             </button>
           </div>
-          <label class="field-label" data-i18n="caseBarcodeLabel">Koli Barkodu (opsiyonel)</label>
-          <p class="card-subtitle" data-i18n="caseBarcodeSubtitle" style="margin-top:0;">Ürünün dış kolisindeki barkod, tekli üründen farklıysa buraya ekle — koliyi okuttuğunda içindeki adet kadarı otomatik eklenir.</p>
+          <label class="field-label" data-i18n="caseBarcodeLabel">Koli Barkodları (opsiyonel)</label>
+          <p class="card-subtitle" data-i18n="caseBarcodeSubtitle" style="margin-top:0;">Ürünün dış kolisindeki barkod, tekli üründen farklıysa buraya ekle — koliyi okuttuğunda içindeki adet kadarı otomatik eklenir. Farklı koli boyutları (12'li, 24'lü gibi) için birden fazla ekleyebilirsin.</p>
+          <div id="caseBarcodesList" class="list" style="margin-bottom:8px;"></div>
           <div class="form-row two-col">
             <div class="form-row barcode-row" style="margin-bottom:0;">
               <input id="editCaseBarcode" type="text" data-i18n-placeholder="caseBarcodePh" placeholder="Koli barkodu" />
@@ -1192,7 +1201,10 @@
             </div>
             <input id="editCaseQty" type="number" min="1" step="1" data-i18n-placeholder="caseQtyPh" placeholder="Koli içi adet" />
           </div>
-          <button id="saveEditBtn" class="btn btn-primary btn-block" data-i18n="saveBtn">Kaydet</button>
+          <button id="addCaseBarcodeBtn" type="button" class="btn btn-block" style="margin-top:6px;">
+            <i class="fa-solid fa-plus" aria-hidden="true"></i> <span data-i18n="addCaseBarcodeBtn">Koli Barkodu Ekle</span>
+          </button>
+          <button id="saveEditBtn" class="btn btn-primary btn-block" style="margin-top:14px;" data-i18n="saveBtn">Kaydet</button>
           <button id="deleteProductBtn" class="btn btn-danger btn-block">
             <i class="fa-solid fa-trash" aria-hidden="true"></i> <span data-i18n="deleteProductBtn">Ürünü sil</span>
           </button>

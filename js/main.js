@@ -3,7 +3,7 @@ import { forgotPassword, importLocalBackup, load, logout, registerPeriodicSync, 
 import { showToast } from './02-utils.js';
 import { addStaffMember, enterAsOwner, saveOwnerPin, staffPickerGoBack, submitStaffPickerPin, switchUser } from './03-staff-roles.js';
 import { saveFiscalSettings, toggleFiscalEnabled } from './04-fiscal.js';
-import { addExtraBarcode, addProduct, adjustQty, closeModal, deleteProduct, handleCsvImportFile, printAllQrCodes, printQr, printSelfSourceList, resetAll, saveEdit, setQtyManually, translateMissingProductNames } from './05-products.js';
+import { addCaseBarcodeEntry, addExtraBarcode, addPendingCaseBarcode, addPendingExtraBarcode, addProduct, adjustQty, closeModal, deleteProduct, handleCsvImportFile, printAllQrCodes, printQr, printSelfSourceList, resetAll, saveEdit, setQtyManually, translateMissingProductNames } from './05-products.js';
 import { addCustomer, closeCustomerModal, deleteCustomer, recordPayment, renderVeresiyeCustomerResults, saveCustomerEdit } from './06-veresiye.js';
 import { clearCart, closeQuickBarcodeScan, completeSale, openQuickBarcodeScan, renderCart, renderManualAddResults, setPaymentType, startScan, startScanKasa, stopScan, stopScanKasa } from './07-kasa-checkout.js';
 import { closeReturnModal, confirmReturn, renderSales } from './08-sales-returns.js';
@@ -102,11 +102,14 @@ document.getElementById("printAllQrBtn").addEventListener("click", printAllQrCod
 document.getElementById("scanNewBarcodeBtn").addEventListener("click", () => openQuickBarcodeScan("newBarcode"));
 document.getElementById("scanNewExtraBarcodeBtn").addEventListener("click", () => openQuickBarcodeScan("newExtraBarcodeSingle"));
 document.getElementById("scanNewCaseBarcodeBtn").addEventListener("click", () => openQuickBarcodeScan("newCaseBarcode"));
+document.getElementById("addPendingExtraBarcodeBtn").addEventListener("click", addPendingExtraBarcode);
+document.getElementById("addPendingCaseBarcodeBtn").addEventListener("click", addPendingCaseBarcode);
 
 document.getElementById("scanEditBarcodeBtn").addEventListener("click", () => openQuickBarcodeScan("editBarcode"));
 document.getElementById("scanExtraBarcodeBtn").addEventListener("click", () => openQuickBarcodeScan("newExtraBarcode"));
 document.getElementById("scanCaseBarcodeBtn").addEventListener("click", () => openQuickBarcodeScan("editCaseBarcode"));
 document.getElementById("addExtraBarcodeBtn").addEventListener("click", addExtraBarcode);
+document.getElementById("addCaseBarcodeBtn").addEventListener("click", addCaseBarcodeEntry);
 document.getElementById("newExtraBarcode").addEventListener("keydown", (e) => {
   if (e.key === "Enter") addExtraBarcode();
 });

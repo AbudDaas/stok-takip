@@ -142,13 +142,13 @@ export function onScanSuccess(decodedText) {
 
     // Önce KOLİ barkodu mu diye bak — eşleşirse, kaç adet olduğunu sormadan
     // direkt koli içindeki adet kadarını ekle/çıkar (sadece yön sorulur).
-    const caseProduct = findProductByCaseScan(decodedText);
-    if (caseProduct) {
+    const caseMatch = findProductByCaseScan(decodedText);
+    if (caseMatch) {
       stopScan();
       const action = confirm(
-        `${caseProduct.name}\n${state.t("caseBarcodeDetected")}: ${caseProduct.caseQty} ${state.t("unitAdetShort")}\n\n${state.t("confirmStockDirection")}`
+        `${caseMatch.product.name}\n${state.t("caseBarcodeDetected")}: ${caseMatch.caseQty} ${state.t("unitAdetShort")}\n\n${state.t("confirmStockDirection")}`
       );
-      adjustQty(caseProduct.id, action ? caseProduct.caseQty : -caseProduct.caseQty);
+      adjustQty(caseMatch.product.id, action ? caseMatch.caseQty : -caseMatch.caseQty);
       return;
     }
 
@@ -242,12 +242,12 @@ export function playBeepSound() {
 export function onScanSuccessKasa(decodedText) {
     if (state.kasaScanCooldown) return;
 
-    const caseProduct = findProductByCaseScan(decodedText);
-    if (caseProduct) {
+    const caseMatch = findProductByCaseScan(decodedText);
+    if (caseMatch) {
       playBeepSound();
-      addToCart(caseProduct, caseProduct.caseQty);
+      addToCart(caseMatch.product, caseMatch.caseQty);
       state.kasaScanCooldown = true;
-      showKasaScanFeedback(`${caseProduct.name} (${caseProduct.caseQty} ${state.t("unitAdetShort")})`);
+      showKasaScanFeedback(`${caseMatch.product.name} (${caseMatch.caseQty} ${state.t("unitAdetShort")})`);
       setTimeout(() => {
         state.kasaScanCooldown = false;
       }, 3000);

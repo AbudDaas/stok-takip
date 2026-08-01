@@ -19,6 +19,86 @@ export function findProductByFuzzyName(name) {
     return match || null;
   }
 
+export function renderPendingExtraBarcodesList() {
+    const listEl = document.getElementById("pendingExtraBarcodesList");
+    if (!listEl) return;
+    if (!state.pendingExtraBarcodes.length) {
+      listEl.innerHTML = "";
+      return;
+    }
+    listEl.innerHTML = state.pendingExtraBarcodes
+      .map(
+        (code, i) => `
+        <div class="extra-barcode-row">
+          <span class="extra-barcode-value">${escapeHtml(code)}</span>
+          <button class="pending-extra-barcode-remove-btn" data-index="${i}" aria-label="Sil"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button>
+        </div>`
+      )
+      .join("");
+    listEl.querySelectorAll(".pending-extra-barcode-remove-btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        state.pendingExtraBarcodes.splice(Number(btn.dataset.index), 1);
+        renderPendingExtraBarcodesList();
+      });
+    });
+  }
+
+export function addPendingExtraBarcode() {
+    const input = document.getElementById("newExtraBarcodeSingle");
+    const code = input.value.trim();
+    if (!code) return;
+    if (state.pendingExtraBarcodes.includes(code)) {
+      showToast(state.t("extraBarcodeDuplicate"), "error");
+      return;
+    }
+    state.pendingExtraBarcodes.push(code);
+    input.value = "";
+    renderPendingExtraBarcodesList();
+  }
+
+export function renderPendingCaseBarcodesList() {
+    const listEl = document.getElementById("pendingCaseBarcodesList");
+    if (!listEl) return;
+    if (!state.pendingCaseBarcodes.length) {
+      listEl.innerHTML = "";
+      return;
+    }
+    listEl.innerHTML = state.pendingCaseBarcodes
+      .map(
+        (entry, i) => `
+        <div class="extra-barcode-row">
+          <span class="extra-barcode-value">${escapeHtml(entry.barcode)} — ${entry.qty} ${state.t("unitAdetShort")}</span>
+          <button class="pending-case-barcode-remove-btn" data-index="${i}" aria-label="Sil"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button>
+        </div>`
+      )
+      .join("");
+    listEl.querySelectorAll(".pending-case-barcode-remove-btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        state.pendingCaseBarcodes.splice(Number(btn.dataset.index), 1);
+        renderPendingCaseBarcodesList();
+      });
+    });
+  }
+
+export function addPendingCaseBarcode() {
+    const barcodeInput = document.getElementById("newCaseBarcode");
+    const qtyInput = document.getElementById("newCaseQty");
+    const barcode = barcodeInput.value.trim();
+    const qty = Number(qtyInput.value);
+    if (!barcode || !qty || qty <= 0) {
+      showToast(state.t("caseBarcodeInvalid"), "error");
+      return;
+    }
+    if (state.pendingCaseBarcodes.some((cb) => cb.barcode === barcode)) {
+      showToast(state.t("extraBarcodeDuplicate"), "error");
+      return;
+    }
+    state.pendingCaseBarcodes.push({ barcode, qty });
+    barcodeInput.value = "";
+    qtyInput.value = "";
+    renderPendingCaseBarcodesList();
+  }
+
 export function addProduct() {
     const nameInput = document.getElementById("newName");
     const catInput = document.getElementById("newCategory");
@@ -29,9 +109,6 @@ export function addProduct() {
     const barcodeInput = document.getElementById("newBarcode");
     const unitInput = document.getElementById("newUnit");
     const supplierInput = document.getElementById("newSupplierId");
-    const extraBarcodeInput = document.getElementById("newExtraBarcodeSingle");
-    const caseBarcodeInput = document.getElementById("newCaseBarcode");
-    const caseQtyInput = document.getElementById("newCaseQty");
 
     const name = nameInput.value.trim();
     if (!name) {
@@ -48,13 +125,8 @@ export function addProduct() {
 
     const newProduct = mkProduct(name, category, qty, min, price, barcode, unit, costPrice);
     newProduct.supplierId = supplierInput.value || null;
-    const extraBarcode = extraBarcodeInput.value.trim();
-    if (extraBarcode) newProduct.extraBarcodes = [extraBarcode];
-    const caseBarcode = caseBarcodeInput.value.trim();
-    if (caseBarcode) {
-      newProduct.caseBarcode = caseBarcode;
-      newProduct.caseQty = Number(caseQtyInput.value) || null;
-    }
+    if (state.pendingExtraBarcodes.length) newProduct.extraBarcodes = [...state.pendingExtraBarcodes];
+    if (state.pendingCaseBarcodes.length) newProduct.caseBarcodes = [...state.pendingCaseBarcodes];
 
     state.products.push(newProduct);
     logAudit("Ürün eklendi", `${name} (${qty} adet, ${formatTL(price)})`);
@@ -67,9 +139,10 @@ export function addProduct() {
     barcodeInput.value = "";
     unitInput.value = "adet";
     supplierInput.value = "";
-    extraBarcodeInput.value = "";
-    caseBarcodeInput.value = "";
-    caseQtyInput.value = "";
+    state.pendingExtraBarcodes = [];
+    state.pendingCaseBarcodes = [];
+    renderPendingExtraBarcodesList();
+    renderPendingCaseBarcodesList();
     save();
     renderAll();
     nameInput.focus();
@@ -155,8 +228,9 @@ export function saveEdit() {
     p.bulkDiscountType = document.getElementById("editBulkType").value;
     p.bulkDiscountValue = Number(document.getElementById("editBulkValue").value) || 0;
     p.supplierId = document.getElementById("editSupplierId").value || null;
-    p.caseBarcode = document.getElementById("editCaseBarcode").value.trim() || null;
-    p.caseQty = Number(document.getElementById("editCaseQty").value) || null;
+    // Not: koli barkodları artık "Koli Barkodu Ekle" butonuyla doğrudan
+    // p.caseBarcodes listesine ekleniyor/çıkarılıyor, burada ayrıca
+    // kaydetmeye gerek yok.
     logAudit("Ürün düzenlendi", `${name} (${formatTL(p.price)})`);
     save();
     renderAll();
@@ -317,9 +391,10 @@ export function openModal(id) {
     document.getElementById("editBulkType").value = p.bulkDiscountType || "percent";
     document.getElementById("editBulkValue").value = p.bulkDiscountValue || "";
     populateEditSupplierSelect(p.supplierId);
-    document.getElementById("editCaseBarcode").value = p.caseBarcode || "";
-    document.getElementById("editCaseQty").value = p.caseQty || "";
+    document.getElementById("editCaseBarcode").value = "";
+    document.getElementById("editCaseQty").value = "";
     renderExtraBarcodesList();
+    renderCaseBarcodesList();
     updateModalContent(p);
     document.getElementById("detailModal").style.display = "flex";
     renderQrCode(p.id);
@@ -369,6 +444,60 @@ export function removeExtraBarcode(index) {
     if (!p || !Array.isArray(p.extraBarcodes)) return;
     p.extraBarcodes.splice(index, 1);
     renderExtraBarcodesList();
+  }
+
+export function renderCaseBarcodesList() {
+    const listEl = document.getElementById("caseBarcodesList");
+    if (!listEl) return;
+    const p = state.products.find((x) => x.id === state.activeProductId);
+    if (!p) return;
+    migrateProductCaseBarcode(p);
+    const entries = p.caseBarcodes || [];
+    if (!entries.length) {
+      listEl.innerHTML = "";
+      return;
+    }
+    listEl.innerHTML = entries
+      .map(
+        (entry, i) => `
+        <div class="extra-barcode-row">
+          <span class="extra-barcode-value">${escapeHtml(entry.barcode)} — ${entry.qty} ${state.t("unitAdetShort")}</span>
+          <button class="case-barcode-remove-btn" data-index="${i}" aria-label="Sil"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button>
+        </div>`
+      )
+      .join("");
+    listEl.querySelectorAll(".case-barcode-remove-btn").forEach((btn) => {
+      btn.addEventListener("click", () => removeCaseBarcodeEntry(Number(btn.dataset.index)));
+    });
+  }
+
+export function addCaseBarcodeEntry() {
+    const barcodeInput = document.getElementById("editCaseBarcode");
+    const qtyInput = document.getElementById("editCaseQty");
+    const barcode = barcodeInput.value.trim();
+    const qty = Number(qtyInput.value);
+    if (!barcode || !qty || qty <= 0) {
+      showToast(state.t("caseBarcodeInvalid"), "error");
+      return;
+    }
+    const p = state.products.find((x) => x.id === state.activeProductId);
+    if (!p) return;
+    migrateProductCaseBarcode(p);
+    if (p.caseBarcodes.some((cb) => cb.barcode === barcode)) {
+      showToast(state.t("extraBarcodeDuplicate"), "error");
+      return;
+    }
+    p.caseBarcodes.push({ barcode, qty });
+    barcodeInput.value = "";
+    qtyInput.value = "";
+    renderCaseBarcodesList();
+  }
+
+export function removeCaseBarcodeEntry(index) {
+    const p = state.products.find((x) => x.id === state.activeProductId);
+    if (!p || !Array.isArray(p.caseBarcodes)) return;
+    p.caseBarcodes.splice(index, 1);
+    renderCaseBarcodesList();
   }
 
 export function updateModalContent(p) {
@@ -537,7 +666,32 @@ export function findProductByScan(code) {
   }
 
 export function findProductByCaseScan(code) {
-    return state.products.find((p) => p.caseBarcode && p.caseBarcode === code && p.caseQty);
+    for (const p of state.products) {
+      // Eski (tekli) alan hâlâ varsa onu da kontrol et (geriye dönük uyumluluk).
+      if (p.caseBarcode && p.caseBarcode === code && p.caseQty) {
+        return { product: p, caseQty: p.caseQty };
+      }
+      if (Array.isArray(p.caseBarcodes)) {
+        const match = p.caseBarcodes.find((cb) => cb.barcode === code);
+        if (match) return { product: p, caseQty: match.qty };
+      }
+    }
+    return null;
+  }
+
+/**
+ * Bir ürünün eski (tekli) koli barkodu alanlarını yeni (çoklu) listeye taşır.
+ * Ürün her açıldığında/görüntülendiğinde çağrılır — böylece veri zamanla
+ * kendiliğinden yeni formata geçer, ayrı bir toplu göçe gerek kalmaz.
+ */
+export function migrateProductCaseBarcode(p) {
+    if (!Array.isArray(p.caseBarcodes)) p.caseBarcodes = [];
+    if (p.caseBarcode && p.caseQty) {
+      const alreadyThere = p.caseBarcodes.some((cb) => cb.barcode === p.caseBarcode);
+      if (!alreadyThere) p.caseBarcodes.push({ barcode: p.caseBarcode, qty: p.caseQty });
+      delete p.caseBarcode;
+      delete p.caseQty;
+    }
   }
 
 export function productAlreadyExists(name) {
