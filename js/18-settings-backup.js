@@ -72,6 +72,30 @@ export function applyFontSize(size) {
     } catch (e) {}
   }
 
+export function applyScanFps(fps) {
+    state.scanFps = fps;
+    const buttons = { 5: "scanFpsLowBtn", 10: "scanFpsNormalBtn", 20: "scanFpsHighBtn" };
+    Object.keys(buttons).forEach((val) => {
+      const btn = document.getElementById(buttons[val]);
+      if (btn) btn.classList.toggle("active", Number(val) === fps);
+    });
+    try {
+      localStorage.setItem("bakkal_scan_fps", String(fps));
+    } catch (e) {}
+  }
+
+export function applyScanCooldown(ms) {
+    state.scanCooldownMs = ms;
+    const buttons = { 1000: "scanCooldownFastBtn", 3000: "scanCooldownNormalBtn", 5000: "scanCooldownSlowBtn" };
+    Object.keys(buttons).forEach((val) => {
+      const btn = document.getElementById(buttons[val]);
+      if (btn) btn.classList.toggle("active", Number(val) === ms);
+    });
+    try {
+      localStorage.setItem("bakkal_scan_cooldown_ms", String(ms));
+    } catch (e) {}
+  }
+
 export function applySimpleMode(mode) {
     const simpleBtn = document.getElementById("simpleModeBtn");
     const advancedBtn = document.getElementById("advancedModeBtn");
@@ -81,7 +105,7 @@ export function applySimpleMode(mode) {
       localStorage.setItem("bakkal_simple_mode", mode);
     } catch (e) {}
 
-    const advancedOnlyTabs = ["tab-scan", "tab-orders", "tab-pricechanges", "tab-ai", "tab-suppliers"];
+    const advancedOnlyTabs = ["tab-scan", "tab-orders", "tab-pricechanges", "tab-ai", "tab-suppliers", "tab-expenses"];
     advancedOnlyTabs.forEach((tabId) => {
       const btn = document.querySelector(`.nav-btn[data-tab="${tabId}"]`);
       if (btn) btn.style.display = mode === "simple" ? "none" : "flex";
@@ -113,7 +137,8 @@ export function renderDataSize() {
       staffMembers: state.staffMembers,
       suppliers: state.suppliers,
       supplierTransactions: state.supplierTransactions,
-      returns: state.returns
+      returns: state.returns,
+      expenses: state.expenses
     };
     const sizeBytes = new Blob([JSON.stringify(dataObj)]).size;
     const sizeKB = Math.round(sizeBytes / 1024);
@@ -153,6 +178,7 @@ export function maybeCreateDailyBackup() {
       suppliers: state.suppliers,
       supplierTransactions: state.supplierTransactions,
       returns: state.returns,
+      expenses: state.expenses,
       savedAt: new Date().toISOString()
     };
 
@@ -233,6 +259,7 @@ export function restoreFromAutoBackup(backupId, backups) {
     state.suppliers = backup.suppliers || [];
     state.supplierTransactions = backup.supplierTransactions || [];
     state.returns = backup.returns || [];
+    state.expenses = backup.expenses || [];
 
     logAudit("Yedekten geri yüklendi", backupId);
     save();
@@ -269,14 +296,20 @@ export function initSettings() {
     let navPosition = "bottom";
     let fontSize = "normal";
     let simpleMode = "advanced";
+    let scanFps = 10;
+    let scanCooldownMs = 3000;
     try {
       theme = localStorage.getItem("bakkal_theme") || "light";
       navPosition = localStorage.getItem("bakkal_nav_position") || "bottom";
       fontSize = localStorage.getItem("bakkal_font_size") || "normal";
       simpleMode = localStorage.getItem("bakkal_simple_mode") || "advanced";
+      scanFps = Number(localStorage.getItem("bakkal_scan_fps")) || 10;
+      scanCooldownMs = Number(localStorage.getItem("bakkal_scan_cooldown_ms")) || 3000;
     } catch (e) {}
     applyTheme(theme);
     applyNavPosition(navPosition);
     applyFontSize(fontSize);
     applySimpleMode(simpleMode);
+    applyScanFps(scanFps);
+    applyScanCooldown(scanCooldownMs);
   }

@@ -878,6 +878,36 @@
       </div>
 
       <div class="card">
+        <p class="card-title" data-i18n="scanSpeedTitle">📷 Barkod Tarama Hızı</p>
+        <p class="card-subtitle" data-i18n="scanSpeedSubtitle">Kasada barkod okutma hızını kendi telefonuna/tercihine göre ayarla.</p>
+        <label class="field-label" data-i18n="scanFpsLabel">Kameranın Algılama Hızı</label>
+        <div class="settings-toggle-row">
+          <button class="settings-toggle-btn" id="scanFpsLowBtn" data-value="5">
+            <span data-i18n="scanSpeedLow">Düşük</span>
+          </button>
+          <button class="settings-toggle-btn" id="scanFpsNormalBtn" data-value="10">
+            <span data-i18n="scanSpeedNormal">Normal</span>
+          </button>
+          <button class="settings-toggle-btn" id="scanFpsHighBtn" data-value="20">
+            <span data-i18n="scanSpeedHigh">Yüksek</span>
+          </button>
+        </div>
+        <label class="field-label" data-i18n="scanCooldownLabel">Ürünler Arası Bekleme Süresi</label>
+        <p class="card-subtitle" data-i18n="scanCooldownSubtitle" style="margin-top:0;">Bir ürünü okuttuktan sonra, bir sonrakini okutabilmen için geçen süre.</p>
+        <div class="settings-toggle-row">
+          <button class="settings-toggle-btn" id="scanCooldownFastBtn" data-value="1000">
+            <span data-i18n="scanSpeedFast">Hızlı (1sn)</span>
+          </button>
+          <button class="settings-toggle-btn" id="scanCooldownNormalBtn" data-value="3000">
+            <span data-i18n="scanSpeedNormalTime">Normal (3sn)</span>
+          </button>
+          <button class="settings-toggle-btn" id="scanCooldownSlowBtn" data-value="5000">
+            <span data-i18n="scanSpeedSlow">Yavaş (5sn)</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="card">
         <p class="card-title" data-i18n="settingsBackupTitle">Veri Yedeği</p>
         <p class="card-subtitle" data-i18n="settingsBackupSubtitle">Tüm ürün, satış ve müşteri verini bir dosya olarak indir, güvenli bir yerde sakla.</p>
         <button id="downloadBackupBtn" class="btn btn-block">

@@ -113,7 +113,7 @@ export function startScan() {
     state.html5QrCode
       .start(
         { facingMode: "environment" },
-        { fps: 10, qrbox: 220 },
+        { fps: state.scanFps || 10, qrbox: 220 },
         (decodedText) => {
           onScanSuccess(decodedText);
         },
@@ -194,7 +194,7 @@ export function startScanKasa() {
     state.html5QrCodeKasa
       .start(
         { facingMode: "environment" },
-        { fps: 10, qrbox: 220 },
+        { fps: state.scanFps || 10, qrbox: 220 },
         (decodedText) => {
           onScanSuccessKasa(decodedText);
         },
@@ -250,7 +250,7 @@ export function onScanSuccessKasa(decodedText) {
       showKasaScanFeedback(`${caseMatch.product.name} (${caseMatch.caseQty} ${state.t("unitAdetShort")})`);
       setTimeout(() => {
         state.kasaScanCooldown = false;
-      }, 3000);
+      }, state.scanCooldownMs || 3000);
       return;
     }
 
@@ -273,7 +273,7 @@ export function onScanSuccessKasa(decodedText) {
         showKasaScanFeedback(`${p.name} (${weight} ${state.t("unitKgShort")})`);
         setTimeout(() => {
           state.kasaScanCooldown = false;
-        }, 3000);
+        }, state.scanCooldownMs || 3000);
       });
     } else {
       playBeepSound();
@@ -282,7 +282,7 @@ export function onScanSuccessKasa(decodedText) {
       showKasaScanFeedback(p.name);
       setTimeout(() => {
         state.kasaScanCooldown = false;
-      }, 3000);
+      }, state.scanCooldownMs || 3000);
     }
   }
 
@@ -600,7 +600,7 @@ export function openQuickBarcodeScan(targetInputId) {
     state.quickScanCode
       .start(
         { facingMode: "environment" },
-        { fps: 10, qrbox: 220 },
+        { fps: state.scanFps || 10, qrbox: 220 },
         (decodedText) => {
           const input = document.getElementById(state.quickScanTargetInputId);
           if (input) input.value = decodedText;

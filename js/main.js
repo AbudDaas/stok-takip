@@ -16,7 +16,7 @@ import { createAdminBusiness } from './14-admin-panel.js';
 import { confirmVoiceAction, hideVoiceCommandConfirm, setVoiceLang, startVoiceCommand, startVoiceInput } from './15-voice-commands.js';
 import { addAllBulkScanProducts, applyInvoiceScan, checkForLaunchedFile, checkForNoteTakingLaunch, checkForProtocolLaunch, checkForSharedPhoto, closeBulkScanModal, closeInvoiceScanModal, handleInvoicePhotos, handleShelfPhotos } from './16-bulk-scan-ai.js';
 import { askAiAdvisor, createOrderFromEngine, printOrderEngineList, renderOrderEngine } from './17-ai-panel.js';
-import { applyFontSize, applyNavPosition, applySimpleMode, applyTheme, downloadBackup, initSettings, sendFeedback } from './18-settings-backup.js';
+import { applyFontSize, applyNavPosition, applyScanCooldown, applyScanFps, applySimpleMode, applyTheme, downloadBackup, initSettings, sendFeedback } from './18-settings-backup.js';
 import { finishOnboarding, onboardingNext } from './19-onboarding.js';
 import { renderAll, switchTab } from './20-navigation.js';
 
@@ -273,6 +273,12 @@ document.getElementById("navSideBtn").addEventListener("click", () => applyNavPo
 document.getElementById("fontNormalBtn").addEventListener("click", () => applyFontSize("normal"));
 
 document.getElementById("fontLargeBtn").addEventListener("click", () => applyFontSize("large"));
+document.getElementById("scanFpsLowBtn").addEventListener("click", () => applyScanFps(5));
+document.getElementById("scanFpsNormalBtn").addEventListener("click", () => applyScanFps(10));
+document.getElementById("scanFpsHighBtn").addEventListener("click", () => applyScanFps(20));
+document.getElementById("scanCooldownFastBtn").addEventListener("click", () => applyScanCooldown(1000));
+document.getElementById("scanCooldownNormalBtn").addEventListener("click", () => applyScanCooldown(3000));
+document.getElementById("scanCooldownSlowBtn").addEventListener("click", () => applyScanCooldown(5000));
 
 document.getElementById("simpleModeBtn").addEventListener("click", () => applySimpleMode("simple"));
 
