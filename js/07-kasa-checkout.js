@@ -137,8 +137,59 @@ export function stopScan() {
     state.scanning = false;
   }
 
+export function setScanMode(mode) {
+    state.scanMode = mode;
+    const stockBtn = document.getElementById("scanModeStockBtn");
+    const shelfBtn = document.getElementById("scanModeShelfBtn");
+    if (stockBtn) stockBtn.classList.toggle("active", mode === "stok");
+    if (shelfBtn) shelfBtn.classList.toggle("active", mode === "rafaAktar");
+  }
+
+function handleShelfTransferScan(decodedText) {
+    const caseMatch = findProductByCaseScan(decodedText);
+    const p = caseMatch ? caseMatch.product : findProductByScan(decodedText);
+    if (!p) {
+      showToast(state.t("alertNotRegistered"), "error");
+      return;
+    }
+    stopScan();
+
+    const available = p.warehouseQty || 0;
+    if (available <= 0) {
+      showToast(`${p.name}: ${state.t("warehouseEmpty")}`, "error");
+      return;
+    }
+
+    showPrompt(`${p.name} — ${state.t("warehouseAvailable")}: ${available}\n${state.t("transferToShelfPrompt")}`, String(available)).then((value) => {
+      if (value === null) return;
+      const amount = Number(value);
+      if (!amount || amount <= 0) {
+        showToast(state.t("alertInvalidAmount"), "error");
+        return;
+      }
+      if (amount > available) {
+        showToast(state.t("warehouseNotEnough"), "error");
+        return;
+      }
+      p.warehouseQty = available - amount;
+      p.qty = Number(p.qty) + amount;
+      updateOutOfStockTracking(p);
+      logAudit("Rafa aktarıldı (QR ile)", `${p.name}: ${amount}`);
+      save();
+      renderAll();
+      showToast(`${p.name}: ${amount} ${state.t("transferredToShelfSuccess")}`, "success");
+    });
+  }
+
 export function onScanSuccess(decodedText) {
     if (state.stokScanCooldown) return;
+
+    // "Depodan Rafa Aktar" modundaysak, normal stok ekleme/çıkarma akışına
+    // hiç girmeden, direkt depo → raf transferi soruyoruz.
+    if (state.scanMode === "rafaAktar") {
+      handleShelfTransferScan(decodedText);
+      return;
+    }
 
     // Önce KOLİ barkodu mu diye bak — eşleşirse, kaç adet olduğunu sormadan
     // direkt koli içindeki adet kadarını ekle/çıkar (sadece yön sorulur).

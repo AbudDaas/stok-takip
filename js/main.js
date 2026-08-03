@@ -5,7 +5,7 @@ import { addStaffMember, enterAsOwner, saveOwnerPin, staffPickerGoBack, submitSt
 import { saveFiscalSettings, toggleFiscalEnabled } from './04-fiscal.js';
 import { addCaseBarcodeEntry, addExtraBarcode, addPendingCaseBarcode, addPendingExtraBarcode, addProduct, addWarehouseStock, adjustQty, closeModal, deleteProduct, handleCsvImportFile, printAllQrCodes, printQr, printSelfSourceList, resetAll, saveEdit, setQtyManually, transferToShelf, translateMissingProductNames } from './05-products.js';
 import { addCustomer, closeCustomerModal, deleteCustomer, recordPayment, renderVeresiyeCustomerResults, saveCustomerEdit } from './06-veresiye.js';
-import { clearCart, closeQuickBarcodeScan, completeSale, openQuickBarcodeScan, renderCart, renderManualAddResults, setPaymentType, startScan, startScanKasa, stopScan, stopScanKasa } from './07-kasa-checkout.js';
+import { clearCart, closeQuickBarcodeScan, completeSale, openQuickBarcodeScan, renderCart, renderManualAddResults, setPaymentType, setScanMode, startScan, startScanKasa, stopScan, stopScanKasa } from './07-kasa-checkout.js';
 import { closeReturnModal, confirmReturn, renderSales } from './08-sales-returns.js';
 import { addSuggestedSuppliers, addSupplier, addSupplierDebt, addSupplierPayment, assignSelectedProductsToSupplier, closeSupplierModal, deleteSupplier, printSupplierOrderList, renderSupplierProductPicker, sendSupplierOrderWhatsApp } from './09-suppliers.js';
 import { addExpense } from './21-expenses.js';
@@ -14,7 +14,7 @@ import { enableNotifications } from './12-push-notifications.js';
 import { addCatalogItem, closeBranchEditModal, createBranch, exitBranchView, saveBranchEdit } from './13-branches-chain.js';
 import { createAdminBusiness } from './14-admin-panel.js';
 import { confirmVoiceAction, hideVoiceCommandConfirm, setVoiceLang, startVoiceCommand, startVoiceInput } from './15-voice-commands.js';
-import { addAllBulkScanProducts, applyInvoiceScan, checkForLaunchedFile, checkForNoteTakingLaunch, checkForProtocolLaunch, checkForSharedPhoto, closeBulkScanModal, closeInvoiceScanModal, handleInvoicePhotos, handleShelfPhotos } from './16-bulk-scan-ai.js';
+import { addAllBulkScanProducts, applyInvoiceScan, checkForLaunchedFile, checkForNoteTakingLaunch, checkForProtocolLaunch, checkForSharedPhoto, closeBulkScanModal, closeInvoiceScanModal, handleInvoicePhotos, handleShelfPhotos, setInvoiceScanDestination } from './16-bulk-scan-ai.js';
 import { askAiAdvisor, createOrderFromEngine, printOrderEngineList, renderOrderEngine } from './17-ai-panel.js';
 import { applyFontSize, applyNavPosition, applyScanCooldown, applyScanFps, applySimpleMode, applyTheme, copyPublicCatalogLink, downloadBackup, initSettings, savePublicCatalogSettings, sendFeedback, togglePublicCatalog } from './18-settings-backup.js';
 import { finishOnboarding, onboardingNext } from './19-onboarding.js';
@@ -163,12 +163,16 @@ document.getElementById("invoiceScanModal").addEventListener("click", (e) => {
   });
 
 document.getElementById("invoiceApplyBtn").addEventListener("click", applyInvoiceScan);
+document.getElementById("invoiceDestShelfBtn").addEventListener("click", () => setInvoiceScanDestination("raf"));
+document.getElementById("invoiceDestWarehouseBtn").addEventListener("click", () => setInvoiceScanDestination("depo"));
 
 document.getElementById("barcodeScanModal").addEventListener("click", (e) => {
     if (e.target.id === "barcodeScanModal") closeQuickBarcodeScan();
   });
 
 document.getElementById("startScanBtn").addEventListener("click", startScan);
+document.getElementById("scanModeStockBtn").addEventListener("click", () => setScanMode("stok"));
+document.getElementById("scanModeShelfBtn").addEventListener("click", () => setScanMode("rafaAktar"));
 
 document.getElementById("stopScanBtn").addEventListener("click", stopScan);
 

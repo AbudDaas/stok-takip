@@ -493,7 +493,16 @@ export function closeInvoiceScanModal() {
     state.invoiceScanCandidates = [];
   }
 
+export function setInvoiceScanDestination(dest) {
+    state.invoiceScanDestination = dest;
+    const shelfBtn = document.getElementById("invoiceDestShelfBtn");
+    const warehouseBtn = document.getElementById("invoiceDestWarehouseBtn");
+    if (shelfBtn) shelfBtn.classList.toggle("active", dest === "raf");
+    if (warehouseBtn) warehouseBtn.classList.toggle("active", dest === "depo");
+  }
+
 export function applyInvoiceScan() {
+    const destination = state.invoiceScanDestination || "raf";
     const checks = document.querySelectorAll(".invoice-result-check");
     let appliedCount = 0;
     checks.forEach((chk) => {
@@ -504,8 +513,12 @@ export function applyInvoiceScan() {
       if (item.matchedProductId) {
         const p = state.products.find((x) => x.id === item.matchedProductId);
         if (p) {
-          p.qty = Math.round((p.qty + item.qty) * 1000) / 1000;
-          updateOutOfStockTracking(p);
+          if (destination === "depo") {
+            p.warehouseQty = Math.round(((p.warehouseQty || 0) + item.qty) * 1000) / 1000;
+          } else {
+            p.qty = Math.round((p.qty + item.qty) * 1000) / 1000;
+            updateOutOfStockTracking(p);
+          }
           if (item.barcode && !p.barcode) p.barcode = item.barcode;
           if (item.unitCost) {
             const oldPrice = p.price;
@@ -526,7 +539,10 @@ export function applyInvoiceScan() {
       } else {
         const costPrice = item.unitCost || 0;
         const price = costPrice ? calcSellingPrice(costPrice, item.markupPercent) : 0;
-        state.products.push(mkProduct(item.name, state.t("categoryOtherDefault"), item.qty, 5, price, item.barcode || "", "adet", costPrice));
+        const shelfQty = destination === "depo" ? 0 : item.qty;
+        const newProduct = mkProduct(item.name, state.t("categoryOtherDefault"), shelfQty, 5, price, item.barcode || "", "adet", costPrice);
+        if (destination === "depo") newProduct.warehouseQty = item.qty;
+        state.products.push(newProduct);
       }
       appliedCount++;
     });

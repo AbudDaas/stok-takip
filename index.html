@@ -271,6 +271,14 @@
       <div class="card">
         <p class="card-title" data-i18n="scanTitle">QR kod ile giriş / çıkış</p>
         <p class="card-subtitle" data-i18n="scanSubtitle">Bir ürünün QR kodunu okutarak stok girişi veya çıkışı yapabilirsin.</p>
+        <div class="settings-toggle-row" style="margin-bottom:12px;">
+          <button class="settings-toggle-btn active" id="scanModeStockBtn" data-value="stok">
+            <i class="fa-solid fa-boxes-stacked" aria-hidden="true"></i> <span data-i18n="scanModeStock">Stok Ekle/Çıkar</span>
+          </button>
+          <button class="settings-toggle-btn" id="scanModeShelfBtn" data-value="rafaAktar">
+            <i class="fa-solid fa-arrow-right" aria-hidden="true"></i> <span data-i18n="scanModeShelf">Depodan Rafa Aktar</span>
+          </button>
+        </div>
         <button id="startScanBtn" class="btn btn-primary btn-block">
           <i class="fa-solid fa-camera" aria-hidden="true"></i> <span data-i18n="startCamera">Kamerayı başlat</span>
         </button>
@@ -1350,6 +1358,15 @@
         <button id="closeInvoiceScanModalBtn" class="icon-btn" aria-label="Kapat"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button>
       </div>
       <div class="modal-body">
+        <div class="settings-toggle-row" style="margin-bottom:10px;">
+          <button class="settings-toggle-btn active" id="invoiceDestShelfBtn" data-value="raf">
+            <i class="fa-solid fa-store" aria-hidden="true"></i> <span data-i18n="invoiceDestShelf">Rafa Ekle</span>
+          </button>
+          <button class="settings-toggle-btn" id="invoiceDestWarehouseBtn" data-value="depo">
+            <i class="fa-solid fa-warehouse" aria-hidden="true"></i> <span data-i18n="invoiceDestWarehouse">Depoya Ekle</span>
+          </button>
+        </div>
+        <p class="card-subtitle" data-i18n="invoiceDestSubtitle" style="margin-top:0;">Bu faturadaki ürünler, seçtiğin yere eklenecek.</p>
         <div id="invoiceScanResultsList" class="list"></div>
         <button id="invoiceApplyBtn" class="btn btn-primary btn-block">
           <span data-i18n="invoiceApplyBtn">Onayla ve uygula</span>
