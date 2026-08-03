@@ -908,6 +908,28 @@
       </div>
 
       <div class="card">
+        <p class="card-title" data-i18n="publicCatalogTitle">🛍️ Herkese Açık Katalog</p>
+        <p class="card-subtitle" data-i18n="publicCatalogSubtitle">Açarsan, müşterilerin (giriş yapmadan) ürün/fiyat listeni görebileceği, WhatsApp'tan sipariş verebileceği bir sayfa oluşur. Maliyet, barkod gibi bilgiler ASLA paylaşılmaz — sadece ürün adı, kategori ve fiyat görünür.</p>
+        <label class="checkbox-row">
+          <input id="publicCatalogToggle" type="checkbox" />
+          <span data-i18n="publicCatalogEnableLabel">Kataloğumu herkese açık yap</span>
+        </label>
+        <div id="publicCatalogConfig" style="display:none; margin-top:10px;">
+          <label class="field-label" data-i18n="publicCatalogPhoneLabel">Sipariş WhatsApp Numarası</label>
+          <input id="publicCatalogPhone" type="tel" data-i18n-placeholder="publicCatalogPhonePh" placeholder="Örn. 905551234567" />
+          <button id="savePublicCatalogBtn" class="btn btn-primary btn-block" style="margin-top:8px;">
+            <i class="fa-solid fa-floppy-disk" aria-hidden="true"></i> <span data-i18n="saveBtn">Kaydet</span>
+          </button>
+          <div class="form-row" style="margin-top:10px;">
+            <input id="publicCatalogLink" type="text" readonly />
+          </div>
+          <button id="copyPublicCatalogLinkBtn" class="btn btn-block">
+            <i class="fa-solid fa-copy" aria-hidden="true"></i> <span data-i18n="copyLinkBtn">Linki Kopyala</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="card">
         <p class="card-title" data-i18n="settingsBackupTitle">Veri Yedeği</p>
         <p class="card-subtitle" data-i18n="settingsBackupSubtitle">Tüm ürün, satış ve müşteri verini bir dosya olarak indir, güvenli bir yerde sakla.</p>
         <button id="downloadBackupBtn" class="btn btn-block">
@@ -1145,6 +1167,20 @@
           <button id="qtyPlusBtn" class="qty-btn" aria-label="Stok arttır"><i class="fa-solid fa-plus" aria-hidden="true"></i></button>
         </div>
         <p id="modalStatus" class="status-pill"></p>
+
+        <div class="modal-section warehouse-section">
+          <p class="card-title" data-i18n="warehouseStockTitle">📦 Depo Stoku</p>
+          <p class="card-subtitle" data-i18n="warehouseStockSubtitle">Rafa henüz çıkarılmamış, depoda/arka odada duran stok — yukarıdaki (raftaki) sayıya dahil değildir.</p>
+          <p class="stat-value" id="modalWarehouseQty">0</p>
+          <div class="form-row two-col">
+            <button id="addWarehouseStockBtn" class="btn btn-block">
+              <i class="fa-solid fa-box" aria-hidden="true"></i> <span data-i18n="addWarehouseStockBtn">Depoya Ekle</span>
+            </button>
+            <button id="transferToShelfBtn" class="btn btn-primary btn-block">
+              <i class="fa-solid fa-arrow-right" aria-hidden="true"></i> <span data-i18n="transferToShelfBtn">Rafa Aktar</span>
+            </button>
+          </div>
+        </div>
 
         <div class="modal-section">
           <div id="modalQrCode" class="qr-code-box"></div>

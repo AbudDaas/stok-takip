@@ -1,6 +1,6 @@
 import { state } from './00-state.js';
 import { save } from './01-firebase-core.js';
-import { escapeHtml, formatQty, formatTL, getStatus, getStatusLabel, mkProduct, printOrderListAsPdf, showToast } from './02-utils.js';
+import { escapeHtml, formatQty, formatTL, getStatus, getStatusLabel, mkProduct, printOrderListAsPdf, showPrompt, showToast } from './02-utils.js';
 import { logAudit } from './03-staff-roles.js';
 import { callGeminiWithRetry } from './16-bulk-scan-ai.js';
 import { renderAll } from './20-navigation.js';
@@ -510,11 +510,60 @@ export function updateModalContent(p) {
     const pill = document.getElementById("modalStatus");
     pill.textContent = getStatusLabel(status);
     pill.className = "status-pill " + state.STATUS_CLASS[status];
+    const warehouseEl = document.getElementById("modalWarehouseQty");
+    if (warehouseEl) warehouseEl.textContent = formatQty({ unit: p.unit, qty: p.warehouseQty || 0 });
   }
 
 export function closeModal() {
     document.getElementById("detailModal").style.display = "none";
     state.activeProductId = null;
+  }
+
+export function addWarehouseStock() {
+    const p = state.products.find((x) => x.id === state.activeProductId);
+    if (!p) return;
+    const promptText = `${state.t("addWarehouseStockPrompt")} (${p.unit === "kg" ? state.t("unitKgShort") : state.t("unitAdetShort")})`;
+    showPrompt(promptText, "").then((value) => {
+      if (value === null) return;
+      const amount = Number(value);
+      if (!amount || amount <= 0) {
+        showToast(state.t("alertInvalidAmount"), "error");
+        return;
+      }
+      p.warehouseQty = (p.warehouseQty || 0) + amount;
+      logAudit("Depo stoku eklendi", `${p.name}: +${amount}`);
+      save();
+      updateModalContent(p);
+    });
+  }
+
+export function transferToShelf() {
+    const p = state.products.find((x) => x.id === state.activeProductId);
+    if (!p) return;
+    const available = p.warehouseQty || 0;
+    if (available <= 0) {
+      showToast(state.t("warehouseEmpty"), "error");
+      return;
+    }
+    const promptText = `${state.t("transferToShelfPrompt")} (${state.t("warehouseAvailable")}: ${available})`;
+    showPrompt(promptText, String(available)).then((value) => {
+      if (value === null) return;
+      const amount = Number(value);
+      if (!amount || amount <= 0) {
+        showToast(state.t("alertInvalidAmount"), "error");
+        return;
+      }
+      if (amount > available) {
+        showToast(state.t("warehouseNotEnough"), "error");
+        return;
+      }
+      p.warehouseQty = available - amount;
+      p.qty = Number(p.qty) + amount;
+      updateOutOfStockTracking(p);
+      logAudit("Rafa aktarıldı", `${p.name}: ${amount}`);
+      save();
+      updateModalContent(p);
+    });
   }
 
 export function renderQrCode(productId) {

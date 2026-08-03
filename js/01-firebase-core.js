@@ -22,6 +22,23 @@ export function initFirebaseIfConfigured() {
       state.db = firebase.firestore();
       state.auth = firebase.auth();
       state.cloudEnabled = true;
+
+      // Çevrimdışı (offline) destek: Firestore'un kendi yerleşik önbelleğini
+      // etkinleştiriyoruz. Bu sayede internet kesildiğinde bile:
+      //  - Daha önce yüklenmiş veriler (ürünler, satışlar) okunabilir kalır
+      //  - Yapılan değişiklikler (yeni satış, stok güncellemesi) yerel
+      //    olarak kaydedilir ve internet geri gelince OTOMATİK olarak
+      //    sunucuya gönderilir — elle bir şey yapmaya gerek yok.
+      // "synchronizeTabs: true" ile aynı cihazda birden fazla sekme/pencere
+      // açık olsa bile önbellek tutarlı kalır.
+      state.db.enablePersistence({ synchronizeTabs: true }).catch((err) => {
+        if (err.code === "failed-precondition") {
+          console.warn("Çevrimdışı önbellek: aynı tarayıcıda başka bir sekme zaten açık, bu sekmede pasif kalacak.");
+        } else if (err.code === "unimplemented") {
+          console.warn("Bu tarayıcı çevrimdışı önbelleği desteklemiyor.");
+        }
+      });
+
       return true;
     } catch (e) {
       console.error("Firebase başlatma hatası", e);
@@ -101,6 +118,9 @@ export function attachFirestoreListener() {
           state.supplierTransactions = data.supplierTransactions || [];
           state.returns = data.returns || [];
           state.expenses = data.expenses || [];
+          state.publicCatalogEnabled = data.publicCatalogEnabled || false;
+          state.publicCatalogPhone = data.publicCatalogPhone || "";
+          state.businessName = data.businessName || "";
 
           // ---- Çakışma tespiti ----
           // Bu koda ulaşan her anlık görüntü, KENDİ yazdığımız bir kayıt
@@ -165,12 +185,33 @@ export function setSyncStatus(status) {
     } else if (status === "connecting") {
       icon.className = "fa-solid fa-arrows-rotate";
       text.textContent = state.t("syncConnecting");
+    } else if (status === "offline") {
+      icon.className = "fa-solid fa-plane";
+      text.textContent = state.t("syncOffline");
     } else if (status === "error") {
       icon.className = "fa-solid fa-triangle-exclamation";
       text.textContent = state.t("syncError");
     } else {
       icon.className = "fa-solid fa-cloud";
       text.textContent = state.t("syncLocal");
+    }
+  }
+
+/**
+ * Tarayıcının kendi çevrimiçi/çevrimdışı olaylarını dinleyerek senkronizasyon
+ * göstergesini günceller. Firestore'un kendi önbelleği zaten arka planda
+ * çalışmaya devam ediyor — bu sadece kullanıcıya "şu an internetin yok ama
+ * merak etme, değişiklikler kaydediliyor" demenin bir yolu.
+ */
+export function setupOfflineDetection() {
+    window.addEventListener("offline", () => {
+      if (state.cloudEnabled) setSyncStatus("offline");
+    });
+    window.addEventListener("online", () => {
+      if (state.cloudEnabled) setSyncStatus("connecting");
+    });
+    if (!navigator.onLine && state.cloudEnabled) {
+      setSyncStatus("offline");
     }
   }
 
@@ -223,6 +264,7 @@ export function logout() {
 
 export function load() {
     const cloudReady = initFirebaseIfConfigured();
+    if (cloudReady) setupOfflineDetection();
 
     if (!cloudReady) {
       // Yerel mod: Firebase ayarlanmamış, tek cihazlık kullanım

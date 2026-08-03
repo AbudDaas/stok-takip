@@ -1769,3 +1769,13 @@ body.font-large{zoom:1.18;}
   font-size:11px;color:var(--text-muted);font-style:italic;
   max-width:110px;text-align:right;
 }
+
+.expense-delete-btn{
+  background:none;border:none;color:var(--red-text);cursor:pointer;
+  font-size:13px;padding:4px 6px;
+}
+
+.warehouse-section{
+  background:var(--bg);border-radius:var(--radius);padding:14px;margin:14px 0;
+}
+.warehouse-section .stat-value{font-size:22px;margin:6px 0 10px;}

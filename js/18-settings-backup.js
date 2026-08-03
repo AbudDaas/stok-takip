@@ -291,6 +291,57 @@ export function downloadBackup() {
     showToast(state.t("settingsBackupSuccess"), "success");
   }
 
+export function togglePublicCatalog(checked) {
+    state.publicCatalogEnabled = checked;
+    document.getElementById("publicCatalogConfig").style.display = checked ? "block" : "none";
+    const targetRef = state.originalDocRef || state.docRef;
+    if (targetRef) {
+      targetRef.set({ publicCatalogEnabled: checked }, { merge: true }).catch((e) => console.error("Katalog ayarı kaydedilemedi", e));
+    }
+    if (checked) renderPublicCatalogLink();
+  }
+
+export function savePublicCatalogSettings() {
+    const phone = document.getElementById("publicCatalogPhone").value.trim();
+    state.publicCatalogPhone = phone;
+    const targetRef = state.originalDocRef || state.docRef;
+    if (targetRef) {
+      targetRef
+        .set({ publicCatalogPhone: phone, businessName: state.businessName || "" }, { merge: true })
+        .catch((e) => console.error("Katalog ayarları kaydedilemedi", e));
+    }
+    showToast(state.t("publicCatalogSaved"), "success");
+  }
+
+export function renderPublicCatalogSettings() {
+    const toggle = document.getElementById("publicCatalogToggle");
+    if (!toggle) return;
+    toggle.checked = !!state.publicCatalogEnabled;
+    document.getElementById("publicCatalogConfig").style.display = state.publicCatalogEnabled ? "block" : "none";
+    document.getElementById("publicCatalogPhone").value = state.publicCatalogPhone || "";
+    if (state.publicCatalogEnabled) renderPublicCatalogLink();
+  }
+
+function renderPublicCatalogLink() {
+    const linkEl = document.getElementById("publicCatalogLink");
+    if (!linkEl) return;
+    const targetRef = state.originalDocRef || state.docRef;
+    if (!targetRef) return;
+    const businessId = targetRef.id;
+    const currentUrl = new URL(window.location.href);
+    const baseUrl = currentUrl.href.replace(/index\.html.*$/, "").replace(/\/$/, "");
+    linkEl.value = `${baseUrl}/katalog.html?id=${businessId}`;
+  }
+
+export function copyPublicCatalogLink() {
+    const linkEl = document.getElementById("publicCatalogLink");
+    if (!linkEl || !linkEl.value) return;
+    navigator.clipboard
+      .writeText(linkEl.value)
+      .then(() => showToast(state.t("linkCopied"), "success"))
+      .catch(() => {});
+  }
+
 export function initSettings() {
     let theme = "light";
     let navPosition = "bottom";

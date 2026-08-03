@@ -3,7 +3,7 @@ import { forgotPassword, importLocalBackup, load, logout, registerPeriodicSync, 
 import { showToast } from './02-utils.js';
 import { addStaffMember, enterAsOwner, saveOwnerPin, staffPickerGoBack, submitStaffPickerPin, switchUser } from './03-staff-roles.js';
 import { saveFiscalSettings, toggleFiscalEnabled } from './04-fiscal.js';
-import { addCaseBarcodeEntry, addExtraBarcode, addPendingCaseBarcode, addPendingExtraBarcode, addProduct, adjustQty, closeModal, deleteProduct, handleCsvImportFile, printAllQrCodes, printQr, printSelfSourceList, resetAll, saveEdit, setQtyManually, translateMissingProductNames } from './05-products.js';
+import { addCaseBarcodeEntry, addExtraBarcode, addPendingCaseBarcode, addPendingExtraBarcode, addProduct, addWarehouseStock, adjustQty, closeModal, deleteProduct, handleCsvImportFile, printAllQrCodes, printQr, printSelfSourceList, resetAll, saveEdit, setQtyManually, transferToShelf, translateMissingProductNames } from './05-products.js';
 import { addCustomer, closeCustomerModal, deleteCustomer, recordPayment, renderVeresiyeCustomerResults, saveCustomerEdit } from './06-veresiye.js';
 import { clearCart, closeQuickBarcodeScan, completeSale, openQuickBarcodeScan, renderCart, renderManualAddResults, setPaymentType, startScan, startScanKasa, stopScan, stopScanKasa } from './07-kasa-checkout.js';
 import { closeReturnModal, confirmReturn, renderSales } from './08-sales-returns.js';
@@ -16,7 +16,7 @@ import { createAdminBusiness } from './14-admin-panel.js';
 import { confirmVoiceAction, hideVoiceCommandConfirm, setVoiceLang, startVoiceCommand, startVoiceInput } from './15-voice-commands.js';
 import { addAllBulkScanProducts, applyInvoiceScan, checkForLaunchedFile, checkForNoteTakingLaunch, checkForProtocolLaunch, checkForSharedPhoto, closeBulkScanModal, closeInvoiceScanModal, handleInvoicePhotos, handleShelfPhotos } from './16-bulk-scan-ai.js';
 import { askAiAdvisor, createOrderFromEngine, printOrderEngineList, renderOrderEngine } from './17-ai-panel.js';
-import { applyFontSize, applyNavPosition, applyScanCooldown, applyScanFps, applySimpleMode, applyTheme, downloadBackup, initSettings, sendFeedback } from './18-settings-backup.js';
+import { applyFontSize, applyNavPosition, applyScanCooldown, applyScanFps, applySimpleMode, applyTheme, copyPublicCatalogLink, downloadBackup, initSettings, savePublicCatalogSettings, sendFeedback, togglePublicCatalog } from './18-settings-backup.js';
 import { finishOnboarding, onboardingNext } from './19-onboarding.js';
 import { renderAll, switchTab } from './20-navigation.js';
 
@@ -96,6 +96,8 @@ document.getElementById("deleteProductBtn").addEventListener("click", () => {
   });
 
 document.getElementById("printQrBtn").addEventListener("click", printQr);
+document.getElementById("addWarehouseStockBtn").addEventListener("click", addWarehouseStock);
+document.getElementById("transferToShelfBtn").addEventListener("click", transferToShelf);
 
 document.getElementById("printAllQrBtn").addEventListener("click", printAllQrCodes);
 
@@ -322,6 +324,9 @@ document.getElementById("closeBranchEditModalBtn").addEventListener("click", clo
 
 document.getElementById("supplierAddBtn").addEventListener("click", addSupplier);
 document.getElementById("expenseAddBtn").addEventListener("click", addExpense);
+document.getElementById("publicCatalogToggle").addEventListener("change", (e) => togglePublicCatalog(e.target.checked));
+document.getElementById("savePublicCatalogBtn").addEventListener("click", savePublicCatalogSettings);
+document.getElementById("copyPublicCatalogLinkBtn").addEventListener("click", copyPublicCatalogLink);
 
 document.getElementById("addSuggestedSuppliersBtn").addEventListener("click", addSuggestedSuppliers);
 
