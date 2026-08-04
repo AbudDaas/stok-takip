@@ -525,6 +525,27 @@ export function handleLogoUpload(file) {
     reader.readAsDataURL(file);
   }
 
+export function resetBrandIdentity() {
+    const confirmed = confirm(state.t("resetBrandIdentityConfirm"));
+    if (!confirmed) return;
+
+    state.businessName = "";
+    state.businessLogo = "";
+    state.brandColor = "#1F3864";
+    applyBrandColor("#1F3864");
+
+    const targetRef = state.originalDocRef || state.docRef;
+    if (targetRef) {
+      targetRef
+        .set({ businessName: "", businessLogo: "", brandColor: "#1F3864" }, { merge: true })
+        .catch((e) => console.error("Marka kimliği sıfırlanamadı", e));
+    }
+    renderBrandIdentitySettings();
+    const logoInput = document.getElementById("businessLogoInput");
+    if (logoInput) logoInput.value = "";
+    showToast(state.t("brandIdentityReset"), "success");
+  }
+
 export function saveBrandIdentity() {
     const name = document.getElementById("businessNameInput").value.trim();
     const color = document.getElementById("brandColorInput").value;
