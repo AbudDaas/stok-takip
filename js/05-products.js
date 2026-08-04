@@ -125,6 +125,8 @@ export function addProduct() {
 
     const newProduct = mkProduct(name, category, qty, min, price, barcode, unit, costPrice);
     newProduct.supplierId = supplierInput.value || null;
+    const scaleCodeInput = document.getElementById("newScaleCode");
+    if (scaleCodeInput && scaleCodeInput.value.trim()) newProduct.teraziKodu = scaleCodeInput.value.trim();
     if (state.pendingExtraBarcodes.length) newProduct.extraBarcodes = [...state.pendingExtraBarcodes];
     if (state.pendingCaseBarcodes.length) newProduct.caseBarcodes = [...state.pendingCaseBarcodes];
 
@@ -139,6 +141,7 @@ export function addProduct() {
     barcodeInput.value = "";
     unitInput.value = "adet";
     supplierInput.value = "";
+    if (scaleCodeInput) scaleCodeInput.value = "";
     state.pendingExtraBarcodes = [];
     state.pendingCaseBarcodes = [];
     renderPendingExtraBarcodesList();
@@ -228,6 +231,7 @@ export function saveEdit() {
     p.bulkDiscountType = document.getElementById("editBulkType").value;
     p.bulkDiscountValue = Number(document.getElementById("editBulkValue").value) || 0;
     p.supplierId = document.getElementById("editSupplierId").value || null;
+    p.teraziKodu = document.getElementById("editScaleCode").value.trim() || null;
     // Not: koli barkodları artık "Koli Barkodu Ekle" butonuyla doğrudan
     // p.caseBarcodes listesine ekleniyor/çıkarılıyor, burada ayrıca
     // kaydetmeye gerek yok.
@@ -391,6 +395,7 @@ export function openModal(id) {
     document.getElementById("editBulkType").value = p.bulkDiscountType || "percent";
     document.getElementById("editBulkValue").value = p.bulkDiscountValue || "";
     populateEditSupplierSelect(p.supplierId);
+    document.getElementById("editScaleCode").value = p.teraziKodu || "";
     document.getElementById("editCaseBarcode").value = "";
     document.getElementById("editCaseQty").value = "";
     renderExtraBarcodesList();
@@ -712,6 +717,37 @@ export function findProductByScan(code) {
     return state.products.find(
       (p) => p.id === code || (p.barcode && p.barcode === code) || (Array.isArray(p.extraBarcodes) && p.extraBarcodes.includes(code))
     );
+  }
+
+/**
+ * Terazi barkodunu çözer. Ayarlarda belirlenen (ön ek, ürün kodu uzunluğu,
+ * ağırlık alanı uzunluğu) yapılandırmaya göre barkodu parçalara ayırır,
+ * ürün kodunu bizim ürünlerimizden birinin "teraziKodu" alanıyla eşleştirir,
+ * ağırlığı (gram) kg'ye çevirir.
+ *
+ * NOT: Terazi markaları arasında format farklılık gösterebilir — bu yüzden
+ * ayarlardan değiştirilebilir yaptık. Varsayılan: "20" ön eki + 5 haneli
+ * ürün kodu + 5 haneli gram ağırlığı + 1 haneli kontrol rakamı = 13 hane.
+ */
+export function parseScaleBarcode(code) {
+    if (!state.scaleBarcodeEnabled) return null;
+    const prefix = state.scaleBarcodePrefix || "20";
+    const codeLength = state.scaleBarcodeCodeLength || 5;
+    const weightLength = state.scaleBarcodeWeightLength || 5;
+    const expectedLength = prefix.length + codeLength + weightLength + 1;
+
+    if (!code || code.length !== expectedLength) return null;
+    if (!code.startsWith(prefix)) return null;
+
+    const productCode = code.slice(prefix.length, prefix.length + codeLength);
+    const weightStr = code.slice(prefix.length + codeLength, prefix.length + codeLength + weightLength);
+    const weightGrams = parseInt(weightStr, 10);
+    if (isNaN(weightGrams) || weightGrams <= 0) return null;
+
+    const product = state.products.find((p) => p.teraziKodu && p.teraziKodu === productCode);
+    if (!product) return null;
+
+    return { product, weightKg: Math.round((weightGrams / 1000) * 1000) / 1000 };
   }
 
 export function findProductByCaseScan(code) {

@@ -182,6 +182,8 @@
             <i class="fa-solid fa-barcode" aria-hidden="true"></i>
           </button>
         </div>
+        <label class="field-label" data-i18n="scaleCodeLabel">Terazi Kodu (opsiyonel, sadece kg ile satılan ürünler için)</label>
+        <input id="newScaleCode" type="text" maxlength="8" data-i18n-placeholder="scaleCodePh" placeholder="Terazide bu ürüne verdiğin kod" />
         <label class="field-label" data-i18n="editSupplierLabel">Tedarikçi (opsiyonel)</label>
         <select id="newSupplierId">
           <option value="" data-i18n="editSupplierNone">Tedarikçi seçilmedi</option>
@@ -942,6 +944,26 @@
       </div>
 
       <div class="card">
+        <p class="card-title" data-i18n="scaleBarcodeTitle">⚖️ Terazi Barkodu</p>
+        <p class="card-subtitle" data-i18n="scaleBarcodeSubtitle">Kasap/manav/şarküteri terazinden çıkan barkodu otomatik çözer — ürünü ve ağırlığını (kg) sepete otomatik ekler. Terazi markasına göre format değişebilir, gerekirse aşağıdaki değerleri ayarla.</p>
+        <label class="checkbox-row">
+          <input id="scaleBarcodeToggle" type="checkbox" />
+          <span data-i18n="scaleBarcodeEnableLabel">Terazi barkodu okumayı aktif et</span>
+        </label>
+        <div id="scaleBarcodeConfig" style="display:none; margin-top:10px;">
+          <label class="field-label" data-i18n="scaleBarcodePrefixLabel">Ön Ek (varsayılan: 20)</label>
+          <input id="scaleBarcodePrefix" type="text" maxlength="4" placeholder="20" />
+          <label class="field-label" data-i18n="scaleBarcodeCodeLengthLabel">Ürün Kodu Uzunluğu (varsayılan: 5)</label>
+          <input id="scaleBarcodeCodeLength" type="number" min="1" max="8" placeholder="5" />
+          <label class="field-label" data-i18n="scaleBarcodeWeightLengthLabel">Ağırlık Alanı Uzunluğu (varsayılan: 5, gram cinsinden)</label>
+          <input id="scaleBarcodeWeightLength" type="number" min="1" max="8" placeholder="5" />
+          <button id="saveScaleBarcodeSettingsBtn" class="btn btn-primary btn-block" style="margin-top:8px;">
+            <i class="fa-solid fa-floppy-disk" aria-hidden="true"></i> <span data-i18n="saveBtn">Kaydet</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="card">
         <p class="card-title" data-i18n="publicCatalogTitle">🛍️ Herkese Açık Katalog</p>
         <p class="card-subtitle" data-i18n="publicCatalogSubtitle">Açarsan, müşterilerin (giriş yapmadan) ürün/fiyat listeni görebileceği, WhatsApp'tan sipariş verebileceği bir sayfa oluşur. Maliyet, barkod gibi bilgiler ASLA paylaşılmaz — sadece ürün adı, kategori ve fiyat görünür.</p>
         <label class="checkbox-row">
@@ -1295,6 +1317,8 @@
               <i class="fa-solid fa-barcode" aria-hidden="true"></i>
             </button>
           </div>
+          <label class="field-label" data-i18n="scaleCodeLabel">Terazi Kodu (opsiyonel, sadece kg ile satılan ürünler için)</label>
+          <input id="editScaleCode" type="text" maxlength="8" data-i18n-placeholder="scaleCodePh" placeholder="Terazide bu ürüne verdiğin kod" />
           <label class="field-label" data-i18n="extraBarcodesLabel">Ek Barkodlar (opsiyonel)</label>
           <p class="card-subtitle" data-i18n="extraBarcodesSubtitle" style="margin-top:0;">Aynı ürünün farklı çeşitleri/ambalajları varsa, hepsinin barkodunu buraya ekle — hangisini okutursan okut bu ürün eşleşir.</p>
           <div id="extraBarcodesList" class="list" style="margin-bottom:8px;"></div>

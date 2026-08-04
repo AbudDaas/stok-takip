@@ -13,7 +13,7 @@ import { renderReminders } from './10-reminders.js';
 import { renderBreadStatus, renderPriceChanges } from './11-bread-orders.js';
 import { loadBranches, renderCatalogList } from './13-branches-chain.js';
 import { renderAiPanel } from './17-ai-panel.js';
-import { loadAutoBackups, renderDataSize, renderLoyaltySettings, renderPublicCatalogSettings } from './18-settings-backup.js';
+import { loadAutoBackups, renderDataSize, renderLoyaltySettings, renderPublicCatalogSettings, renderScaleBarcodeSettings } from './18-settings-backup.js';
 
 export function renderAll() {
     const searchEl = document.getElementById("searchBox");
@@ -108,6 +108,7 @@ export function renderAll() {
     renderExpenses();
     renderPublicCatalogSettings();
     renderLoyaltySettings();
+    renderScaleBarcodeSettings();
     renderBreadStatus();
     renderPriceChanges();
     renderAuditLog();

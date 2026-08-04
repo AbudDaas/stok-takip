@@ -3,7 +3,7 @@ import { locale, save } from './01-firebase-core.js';
 import { escapeHtml, formatQty, formatTL, genId, showPrompt, showToast } from './02-utils.js';
 import { logAudit } from './03-staff-roles.js';
 import { attemptSendToFiscalProvider } from './04-fiscal.js';
-import { adjustQty, findProductByCaseScan, findProductByScan, getDisplayName, updateOutOfStockTracking } from './05-products.js';
+import { adjustQty, findProductByCaseScan, findProductByScan, getDisplayName, parseScaleBarcode, updateOutOfStockTracking } from './05-products.js';
 import { measurePerf } from './22-perf-logger.js';
 import { clearVeresiyeCustomerSelection, earnLoyaltyPoints, redeemLoyaltyPoints } from './06-veresiye.js';
 import { findGiftCardByCode, redeemGiftCard } from './23-giftcards.js';
@@ -293,6 +293,20 @@ export function playBeepSound() {
 
 export function onScanSuccessKasa(decodedText) {
     if (state.kasaScanCooldown) return;
+
+    // Terazi barkodu mu diye bak — kasap/manav/şarküteri terazisinden çıkan
+    // barkod, ürünü VE ağırlığını (kg) kendi içinde taşıyor.
+    const scaleMatch = parseScaleBarcode(decodedText);
+    if (scaleMatch) {
+      playBeepSound();
+      addToCart(scaleMatch.product, scaleMatch.weightKg);
+      state.kasaScanCooldown = true;
+      showKasaScanFeedback(`${scaleMatch.product.name} (${scaleMatch.weightKg} ${state.t("unitKgShort")})`);
+      setTimeout(() => {
+        state.kasaScanCooldown = false;
+      }, state.scanCooldownMs || 3000);
+      return;
+    }
 
     const caseMatch = findProductByCaseScan(decodedText);
     if (caseMatch) {

@@ -372,6 +372,41 @@ export function renderLoyaltySettings() {
     document.getElementById("loyaltyRedeemRate").value = state.loyaltyRedeemRate || 10;
   }
 
+export function toggleScaleBarcodeEnabled(checked) {
+    state.scaleBarcodeEnabled = checked;
+    document.getElementById("scaleBarcodeConfig").style.display = checked ? "block" : "none";
+    const targetRef = state.originalDocRef || state.docRef;
+    if (targetRef) {
+      targetRef.set({ scaleBarcodeEnabled: checked }, { merge: true }).catch((e) => console.error("Terazi ayarı kaydedilemedi", e));
+    }
+  }
+
+export function saveScaleBarcodeSettings() {
+    const prefix = document.getElementById("scaleBarcodePrefix").value.trim() || "20";
+    const codeLength = Number(document.getElementById("scaleBarcodeCodeLength").value) || 5;
+    const weightLength = Number(document.getElementById("scaleBarcodeWeightLength").value) || 5;
+    state.scaleBarcodePrefix = prefix;
+    state.scaleBarcodeCodeLength = codeLength;
+    state.scaleBarcodeWeightLength = weightLength;
+    const targetRef = state.originalDocRef || state.docRef;
+    if (targetRef) {
+      targetRef
+        .set({ scaleBarcodePrefix: prefix, scaleBarcodeCodeLength: codeLength, scaleBarcodeWeightLength: weightLength }, { merge: true })
+        .catch((e) => console.error("Terazi ayarları kaydedilemedi", e));
+    }
+    showToast(state.t("scaleBarcodeSettingsSaved"), "success");
+  }
+
+export function renderScaleBarcodeSettings() {
+    const toggle = document.getElementById("scaleBarcodeToggle");
+    if (!toggle) return;
+    toggle.checked = !!state.scaleBarcodeEnabled;
+    document.getElementById("scaleBarcodeConfig").style.display = state.scaleBarcodeEnabled ? "block" : "none";
+    document.getElementById("scaleBarcodePrefix").value = state.scaleBarcodePrefix || "20";
+    document.getElementById("scaleBarcodeCodeLength").value = state.scaleBarcodeCodeLength || 5;
+    document.getElementById("scaleBarcodeWeightLength").value = state.scaleBarcodeWeightLength || 5;
+  }
+
 export function initSettings() {
     let theme = "light";
     let navPosition = "bottom";

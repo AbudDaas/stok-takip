@@ -125,6 +125,10 @@ export function attachFirestoreListener() {
           state.loyaltyEarnRate = data.loyaltyEarnRate || 10;
           state.loyaltyRedeemRate = data.loyaltyRedeemRate || 10;
           state.giftCards = data.giftCards || [];
+          state.scaleBarcodeEnabled = data.scaleBarcodeEnabled || false;
+          state.scaleBarcodePrefix = data.scaleBarcodePrefix || "20";
+          state.scaleBarcodeCodeLength = data.scaleBarcodeCodeLength || 5;
+          state.scaleBarcodeWeightLength = data.scaleBarcodeWeightLength || 5;
 
           // ---- Çakışma tespiti ----
           // Bu koda ulaşan her anlık görüntü, KENDİ yazdığımız bir kayıt
