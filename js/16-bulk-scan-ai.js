@@ -312,13 +312,23 @@ export function analyzeOneInvoicePhoto(file) {
       '- name: SADECE ürünün gerçek adı (faturada yazdığı gibi, örn. "Pepsi 1 Lt"). Faturada ürün adından ÖNCE gelen sıra numarası, stok kodu, satır numarası gibi rakamları/kodları KESİNLİKLE dahil etme — sadece ürünü tanımlayan gerçek ismi al.',
       "- qty: yukarıdaki mantığa göre hesapladığın GERÇEK TEKİL ADET sayısı (sayı olarak)",
       "- unitCost: TEKİL ADET başına, İSKONTO DÜŞÜLMÜŞ ve KDV HARİÇ alış fiyatı (sayı olarak). Faturada kutu/koli fiyatı yazıyorsa, bunu senin hesapladığın gerçek adet sayısına bölerek adet başı fiyatı bul.",
+      "",
+      "BİRİM (unit) — ÇOK ÖNEMLİ:",
+      'Ürün TANE/PAKET olarak mı satılıyor yoksa AĞIRLIK (kilogram) olarak mı satılıyor tespit et. unit alanına SADECE "adet" ya da "kg" yaz.',
+      'Faturada ağırlık birimini gösteren KISALTMALARA dikkat et — bunlar farklı dillerde farklı görünebilir:',
+      '- Türkçe: "kg", "kilogram", "KG"',
+      '- Arapça: "كغ" (kilogram kısaltması), "كيلو", "كجم" — bunların HEPSİ "kg" demektir, "adet" DEĞİL.',
+      '- İngilizce: "kg", "kgs"',
+      'Örneğin faturada "5 كغ" yazıyorsa, bu ürünün 5 KİLOGRAM olduğu anlamına gelir — bunu "1 adet" gibi YANLIŞ yorumlama. Böyle bir durumda qty alanına 5 (kilogram miktarı), unit alanına "kg" yaz.',
+      'Birim belirtilmemişse veya net değilse, varsayılan olarak "adet" kullan.',
+      "",
       "- kdvRate: bu satır/fatura için geçerli KDV oranı (sayı olarak, örn. 10 ya da 20). Faturada belirtilmiyorsa null bırak.",
       "- discountApplied: bu satıra bir iskonto uygulandıysa true, uygulanmadıysa false.",
       "- unitNote: emin olamadığın durumlar için kısa bir not (varsa), yoksa boş bırak",
       "- barcode: Bu ürün satırının yanında bir barkod (çizgili kod ya da altındaki rakamlar) ya da QR kod NET olarak basılıysa oku ve buraya yaz. Görünmüyorsa ya da emin değilsen boş string (\"\") bırak — ASLA rakam uydurma.",
       "",
       "SADECE geçerli bir JSON dizisi döndür, başka hiçbir açıklama veya metin ekleme.",
-      'Format: [{"name":"...","qty":24,"unitCost":16.5,"kdvRate":10,"discountApplied":true,"unitNote":"","barcode":""}]',
+      'Format: [{"name":"...","qty":24,"unit":"adet","unitCost":16.5,"kdvRate":10,"discountApplied":true,"unitNote":"","barcode":""}]',
       "Ürün satırı olmayan (fatura toplamı, tarih, firma bilgisi gibi) satırları dahil etme — ama KDV oranı ve iskonto bilgisini, ait olduğu ürün satırına yukarıdaki gibi işleyerek kullan."
     ].join("\n");
 
@@ -367,9 +377,10 @@ export function handleInvoicePhotos(files) {
           if (!line.name) return;
           const key = line.name.trim().toLowerCase();
           if (!merged[key]) {
-            merged[key] = { name: line.name, qty: 0, unitCost: line.unitCost || 0, unitNote: line.unitNote || "", barcode: line.barcode || "", kdvRate: line.kdvRate || null, discountApplied: !!line.discountApplied };
+            merged[key] = { name: line.name, qty: 0, unit: line.unit === "kg" ? "kg" : "adet", unitCost: line.unitCost || 0, unitNote: line.unitNote || "", barcode: line.barcode || "", kdvRate: line.kdvRate || null, discountApplied: !!line.discountApplied };
           }
           merged[key].qty += Number(line.qty) || 0;
+          if (line.unit === "kg") merged[key].unit = "kg";
           if (line.unitCost) merged[key].unitCost = line.unitCost;
           if (line.unitNote) merged[key].unitNote = line.unitNote;
           if (line.barcode) merged[key].barcode = line.barcode;
@@ -386,6 +397,7 @@ export function handleInvoicePhotos(files) {
           return {
             name: line.name,
             qty: line.qty,
+            unit: line.unit,
             unitCost: line.unitCost,
             unitNote: line.unitNote,
             barcode: line.barcode,
@@ -460,7 +472,7 @@ export function renderInvoiceScanModal() {
             <input type="checkbox" class="invoice-result-check" data-index="${i}" ${isChecked ? "checked" : ""} />
             <div class="bulk-result-info">
               <p class="bulk-result-name">${escapeHtml(item.name)}</p>
-              <p class="bulk-result-meta">${item.qty} adet${costStr ? " · Geliş: " + costStr : ""}${priceStr ? " · Satış: <span class=\"invoice-price-preview\" data-index=\"" + i + "\">" + priceStr + "</span>" : ""}</p>
+              <p class="bulk-result-meta">${item.qty} ${item.unit === "kg" ? state.t("unitKgShort") : "adet"}${costStr ? " · Geliş: " + costStr : ""}${priceStr ? " · Satış: <span class=\"invoice-price-preview\" data-index=\"" + i + "\">" + priceStr + "</span>" : ""}</p>
               ${noteHtml}
               ${barcodeHtml}
               ${kdvHtml}
@@ -540,7 +552,7 @@ export function applyInvoiceScan() {
         const costPrice = item.unitCost || 0;
         const price = costPrice ? calcSellingPrice(costPrice, item.markupPercent) : 0;
         const shelfQty = destination === "depo" ? 0 : item.qty;
-        const newProduct = mkProduct(item.name, state.t("categoryOtherDefault"), shelfQty, 5, price, item.barcode || "", "adet", costPrice);
+        const newProduct = mkProduct(item.name, state.t("categoryOtherDefault"), shelfQty, 5, price, item.barcode || "", item.unit === "kg" ? "kg" : "adet", costPrice);
         if (destination === "depo") newProduct.warehouseQty = item.qty;
         state.products.push(newProduct);
       }
