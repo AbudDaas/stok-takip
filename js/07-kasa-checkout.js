@@ -428,14 +428,19 @@ export function getBulkDiscountForItem(item) {
     if (!p || !p.bulkDiscountQty || !p.bulkDiscountValue) return null;
     if (item.qty < p.bulkDiscountQty) return null;
 
-    let perUnitDiscount;
+    const lineTotal = item.price * item.qty;
+    let totalDiscount;
     if (p.bulkDiscountType === "amount") {
-      perUnitDiscount = p.bulkDiscountValue;
+      // "Tutar" tipi artık ADET BAŞINA değil — girilen değer, bu ürün
+      // satırının TOPLAMINDAN düşülen sabit bir indirim (örn. "24 adet
+      // alana toplamdan 50 TL indirim" gibi).
+      totalDiscount = p.bulkDiscountValue;
     } else {
-      perUnitDiscount = item.price * (p.bulkDiscountValue / 100);
+      totalDiscount = lineTotal * (p.bulkDiscountValue / 100);
     }
-    perUnitDiscount = Math.min(perUnitDiscount, item.price);
-    return { perUnitDiscount, totalDiscount: perUnitDiscount * item.qty };
+    totalDiscount = Math.min(totalDiscount, lineTotal);
+    const perUnitDiscount = totalDiscount / item.qty;
+    return { perUnitDiscount, totalDiscount };
   }
 
 export function calcLineTotal(item) {
