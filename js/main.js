@@ -17,7 +17,7 @@ import { createAdminBusiness } from './14-admin-panel.js';
 import { confirmVoiceAction, hideVoiceCommandConfirm, setVoiceLang, startVoiceCommand, startVoiceInput } from './15-voice-commands.js';
 import { addAllBulkScanProducts, applyInvoiceScan, checkForLaunchedFile, checkForNoteTakingLaunch, checkForProtocolLaunch, checkForSharedPhoto, closeBulkScanModal, closeInvoiceScanModal, handleInvoicePhotos, handleShelfPhotos, setInvoiceScanDestination } from './16-bulk-scan-ai.js';
 import { askAiAdvisor, createOrderFromEngine, printOrderEngineList, renderOrderEngine } from './17-ai-panel.js';
-import { applyFontSize, applyNavPosition, applyScanCooldown, applyScanFps, applySimpleMode, applyTheme, copyPublicCatalogLink, downloadBackup, initSettings, saveLoyaltySettings, savePublicCatalogSettings, saveScaleBarcodeSettings, sendFeedback, toggleLoyalty, togglePublicCatalog, toggleScaleBarcodeEnabled } from './18-settings-backup.js';
+import { applyFontSize, applyNavPosition, applyScanCooldown, applyScanFps, applySimpleMode, applyTheme, closeBusinessLocationModal, confirmBusinessLocation, copyPublicCatalogLink, downloadBackup, initSettings, openBusinessLocationPicker, saveDeliverySettings, saveLoyaltySettings, savePublicCatalogSettings, saveScaleBarcodeSettings, sendFeedback, toggleLoyalty, togglePublicCatalog, toggleScaleBarcodeEnabled } from './18-settings-backup.js';
 import { finishOnboarding, onboardingNext } from './19-onboarding.js';
 import { renderAll, switchTab } from './20-navigation.js';
 
@@ -339,6 +339,10 @@ document.getElementById("loyaltyToggle").addEventListener("change", (e) => toggl
 document.getElementById("saveLoyaltySettingsBtn").addEventListener("click", saveLoyaltySettings);
 document.getElementById("scaleBarcodeToggle").addEventListener("change", (e) => toggleScaleBarcodeEnabled(e.target.checked));
 document.getElementById("saveScaleBarcodeSettingsBtn").addEventListener("click", saveScaleBarcodeSettings);
+document.getElementById("setBusinessLocationBtn").addEventListener("click", openBusinessLocationPicker);
+document.getElementById("closeBusinessLocationModalBtn").addEventListener("click", closeBusinessLocationModal);
+document.getElementById("confirmBusinessLocationBtn").addEventListener("click", confirmBusinessLocation);
+document.getElementById("saveDeliverySettingsBtn").addEventListener("click", saveDeliverySettings);
 
 document.getElementById("addSuggestedSuppliersBtn").addEventListener("click", addSuggestedSuppliers);
 

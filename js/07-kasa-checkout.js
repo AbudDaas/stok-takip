@@ -69,8 +69,15 @@ export function showKgOrPricePrompt(productName, pricePerKg) {
           cleanup(null);
           return;
         }
-        const weightInKg = mode === "kg" ? value : value / pricePerKg;
-        cleanup(Math.round(weightInKg * 1000) / 1000);
+        if (mode === "kg") {
+          cleanup({ weightKg: Math.round(value * 1000) / 1000, exactTotal: null });
+        } else {
+          const weightInKg = value / pricePerKg;
+          // Ağırlığı yuvarlıyoruz (envanter/görüntüleme için) ama girilen
+          // TAM tutarı da ayrıca döndürüyoruz — sepete o tam tutar
+          // yazılacak, yuvarlanmış ağırlıktan yeniden hesaplanmayacak.
+          cleanup({ weightKg: Math.round(weightInKg * 1000) / 1000, exactTotal: value });
+        }
       }
       function onCancel() {
         cleanup(null);
@@ -327,16 +334,17 @@ export function onScanSuccessKasa(decodedText) {
     }
 
     if (p.unit === "kg") {
-      showKgOrPricePrompt(p.name, p.price).then((weight) => {
-        if (weight === null) return;
-        if (!weight || weight <= 0) {
+      showKgOrPricePrompt(p.name, p.price).then((result) => {
+        if (result === null) return;
+        const { weightKg, exactTotal } = result;
+        if (!weightKg || weightKg <= 0) {
           showToast(state.t("alertInvalidWeight"), "error");
           return;
         }
         playBeepSound();
-        addToCart(p, weight);
+        addToCart(p, weightKg, exactTotal);
         state.kasaScanCooldown = true;
-        showKasaScanFeedback(`${p.name} (${weight} ${state.t("unitKgShort")})`);
+        showKasaScanFeedback(`${p.name} (${weightKg} ${state.t("unitKgShort")})`);
         setTimeout(() => {
           state.kasaScanCooldown = false;
         }, state.scanCooldownMs || 3000);
@@ -375,13 +383,14 @@ export function manualAddToCart(productId) {
     if (!p) return;
 
     if (p.unit === "kg") {
-      showKgOrPricePrompt(p.name, p.price).then((weight) => {
-        if (weight === null) return;
-        if (!weight || weight <= 0) {
+      showKgOrPricePrompt(p.name, p.price).then((result) => {
+        if (result === null) return;
+        const { weightKg, exactTotal } = result;
+        if (!weightKg || weightKg <= 0) {
           showToast(state.t("alertInvalidAmount"), "error");
           return;
         }
-        addToCart(p, weight);
+        addToCart(p, weightKg, exactTotal);
         document.getElementById("manualAddSearch").value = "";
         renderManualAddResults();
       });
@@ -459,18 +468,32 @@ export function getBulkDiscountForItem(item) {
   }
 
 export function calcLineTotal(item) {
+    if (item.fixedTotal != null) return item.fixedTotal;
     const base = item.price * item.qty;
     const bulkDiscount = getBulkDiscountForItem(item);
     return bulkDiscount ? base - bulkDiscount.totalDiscount : base;
   }
 
-export function addToCart(p, amount) {
+export function addToCart(p, amount, exactTotal) {
     amount = amount || 1;
     const existing = state.cart.find((c) => c.productId === p.id);
     if (existing) {
+      const previousTotal = calcLineTotal(existing);
       existing.qty = Math.round((existing.qty + amount) * 1000) / 1000;
+      if (exactTotal != null) {
+        // Önceki satırın toplamına, bu eklemenin TAM OLARAK girilen
+        // tutarını ekliyoruz — yuvarlanmış ağırlıktan yeniden hesaplamıyoruz.
+        existing.fixedTotal = previousTotal + exactTotal;
+      } else if (existing.fixedTotal != null) {
+        // Yeni ekleme normal (ağırlıkla) yapıldıysa ama önceki satırda sabit
+        // bir toplam varsa, o sabit toplamın üzerine normal hesaplanan
+        // kısmı ekliyoruz.
+        existing.fixedTotal = previousTotal + existing.price * amount;
+      }
     } else {
-      state.cart.push({ productId: p.id, name: p.name, price: p.price, qty: amount, unit: p.unit || "adet" });
+      const newItem = { productId: p.id, name: p.name, price: p.price, qty: amount, unit: p.unit || "adet" };
+      if (exactTotal != null) newItem.fixedTotal = exactTotal;
+      state.cart.push(newItem);
     }
     renderCart();
   }
@@ -488,13 +511,19 @@ export function adjustCartQty(productId, delta) {
 export function editCartWeight(productId) {
     const item = state.cart.find((c) => c.productId === productId);
     if (!item) return;
-    showKgOrPricePrompt(item.name, item.price).then((weight) => {
-      if (weight === null) return;
-      if (!weight || weight <= 0) {
+    showKgOrPricePrompt(item.name, item.price).then((result) => {
+      if (result === null) return;
+      const { weightKg, exactTotal } = result;
+      if (!weightKg || weightKg <= 0) {
         removeCartItem(productId);
         return;
       }
-      item.qty = Math.round(weight * 1000) / 1000;
+      item.qty = Math.round(weightKg * 1000) / 1000;
+      if (exactTotal != null) {
+        item.fixedTotal = exactTotal;
+      } else {
+        delete item.fixedTotal;
+      }
       renderCart();
     });
   }

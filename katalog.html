@@ -5,98 +5,110 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Ürün Kataloğu</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <style>
     * { box-sizing: border-box; }
     body {
       font-family: -apple-system, "Segoe UI", Arial, sans-serif;
       background: #f4f5f7;
       margin: 0;
-      padding: 16px;
+      padding: 16px 16px 90px;
       color: #222;
     }
-    .header {
-      text-align: center;
-      padding: 20px 0 16px;
-    }
-    .header h1 {
-      font-size: 20px;
-      margin: 0 0 4px;
-      color: #1F3864;
-    }
-    .header p {
-      font-size: 13px;
-      color: #777;
-      margin: 0;
-    }
+    .header { text-align: center; padding: 20px 0 16px; }
+    .header h1 { font-size: 20px; margin: 0 0 4px; color: #1F3864; }
+    .header p { font-size: 13px; color: #777; margin: 0; }
     .search-box {
-      width: 100%;
-      padding: 12px 14px;
-      border-radius: 10px;
-      border: 1px solid #ddd;
-      font-size: 15px;
-      margin-bottom: 16px;
-      background: #fff;
+      width: 100%; padding: 12px 14px; border-radius: 10px;
+      border: 1px solid #ddd; font-size: 15px; margin-bottom: 16px; background: #fff;
     }
     .category-label {
-      font-size: 13px;
-      font-weight: 700;
-      color: #1F3864;
-      margin: 20px 0 8px;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
+      font-size: 13px; font-weight: 700; color: #1F3864;
+      margin: 20px 0 8px; text-transform: uppercase; letter-spacing: 0.5px;
     }
     .product-card {
-      background: #fff;
-      border-radius: 12px;
-      padding: 14px;
-      margin-bottom: 10px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 10px;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+      background: #fff; border-radius: 12px; padding: 14px; margin-bottom: 10px;
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.06);
     }
-    .product-name {
-      font-size: 15px;
-      font-weight: 600;
-      margin: 0;
+    .product-name { font-size: 15px; font-weight: 600; margin: 0; }
+    .product-price { font-size: 14px; color: #1F3864; font-weight: 700; margin: 4px 0 0; }
+    .qty-stepper { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+    .qty-stepper button {
+      width: 32px; height: 32px; border-radius: 8px; border: none;
+      background: #eef0f3; font-size: 16px; cursor: pointer; color: #1F3864;
     }
-    .product-price {
-      font-size: 14px;
-      color: #1F3864;
-      font-weight: 700;
-      margin: 4px 0 0;
+    .qty-stepper button.add-btn { background: #1F3864; color: #fff; }
+    .qty-stepper span { min-width: 20px; text-align: center; font-weight: 600; }
+    .empty-state, .error-state { text-align: center; color: #888; padding: 40px 20px; font-size: 14px; }
+    .loading { text-align: center; padding: 40px 20px; color: #888; }
+
+    .cart-bar {
+      position: fixed; bottom: 0; left: 0; right: 0;
+      background: #1F3864; color: #fff; padding: 14px 18px;
+      display: none; align-items: center; justify-content: space-between;
+      box-shadow: 0 -2px 8px rgba(0,0,0,0.15); z-index: 500;
     }
-    .order-btn {
-      background: #25D366;
-      color: #fff;
-      border: none;
-      border-radius: 8px;
-      padding: 10px 14px;
-      font-size: 13px;
-      font-weight: 600;
-      cursor: pointer;
-      white-space: nowrap;
-      flex-shrink: 0;
+    .cart-bar.show { display: flex; }
+    .cart-bar-info { font-size: 14px; }
+    .cart-bar-total { font-weight: 700; font-size: 16px; }
+    .cart-bar button {
+      background: #25D366; color: #fff; border: none; border-radius: 8px;
+      padding: 10px 16px; font-size: 14px; font-weight: 700; cursor: pointer;
     }
-    .order-btn i { margin-right: 6px; }
-    .empty-state, .error-state {
-      text-align: center;
-      color: #888;
-      padding: 40px 20px;
-      font-size: 14px;
+
+    .sheet-overlay {
+      display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4);
+      z-index: 900; align-items: flex-end; justify-content: center;
     }
-    .loading {
-      text-align: center;
-      padding: 40px 20px;
-      color: #888;
+    .sheet-overlay.show { display: flex; }
+    .sheet {
+      background: #fff; width: 100%; max-width: 480px; border-radius: 18px 18px 0 0;
+      padding: 20px; max-height: 88vh; overflow-y: auto;
     }
+    .sheet h2 { font-size: 17px; margin: 0 0 4px; color: #1F3864; }
+    .sheet-close {
+      position: absolute; top: 14px; right: 18px; background: none; border: none;
+      font-size: 20px; color: #999; cursor: pointer;
+    }
+    .cart-line-row {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 10px 0; border-bottom: 1px solid #f0f0f0;
+    }
+    .cart-line-name { font-size: 14px; font-weight: 600; }
+    .cart-line-price { font-size: 13px; color: #777; }
+    .delivery-choice-row { display: flex; gap: 10px; margin: 14px 0; }
+    .delivery-choice-btn {
+      flex: 1; padding: 14px 8px; border-radius: 12px; border: 2px solid #ddd;
+      background: #fafafa; text-align: center; cursor: pointer; font-size: 13px; font-weight: 600;
+    }
+    .delivery-choice-btn.active { border-color: #1F3864; background: #eef0f8; color: #1F3864; }
+    .delivery-choice-btn i { display: block; font-size: 22px; margin-bottom: 6px; }
+    .address-input {
+      width: 100%; padding: 12px; border-radius: 10px; border: 1px solid #ddd;
+      font-size: 14px; margin-top: 10px; min-height: 60px; font-family: inherit;
+    }
+    .map-btn {
+      width: 100%; padding: 12px; border-radius: 10px; border: none;
+      background: #eef0f3; color: #1F3864; font-weight: 600; margin-top: 10px; cursor: pointer;
+    }
+    #deliveryMap { height: 260px; border-radius: 12px; margin-top: 10px; display: none; }
+    .fee-summary { background: #f8f9fb; border-radius: 10px; padding: 12px; margin-top: 12px; font-size: 14px; }
+    .fee-summary div { display: flex; justify-content: space-between; margin: 4px 0; }
+    .fee-summary .grand-total { font-weight: 700; font-size: 16px; color: #1F3864; border-top: 1px solid #ddd; margin-top: 6px; padding-top: 8px; }
+    .send-order-btn {
+      width: 100%; padding: 14px; border-radius: 10px; border: none;
+      background: #25D366; color: #fff; font-weight: 700; font-size: 15px; margin-top: 14px; cursor: pointer;
+    }
+    .send-order-btn:disabled { background: #ccc; cursor: not-allowed; }
+    .warn-text { color: #c0392b; font-size: 12px; margin-top: 6px; }
   </style>
 </head>
 <body>
   <div class="header">
     <h1 id="businessNameHeader">Ürün Kataloğu</h1>
-    <p data-i18n-static>Sipariş vermek için bir ürüne dokun</p>
+    <p>Sepete ekle, tek seferde gönder</p>
   </div>
 
   <input id="searchBox" class="search-box" type="text" placeholder="Ürün ara..." style="display:none;" />
@@ -105,22 +117,79 @@
     <div class="loading"><i class="fa-solid fa-spinner fa-spin" aria-hidden="true"></i> Yükleniyor...</div>
   </div>
 
+  <div id="cartBar" class="cart-bar">
+    <div class="cart-bar-info">
+      <div id="cartBarCount">0 ürün</div>
+      <div class="cart-bar-total" id="cartBarTotal">0,00 ₺</div>
+    </div>
+    <button id="openCartBtn">Sepeti Gör</button>
+  </div>
+
+  <div id="cartSheetOverlay" class="sheet-overlay">
+    <div class="sheet" style="position:relative;">
+      <button class="sheet-close" id="closeCartSheetBtn">&times;</button>
+      <h2>Sepetin</h2>
+      <div id="cartLinesList"></div>
+
+      <div id="deliveryStep" style="display:none;">
+        <p style="font-weight:600;margin-top:16px;margin-bottom:4px;">Nasıl teslim alacaksın?</p>
+        <div class="delivery-choice-row">
+          <div class="delivery-choice-btn active" id="choosePickupBtn">
+            <i class="fa-solid fa-store" aria-hidden="true"></i>
+            Gelip Alacağım
+          </div>
+          <div class="delivery-choice-btn" id="chooseCourierBtn">
+            <i class="fa-solid fa-motorcycle" aria-hidden="true"></i>
+            Kurye Getirsin
+          </div>
+        </div>
+
+        <div id="courierSection" style="display:none;">
+          <button id="pickOnMapBtn" class="map-btn">
+            <i class="fa-solid fa-location-dot" aria-hidden="true"></i> Haritadan Konumumu İşaretle
+          </button>
+          <div id="deliveryMap"></div>
+          <textarea id="addressTextInput" class="address-input" placeholder="Adresini yazarak da belirtebilirsin (mahalle, sokak, kapı no...)"></textarea>
+          <p id="deliveryWarn" class="warn-text" style="display:none;"></p>
+        </div>
+
+        <div id="feeSummary" class="fee-summary" style="display:none;">
+          <div><span>Ürünler Toplamı</span><span id="feeProductTotal">0,00 ₺</span></div>
+          <div id="feeDeliveryRow" style="display:none;"><span>Teslimat Ücreti</span><span id="feeDeliveryAmount">0,00 ₺</span></div>
+          <div class="grand-total"><span>Toplam</span><span id="feeGrandTotal">0,00 ₺</span></div>
+        </div>
+
+        <button id="sendOrderBtn" class="send-order-btn">
+          <i class="fa-brands fa-whatsapp" aria-hidden="true"></i> Siparişi Gönder
+        </button>
+      </div>
+    </div>
+  </div>
+
   <script src="js/chain-config.js"></script>
   <script>
     let allProducts = [];
     let businessPhone = "";
+    let businessName = "";
+    let businessLat = null;
+    let businessLng = null;
+    let perKmDeliveryFee = 0;
+
+    const cart = {};
+    let deliveryMode = "pickup";
+    let pickedLat = null;
+    let pickedLng = null;
+    let deliveryMap = null;
+    let deliveryMarker = null;
 
     function getQueryParam(name) {
-      const params = new URLSearchParams(window.location.search);
-      return params.get(name);
+      return new URLSearchParams(window.location.search).get(name);
     }
-
     function escapeHtml(s) {
       const div = document.createElement("div");
       div.textContent = s || "";
       return div.innerHTML;
     }
-
     function formatTL(n) {
       return (Number(n) || 0).toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " ₺";
     }
@@ -135,7 +204,6 @@
         return;
       }
 
-      // Kategoriye göre grupla
       const byCategory = {};
       filtered.forEach((p) => {
         const cat = p.category || "Diğer";
@@ -144,38 +212,227 @@
       });
 
       let html = "";
-      Object.keys(byCategory)
-        .sort()
-        .forEach((cat) => {
-          html += `<p class="category-label">${escapeHtml(cat)}</p>`;
-          byCategory[cat].forEach((p) => {
-            const unitLabel = p.unit === "kg" ? "kg" : "adet";
-            html += `
-              <div class="product-card">
-                <div>
-                  <p class="product-name">${escapeHtml(p.name)}</p>
-                  <p class="product-price">${formatTL(p.price)} / ${unitLabel}</p>
-                </div>
-                <button class="order-btn" data-name="${escapeHtml(p.name)}">
-                  <i class="fa-brands fa-whatsapp" aria-hidden="true"></i>Sipariş Ver
-                </button>
-              </div>`;
-          });
-        });
-      contentEl.innerHTML = html;
-
-      contentEl.querySelectorAll(".order-btn").forEach((btn) => {
-        btn.addEventListener("click", () => {
-          const productName = btn.dataset.name;
-          const message = `Merhaba, "${productName}" ürününü sipariş etmek istiyorum.`;
-          if (businessPhone) {
-            const cleanPhone = businessPhone.replace(/[^\d]/g, "");
-            window.open(`https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`, "_blank");
-          } else {
-            alert("Bu işletme için sipariş numarası tanımlanmamış.");
-          }
+      Object.keys(byCategory).sort().forEach((cat) => {
+        html += `<p class="category-label">${escapeHtml(cat)}</p>`;
+        byCategory[cat].forEach((p) => {
+          const unitLabel = p.unit === "kg" ? "kg" : "adet";
+          const qty = cart[p.name] ? cart[p.name].qty : 0;
+          html += `
+            <div class="product-card">
+              <div>
+                <p class="product-name">${escapeHtml(p.name)}</p>
+                <p class="product-price">${formatTL(p.price)} / ${unitLabel}</p>
+              </div>
+              <div class="qty-stepper" data-name="${escapeHtml(p.name)}" data-price="${p.price}" data-unit="${p.unit}">
+                ${qty > 0 ? `<button class="minus-btn">−</button><span>${qty}</span>` : ""}
+                <button class="add-btn">${qty > 0 ? "+" : "Ekle"}</button>
+              </div>
+            </div>`;
         });
       });
+      contentEl.innerHTML = html;
+
+      contentEl.querySelectorAll(".qty-stepper").forEach((el) => {
+        const name = el.dataset.name;
+        const price = Number(el.dataset.price);
+        const unit = el.dataset.unit;
+        const addBtn = el.querySelector(".add-btn");
+        const minusBtn = el.querySelector(".minus-btn");
+        if (addBtn) addBtn.addEventListener("click", () => changeCartQty(name, price, unit, 1));
+        if (minusBtn) minusBtn.addEventListener("click", () => changeCartQty(name, price, unit, -1));
+      });
+    }
+
+    function changeCartQty(name, price, unit, delta) {
+      if (!cart[name]) cart[name] = { qty: 0, price, unit };
+      cart[name].qty += delta;
+      if (cart[name].qty <= 0) delete cart[name];
+      updateCartBar();
+      renderProducts(allProducts, document.getElementById("searchBox").value);
+    }
+
+    function getCartTotal() {
+      return Object.values(cart).reduce((sum, item) => sum + item.qty * item.price, 0);
+    }
+    function getCartCount() {
+      return Object.values(cart).reduce((sum, item) => sum + item.qty, 0);
+    }
+
+    function updateCartBar() {
+      const bar = document.getElementById("cartBar");
+      const count = getCartCount();
+      if (count <= 0) {
+        bar.classList.remove("show");
+        return;
+      }
+      bar.classList.add("show");
+      document.getElementById("cartBarCount").textContent = `${count} ürün`;
+      document.getElementById("cartBarTotal").textContent = formatTL(getCartTotal());
+    }
+
+    function openCartSheet() {
+      renderCartLines();
+      document.getElementById("deliveryStep").style.display = Object.keys(cart).length ? "block" : "none";
+      updateFeeSummary();
+      document.getElementById("cartSheetOverlay").classList.add("show");
+    }
+    function closeCartSheet() {
+      document.getElementById("cartSheetOverlay").classList.remove("show");
+    }
+
+    function renderCartLines() {
+      const listEl = document.getElementById("cartLinesList");
+      const entries = Object.entries(cart);
+      if (!entries.length) {
+        listEl.innerHTML = '<p style="color:#888;font-size:14px;">Sepetin boş.</p>';
+        return;
+      }
+      listEl.innerHTML = entries
+        .map(([name, item]) => {
+          const unitLabel = item.unit === "kg" ? "kg" : "adet";
+          return `
+            <div class="cart-line-row">
+              <div>
+                <p class="cart-line-name">${escapeHtml(name)}</p>
+                <p class="cart-line-price">${item.qty} ${unitLabel} × ${formatTL(item.price)}</p>
+              </div>
+              <p class="cart-line-price" style="font-weight:700;">${formatTL(item.qty * item.price)}</p>
+            </div>`;
+        })
+        .join("");
+    }
+
+    function chooseDelivery(mode) {
+      deliveryMode = mode;
+      document.getElementById("choosePickupBtn").classList.toggle("active", mode === "pickup");
+      document.getElementById("chooseCourierBtn").classList.toggle("active", mode === "courier");
+      document.getElementById("courierSection").style.display = mode === "courier" ? "block" : "none";
+      updateFeeSummary();
+    }
+
+    function haversineKm(lat1, lng1, lat2, lng2) {
+      const R = 6371;
+      const dLat = ((lat2 - lat1) * Math.PI) / 180;
+      const dLng = ((lng2 - lng1) * Math.PI) / 180;
+      const a =
+        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) * Math.sin(dLng / 2) * Math.sin(dLng / 2);
+      return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    }
+
+    function updateFeeSummary() {
+      const summary = document.getElementById("feeSummary");
+      const deliveryRow = document.getElementById("feeDeliveryRow");
+      const warnEl = document.getElementById("deliveryWarn");
+      const sendBtn = document.getElementById("sendOrderBtn");
+      const productTotal = getCartTotal();
+
+      document.getElementById("feeProductTotal").textContent = formatTL(productTotal);
+      summary.style.display = Object.keys(cart).length ? "block" : "none";
+      warnEl.style.display = "none";
+      sendBtn.disabled = Object.keys(cart).length === 0;
+
+      if (deliveryMode === "courier") {
+        if (!businessLat || !businessLng) {
+          deliveryRow.style.display = "none";
+          document.getElementById("feeGrandTotal").textContent = formatTL(productTotal);
+          warnEl.textContent = "Bu işletme henüz kurye teslimatı için konum ayarlamamış — sipariş verirken kendin fiyat sorman gerekebilir.";
+          warnEl.style.display = "block";
+          return;
+        }
+        if (pickedLat == null) {
+          deliveryRow.style.display = "none";
+          document.getElementById("feeGrandTotal").textContent = formatTL(productTotal);
+          warnEl.textContent = "Teslimat ücretinin hesaplanması için lütfen konumunu haritadan işaretle.";
+          warnEl.style.display = "block";
+          sendBtn.disabled = true;
+          return;
+        }
+        const distanceKm = haversineKm(businessLat, businessLng, pickedLat, pickedLng);
+        const fee = Math.round(distanceKm * perKmDeliveryFee * 100) / 100;
+        deliveryRow.style.display = "flex";
+        document.getElementById("feeDeliveryAmount").textContent = `${formatTL(fee)} (~${distanceKm.toFixed(1)} km)`;
+        document.getElementById("feeGrandTotal").textContent = formatTL(productTotal + fee);
+      } else {
+        deliveryRow.style.display = "none";
+        document.getElementById("feeGrandTotal").textContent = formatTL(productTotal);
+      }
+    }
+
+    function openDeliveryMap() {
+      const mapEl = document.getElementById("deliveryMap");
+      mapEl.style.display = "block";
+
+      const startLat = businessLat || 39.0;
+      const startLng = businessLng || 35.0;
+
+      setTimeout(() => {
+        if (!deliveryMap) {
+          deliveryMap = L.map("deliveryMap").setView([startLat, startLng], businessLat ? 13 : 6);
+          L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { attribution: "© OpenStreetMap" }).addTo(deliveryMap);
+          deliveryMarker = L.marker([startLat, startLng], { draggable: true }).addTo(deliveryMap);
+          deliveryMarker.on("dragend", () => {
+            const pos = deliveryMarker.getLatLng();
+            pickedLat = pos.lat;
+            pickedLng = pos.lng;
+            updateFeeSummary();
+          });
+          deliveryMap.on("click", (e) => {
+            deliveryMarker.setLatLng(e.latlng);
+            pickedLat = e.latlng.lat;
+            pickedLng = e.latlng.lng;
+            updateFeeSummary();
+          });
+        } else {
+          deliveryMap.invalidateSize();
+        }
+
+        if (navigator.geolocation && pickedLat == null) {
+          navigator.geolocation.getCurrentPosition(
+            (pos) => {
+              const lat = pos.coords.latitude;
+              const lng = pos.coords.longitude;
+              deliveryMap.setView([lat, lng], 15);
+              deliveryMarker.setLatLng([lat, lng]);
+              pickedLat = lat;
+              pickedLng = lng;
+              updateFeeSummary();
+            },
+            () => {}
+          );
+        }
+      }, 100);
+    }
+
+    function sendOrder() {
+      const lines = Object.entries(cart)
+        .map(([name, item]) => `• ${name} — ${item.qty} ${item.unit === "kg" ? "kg" : "adet"}`)
+        .join("%0A");
+
+      const productTotal = getCartTotal();
+      let message = `Merhaba, sipariş vermek istiyorum:%0A%0A${lines}%0A%0AÜrünler Toplamı: ${formatTL(productTotal)}`;
+
+      if (deliveryMode === "courier") {
+        const addressText = document.getElementById("addressTextInput").value.trim();
+        message += `%0A%0ATeslimat: Kurye ile%0A`;
+        if (pickedLat != null) {
+          message += `Konum: https://www.google.com/maps?q=${pickedLat},${pickedLng}%0A`;
+          const distanceKm = haversineKm(businessLat, businessLng, pickedLat, pickedLng);
+          const fee = Math.round(distanceKm * perKmDeliveryFee * 100) / 100;
+          message += `Teslimat Ücreti (~${distanceKm.toFixed(1)} km): ${formatTL(fee)}%0A`;
+          message += `Genel Toplam: ${formatTL(productTotal + fee)}%0A`;
+        }
+        if (addressText) message += `Adres notu: ${addressText}%0A`;
+      } else {
+        message += `%0A%0ATeslimat: Gelip alacağım`;
+      }
+
+      if (!businessPhone) {
+        alert("Bu işletme için sipariş numarası tanımlanmamış.");
+        return;
+      }
+      const cleanPhone = businessPhone.replace(/[^\d]/g, "");
+      window.open(`https://wa.me/${cleanPhone}?text=${message}`, "_blank");
     }
 
     async function loadCatalog() {
@@ -200,8 +457,12 @@
           return;
         }
 
-        document.getElementById("businessNameHeader").textContent = data.businessName || "Ürün Kataloğu";
+        businessName = data.businessName || "Ürün Kataloğu";
+        document.getElementById("businessNameHeader").textContent = businessName;
         businessPhone = data.phone || "";
+        businessLat = data.businessLat || null;
+        businessLng = data.businessLng || null;
+        perKmDeliveryFee = data.perKmDeliveryFee || 0;
         allProducts = data.products || [];
 
         if (!allProducts.length) {
@@ -216,8 +477,15 @@
       }
     }
 
-    document.getElementById("searchBox").addEventListener("input", (e) => {
-      renderProducts(allProducts, e.target.value);
+    document.getElementById("searchBox").addEventListener("input", (e) => renderProducts(allProducts, e.target.value));
+    document.getElementById("openCartBtn").addEventListener("click", openCartSheet);
+    document.getElementById("closeCartSheetBtn").addEventListener("click", closeCartSheet);
+    document.getElementById("choosePickupBtn").addEventListener("click", () => chooseDelivery("pickup"));
+    document.getElementById("chooseCourierBtn").addEventListener("click", () => chooseDelivery("courier"));
+    document.getElementById("pickOnMapBtn").addEventListener("click", openDeliveryMap);
+    document.getElementById("sendOrderBtn").addEventListener("click", sendOrder);
+    document.getElementById("cartSheetOverlay").addEventListener("click", (e) => {
+      if (e.target.id === "cartSheetOverlay") closeCartSheet();
     });
 
     loadCatalog();

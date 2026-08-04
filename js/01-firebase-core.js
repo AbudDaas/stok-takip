@@ -129,6 +129,9 @@ export function attachFirestoreListener() {
           state.scaleBarcodePrefix = data.scaleBarcodePrefix || "20";
           state.scaleBarcodeCodeLength = data.scaleBarcodeCodeLength || 5;
           state.scaleBarcodeWeightLength = data.scaleBarcodeWeightLength || 5;
+          state.businessLat = data.businessLat || null;
+          state.businessLng = data.businessLng || null;
+          state.perKmDeliveryFee = data.perKmDeliveryFee || 0;
 
           // ---- Çakışma tespiti ----
           // Bu koda ulaşan her anlık görüntü, KENDİ yazdığımız bir kayıt

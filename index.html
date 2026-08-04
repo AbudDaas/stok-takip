@@ -982,6 +982,18 @@
           <button id="copyPublicCatalogLinkBtn" class="btn btn-block">
             <i class="fa-solid fa-copy" aria-hidden="true"></i> <span data-i18n="copyLinkBtn">Linki Kopyala</span>
           </button>
+
+          <label class="field-label" style="margin-top:16px;" data-i18n="deliverySettingsLabel">🚚 Kurye ile Teslimat Ayarları</label>
+          <p class="card-subtitle" data-i18n="deliverySettingsSubtitle" style="margin-top:0;">Müşteri "Kurye Getirsin" seçerse, işletmenle müşteri arasındaki mesafeye göre otomatik bir teslimat ücreti hesaplanır.</p>
+          <button id="setBusinessLocationBtn" type="button" class="btn btn-block">
+            <i class="fa-solid fa-location-dot" aria-hidden="true"></i> <span data-i18n="setBusinessLocationBtn">İşletme Konumunu Haritadan İşaretle</span>
+          </button>
+          <p id="businessLocationStatus" class="card-subtitle" style="margin:6px 0 0;"></p>
+          <label class="field-label" data-i18n="perKmFeeLabel">Km Başına Teslimat Ücreti (TL)</label>
+          <input id="perKmDeliveryFee" type="number" min="0" step="0.5" placeholder="Örn. 5" />
+          <button id="saveDeliverySettingsBtn" class="btn btn-primary btn-block" style="margin-top:8px;">
+            <i class="fa-solid fa-floppy-disk" aria-hidden="true"></i> <span data-i18n="saveBtn">Kaydet</span>
+          </button>
         </div>
       </div>
 
@@ -1419,6 +1431,23 @@
   </div>
 
   <!-- FATURA TARAMA SONUÇ MODAL -->
+  <!-- İŞLETME KONUMU SEÇİCİ MODAL -->
+  <div id="businessLocationModal" class="modal-overlay" style="display:none;">
+    <div class="modal">
+      <div class="modal-header">
+        <p class="modal-title" data-i18n="businessLocationModalTitle">İşletme Konumunu İşaretle</p>
+        <button id="closeBusinessLocationModalBtn" class="icon-btn" aria-label="Kapat"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button>
+      </div>
+      <div class="modal-body">
+        <p class="card-subtitle" data-i18n="mapPickerInstructions">Haritada dükkânının olduğu noktaya dokun ya da işareti sürükle.</p>
+        <div id="businessLocationMap" style="height:320px;border-radius:12px;overflow:hidden;"></div>
+        <button id="confirmBusinessLocationBtn" class="btn btn-primary btn-block" style="margin-top:10px;">
+          <i class="fa-solid fa-check" aria-hidden="true"></i> <span data-i18n="confirmLocationBtn">Bu Konumu Kullan</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
   <div id="invoiceScanModal" class="modal-overlay" style="display:none;">
     <div class="modal">
       <div class="modal-header">
@@ -1562,6 +1591,8 @@
   </nav>
 
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>

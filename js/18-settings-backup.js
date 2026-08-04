@@ -407,6 +407,73 @@ export function renderScaleBarcodeSettings() {
     document.getElementById("scaleBarcodeWeightLength").value = state.scaleBarcodeWeightLength || 5;
   }
 
+let businessLocationMap = null;
+let businessLocationMarker = null;
+
+export function openBusinessLocationPicker() {
+    const modal = document.getElementById("businessLocationModal");
+    modal.style.display = "flex";
+
+    const startLat = state.businessLat || 39.0;
+    const startLng = state.businessLng || 35.0;
+    const startZoom = state.businessLat ? 15 : 6;
+
+    setTimeout(() => {
+      if (!businessLocationMap) {
+        businessLocationMap = L.map("businessLocationMap").setView([startLat, startLng], startZoom);
+        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+          attribution: "© OpenStreetMap"
+        }).addTo(businessLocationMap);
+        businessLocationMarker = L.marker([startLat, startLng], { draggable: true }).addTo(businessLocationMap);
+        businessLocationMap.on("click", (e) => {
+          businessLocationMarker.setLatLng(e.latlng);
+        });
+      } else {
+        businessLocationMap.setView([startLat, startLng], startZoom);
+        businessLocationMarker.setLatLng([startLat, startLng]);
+        businessLocationMap.invalidateSize();
+      }
+    }, 100);
+  }
+
+export function closeBusinessLocationModal() {
+    document.getElementById("businessLocationModal").style.display = "none";
+  }
+
+export function confirmBusinessLocation() {
+    if (!businessLocationMarker) return;
+    const pos = businessLocationMarker.getLatLng();
+    state.businessLat = pos.lat;
+    state.businessLng = pos.lng;
+    const targetRef = state.originalDocRef || state.docRef;
+    if (targetRef) {
+      targetRef.set({ businessLat: pos.lat, businessLng: pos.lng }, { merge: true }).catch((e) => console.error("Konum kaydedilemedi", e));
+    }
+    closeBusinessLocationModal();
+    renderDeliverySettings();
+    showToast(state.t("businessLocationSaved"), "success");
+  }
+
+export function saveDeliverySettings() {
+    const fee = Number(document.getElementById("perKmDeliveryFee").value) || 0;
+    state.perKmDeliveryFee = fee;
+    const targetRef = state.originalDocRef || state.docRef;
+    if (targetRef) {
+      targetRef.set({ perKmDeliveryFee: fee }, { merge: true }).catch((e) => console.error("Teslimat ücreti kaydedilemedi", e));
+    }
+    showToast(state.t("deliverySettingsSaved"), "success");
+  }
+
+export function renderDeliverySettings() {
+    const statusEl = document.getElementById("businessLocationStatus");
+    const feeInput = document.getElementById("perKmDeliveryFee");
+    if (!statusEl) return;
+    statusEl.textContent = state.businessLat
+      ? `✅ ${state.t("businessLocationSet")}`
+      : `⚠️ ${state.t("businessLocationNotSet")}`;
+    if (feeInput) feeInput.value = state.perKmDeliveryFee || 0;
+  }
+
 export function initSettings() {
     let theme = "light";
     let navPosition = "bottom";
