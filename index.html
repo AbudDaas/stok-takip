@@ -964,6 +964,32 @@
       </div>
 
       <div class="card">
+        <p class="card-title" data-i18n="brandIdentityTitle">🎨 Marka Kimliği</p>
+        <p class="card-subtitle" data-i18n="brandIdentitySubtitle">İşletmenin adı, logosu ve ana rengi — hem uygulamanın kendisinde hem herkese açık kataloğunda kullanılır.</p>
+        <label class="field-label" data-i18n="businessNameFieldLabel">İşletme Adı</label>
+        <input id="businessNameInput" type="text" data-i18n-placeholder="businessNameFieldPh" placeholder="Örn. Ali'nin Marketi" />
+
+        <label class="field-label" style="margin-top:12px;" data-i18n="businessLogoLabel">Logo</label>
+        <div style="display:flex;align-items:center;gap:12px;">
+          <img id="businessLogoPreview" src="" alt="" style="width:56px;height:56px;border-radius:10px;object-fit:cover;display:none;background:var(--bg);" />
+          <div id="businessLogoPlaceholder" class="stat-card" style="width:56px;height:56px;display:flex;align-items:center;justify-content:center;padding:0;">
+            <i class="fa-solid fa-image" style="color:var(--text-muted);"></i>
+          </div>
+          <input id="businessLogoInput" type="file" accept="image/*" style="flex:1;" />
+        </div>
+
+        <label class="field-label" style="margin-top:12px;" data-i18n="brandColorLabel">Ana Renk</label>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <input id="brandColorInput" type="color" value="#1F3864" style="width:52px;height:40px;border:none;border-radius:8px;padding:0;cursor:pointer;" />
+          <p class="card-subtitle" style="margin:0;" data-i18n="brandColorSubtitle">Butonlar, sekme vurguları ve kataloğun ana rengi bu olur.</p>
+        </div>
+
+        <button id="saveBrandIdentityBtn" class="btn btn-primary btn-block" style="margin-top:12px;">
+          <i class="fa-solid fa-floppy-disk" aria-hidden="true"></i> <span data-i18n="saveBtn">Kaydet</span>
+        </button>
+      </div>
+
+      <div class="card">
         <p class="card-title" data-i18n="publicCatalogTitle">🛍️ Herkese Açık Katalog</p>
         <p class="card-subtitle" data-i18n="publicCatalogSubtitle">Açarsan, müşterilerin (giriş yapmadan) ürün/fiyat listeni görebileceği, WhatsApp'tan sipariş verebileceği bir sayfa oluşur. Maliyet, barkod gibi bilgiler ASLA paylaşılmaz — sadece ürün adı, kategori ve fiyat görünür.</p>
         <label class="checkbox-row">

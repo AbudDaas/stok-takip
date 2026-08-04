@@ -132,6 +132,8 @@ export function attachFirestoreListener() {
           state.businessLat = data.businessLat || null;
           state.businessLng = data.businessLng || null;
           state.perKmDeliveryFee = data.perKmDeliveryFee || 0;
+          state.businessLogo = data.businessLogo || "";
+          state.brandColor = data.brandColor || "#1F3864";
 
           // ---- Çakışma tespiti ----
           // Bu koda ulaşan her anlık görüntü, KENDİ yazdığımız bir kayıt

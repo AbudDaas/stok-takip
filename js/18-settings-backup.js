@@ -474,6 +474,91 @@ export function renderDeliverySettings() {
     if (feeInput) feeInput.value = state.perKmDeliveryFee || 0;
   }
 
+function lightenHexColor(hex, amount) {
+    const num = parseInt(hex.replace("#", ""), 16);
+    const r = Math.min(255, (num >> 16) + amount);
+    const g = Math.min(255, ((num >> 8) & 0x00ff) + amount);
+    const b = Math.min(255, (num & 0x0000ff) + amount);
+    return `#${((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1)}`;
+  }
+
+export function applyBrandColor(color) {
+    let styleTag = document.getElementById("brandColorOverride");
+    if (!styleTag) {
+      styleTag = document.createElement("style");
+      styleTag.id = "brandColorOverride";
+      document.head.appendChild(styleTag);
+    }
+    const lightVariant = lightenHexColor(color, 25);
+    styleTag.textContent = `:root, :root[data-theme="dark"] { --navy: ${color} !important; --navy-light: ${lightVariant} !important; }`;
+  }
+
+export function handleLogoUpload(file) {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        // Logoyu küçük bir kareye sıkıştırıyoruz — hem hızlı yüklensin hem
+        // veritabanı belgesini şişirmesin.
+        const size = 160;
+        const canvas = document.createElement("canvas");
+        canvas.width = size;
+        canvas.height = size;
+        const ctx = canvas.getContext("2d");
+        const scale = Math.max(size / img.width, size / img.height);
+        const w = img.width * scale;
+        const h = img.height * scale;
+        ctx.drawImage(img, (size - w) / 2, (size - h) / 2, w, h);
+        const dataUrl = canvas.toDataURL("image/jpeg", 0.85);
+        state.businessLogo = dataUrl;
+        const preview = document.getElementById("businessLogoPreview");
+        const placeholder = document.getElementById("businessLogoPlaceholder");
+        if (preview) {
+          preview.src = dataUrl;
+          preview.style.display = "block";
+        }
+        if (placeholder) placeholder.style.display = "none";
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  }
+
+export function saveBrandIdentity() {
+    const name = document.getElementById("businessNameInput").value.trim();
+    const color = document.getElementById("brandColorInput").value;
+    state.businessName = name;
+    state.brandColor = color;
+    applyBrandColor(color);
+
+    const targetRef = state.originalDocRef || state.docRef;
+    if (targetRef) {
+      targetRef
+        .set({ businessName: name, brandColor: color, businessLogo: state.businessLogo || "" }, { merge: true })
+        .catch((e) => console.error("Marka kimliği kaydedilemedi", e));
+    }
+    showToast(state.t("brandIdentitySaved"), "success");
+  }
+
+export function renderBrandIdentitySettings() {
+    const nameInput = document.getElementById("businessNameInput");
+    if (!nameInput) return;
+    nameInput.value = state.businessName || "";
+    document.getElementById("brandColorInput").value = state.brandColor || "#1F3864";
+    const preview = document.getElementById("businessLogoPreview");
+    const placeholder = document.getElementById("businessLogoPlaceholder");
+    if (state.businessLogo) {
+      preview.src = state.businessLogo;
+      preview.style.display = "block";
+      placeholder.style.display = "none";
+    } else {
+      preview.style.display = "none";
+      placeholder.style.display = "flex";
+    }
+    applyBrandColor(state.brandColor || "#1F3864");
+  }
+
 export function initSettings() {
     let theme = "light";
     let navPosition = "bottom";

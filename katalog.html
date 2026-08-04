@@ -95,10 +95,11 @@
     .product-price { font-size: 13px; color: var(--ink-soft); margin: 3px 0 0; font-variant-numeric: tabular-nums; }
     .qty-stepper { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
     .qty-stepper button {
-      width: 34px; height: 34px; border-radius: 8px; border: 1.5px solid var(--line);
-      background: var(--paper); font-size: 17px; cursor: pointer; color: var(--tomato-dark);
-      font-family: var(--font-body); font-weight: 700;
+      min-width: 34px; height: 34px; padding: 0 10px; border-radius: 8px; border: 1.5px solid var(--line);
+      background: var(--paper); font-size: 14px; cursor: pointer; color: var(--tomato-dark);
+      font-family: var(--font-body); font-weight: 700; white-space: nowrap;
     }
+    .qty-stepper button.minus-btn { min-width: 34px; width: 34px; padding: 0; font-size: 17px; }
     .qty-stepper button.add-btn { background: var(--tomato); border-color: var(--tomato); color: #fff; }
     .qty-stepper span {
       min-width: 22px; text-align: center; font-weight: 700; font-variant-numeric: tabular-nums;
@@ -207,6 +208,7 @@
 </head>
 <body>
   <div class="header-wrap">
+    <img id="businessLogoImg" src="" alt="" style="width:52px;height:52px;border-radius:12px;object-fit:cover;margin-bottom:8px;display:none;" />
     <h1 id="businessNameHeader">Ürün Kataloğu</h1>
     <p>ürünü seç, sepete ekle, tek seferde gönder</p>
     <div class="torn-edge"></div>
@@ -299,6 +301,19 @@
     }
     function formatTL(n) {
       return (Number(n) || 0).toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " ₺";
+    }
+
+    function shadeHex(hex, amount) {
+      const num = parseInt(hex.replace("#", ""), 16);
+      const r = Math.min(255, Math.max(0, (num >> 16) + amount));
+      const g = Math.min(255, Math.max(0, ((num >> 8) & 0x00ff) + amount));
+      const b = Math.min(255, Math.max(0, (num & 0x0000ff) + amount));
+      return `#${((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1)}`;
+    }
+
+    function applyBrandColor(color) {
+      document.documentElement.style.setProperty("--tomato", color);
+      document.documentElement.style.setProperty("--tomato-dark", shadeHex(color, -30));
     }
 
     function renderProducts(products, filter) {
@@ -571,6 +586,15 @@
         businessLng = data.businessLng || null;
         perKmDeliveryFee = data.perKmDeliveryFee || 0;
         allProducts = data.products || [];
+
+        if (data.businessLogo) {
+          const logoImg = document.getElementById("businessLogoImg");
+          logoImg.src = data.businessLogo;
+          logoImg.style.display = "inline-block";
+        }
+        if (data.brandColor) {
+          applyBrandColor(data.brandColor);
+        }
 
         if (!allProducts.length) {
           contentEl.innerHTML = '<div class="empty-state">Şu an listelenecek ürün yok.</div>';
