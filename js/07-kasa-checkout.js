@@ -5,7 +5,8 @@ import { logAudit } from './03-staff-roles.js';
 import { attemptSendToFiscalProvider } from './04-fiscal.js';
 import { adjustQty, findProductByCaseScan, findProductByScan, getDisplayName, updateOutOfStockTracking } from './05-products.js';
 import { measurePerf } from './22-perf-logger.js';
-import { clearVeresiyeCustomerSelection } from './06-veresiye.js';
+import { clearVeresiyeCustomerSelection, earnLoyaltyPoints, redeemLoyaltyPoints } from './06-veresiye.js';
+import { findGiftCardByCode, redeemGiftCard } from './23-giftcards.js';
 import { renderAll } from './20-navigation.js';
 
 export function showKgOrPricePrompt(productName, pricePerKg) {
@@ -569,7 +570,31 @@ export function setPaymentType(type) {
     document.getElementById("payNakitBtn").classList.toggle("active", type === "nakit");
     document.getElementById("payKartBtn").classList.toggle("active", type === "kart");
     document.getElementById("payVeresiyeBtn").classList.toggle("active", type === "veresiye");
+    document.getElementById("payGiftCardBtn").classList.toggle("active", type === "hediye");
     document.getElementById("veresiyeCustomerRow").style.display = type === "veresiye" ? "block" : "none";
+    document.getElementById("giftCardPaymentRow").style.display = type === "hediye" ? "block" : "none";
+    if (type !== "hediye") {
+      document.getElementById("giftCardBalanceInfo").style.display = "none";
+      document.getElementById("giftCardCodeInput").value = "";
+    }
+  }
+
+export function checkGiftCardBalance() {
+    const input = document.getElementById("giftCardCodeInput");
+    const infoEl = document.getElementById("giftCardBalanceInfo");
+    const code = input.value.trim().toUpperCase();
+    if (!code) {
+      infoEl.style.display = "none";
+      return;
+    }
+    const card = findGiftCardByCode(code);
+    if (!card) {
+      infoEl.textContent = state.t("giftCardNotFound");
+      infoEl.style.display = "block";
+      return;
+    }
+    infoEl.textContent = `${state.t("giftCardBalanceLabel")}: ${formatTL(card.remainingBalance)}`;
+    infoEl.style.display = "block";
   }
 
 function completeSaleImpl() {
@@ -596,8 +621,35 @@ function completeSaleImpl() {
 
     const subtotal = state.cart.reduce((sum, c) => sum + calcLineTotal(c), 0);
     const discountInput = document.getElementById("cartDiscount");
-    const discount = Math.min(Number(discountInput.value) || 0, subtotal);
+    let discount = Math.min(Number(discountInput.value) || 0, subtotal);
+
+    // Sadakat puanı kullanılmak isteniyorsa (sadece veresiye müşterisi
+    // seçiliyken mümkün, çünkü puan/müşteri eşleşmesi oradan geliyor),
+    // kullanılan puanı indirime ekle.
+    const loyaltyRedeemInput = document.getElementById("loyaltyRedeemInput");
+    const pointsToRedeem = loyaltyRedeemInput ? Number(loyaltyRedeemInput.value) || 0 : 0;
+    if (pointsToRedeem > 0 && customerId) {
+      const pointsDiscount = redeemLoyaltyPoints(customerId, pointsToRedeem);
+      discount = Math.min(discount + pointsDiscount, subtotal);
+    }
+
     const total = Math.max(0, subtotal - discount);
+
+    // Hediye kartı ile ödeniyorsa, kartın GERÇEKTEN bu tutarı karşılayacak
+    // bakiyesi olduğunu doğrula — yetersizse satışı tamamlamadan durdur.
+    let giftCardCode = null;
+    if (state.selectedPaymentType === "hediye") {
+      giftCardCode = document.getElementById("giftCardCodeInput").value.trim().toUpperCase();
+      const card = findGiftCardByCode(giftCardCode);
+      if (!card) {
+        showToast(state.t("giftCardNotFound"), "error");
+        return;
+      }
+      if (card.remainingBalance < total) {
+        showToast(`${state.t("giftCardInsufficientBalance")} (${formatTL(card.remainingBalance)})`, "error");
+        return;
+      }
+    }
 
     let totalCost = 0;
     const saleItems = state.cart.map((c) => {
@@ -631,6 +683,8 @@ function completeSaleImpl() {
       customerName
     };
     state.sales.push(newSale);
+    if (customerId) earnLoyaltyPoints(customerId, total);
+    if (giftCardCode) redeemGiftCard(giftCardCode, total);
     attemptSendToFiscalProvider(newSale);
     logAudit("Satış tamamlandı", `${formatTL(total)} (${saleItems.length} ürün)`);
 

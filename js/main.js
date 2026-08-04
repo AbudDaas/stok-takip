@@ -5,10 +5,11 @@ import { addStaffMember, enterAsOwner, saveOwnerPin, staffPickerGoBack, submitSt
 import { saveFiscalSettings, toggleFiscalEnabled } from './04-fiscal.js';
 import { addCaseBarcodeEntry, addExtraBarcode, addPendingCaseBarcode, addPendingExtraBarcode, addProduct, addWarehouseStock, adjustQty, closeModal, deleteProduct, handleCsvImportFile, printAllQrCodes, printQr, printSelfSourceList, resetAll, saveEdit, setQtyManually, transferToShelf, translateMissingProductNames } from './05-products.js';
 import { addCustomer, closeCustomerModal, deleteCustomer, recordPayment, renderVeresiyeCustomerResults, saveCustomerEdit } from './06-veresiye.js';
-import { clearCart, closeQuickBarcodeScan, completeSale, openQuickBarcodeScan, renderCart, renderManualAddResults, setPaymentType, setScanMode, startScan, startScanKasa, stopScan, stopScanKasa } from './07-kasa-checkout.js';
+import { checkGiftCardBalance, clearCart, closeQuickBarcodeScan, completeSale, openQuickBarcodeScan, renderCart, renderManualAddResults, setPaymentType, setScanMode, startScan, startScanKasa, stopScan, stopScanKasa } from './07-kasa-checkout.js';
 import { closeReturnModal, confirmReturn, renderSales } from './08-sales-returns.js';
 import { addSuggestedSuppliers, addSupplier, addSupplierDebt, addSupplierPayment, assignSelectedProductsToSupplier, closeSupplierModal, deleteSupplier, printSupplierOrderList, renderSupplierProductPicker, sendSupplierOrderWhatsApp } from './09-suppliers.js';
 import { addExpense } from './21-expenses.js';
+import { createGiftCard } from './23-giftcards.js';
 import { addBreadConfig, sendBreadWhatsApp } from './11-bread-orders.js';
 import { enableNotifications } from './12-push-notifications.js';
 import { addCatalogItem, closeBranchEditModal, createBranch, exitBranchView, saveBranchEdit } from './13-branches-chain.js';
@@ -16,7 +17,7 @@ import { createAdminBusiness } from './14-admin-panel.js';
 import { confirmVoiceAction, hideVoiceCommandConfirm, setVoiceLang, startVoiceCommand, startVoiceInput } from './15-voice-commands.js';
 import { addAllBulkScanProducts, applyInvoiceScan, checkForLaunchedFile, checkForNoteTakingLaunch, checkForProtocolLaunch, checkForSharedPhoto, closeBulkScanModal, closeInvoiceScanModal, handleInvoicePhotos, handleShelfPhotos, setInvoiceScanDestination } from './16-bulk-scan-ai.js';
 import { askAiAdvisor, createOrderFromEngine, printOrderEngineList, renderOrderEngine } from './17-ai-panel.js';
-import { applyFontSize, applyNavPosition, applyScanCooldown, applyScanFps, applySimpleMode, applyTheme, copyPublicCatalogLink, downloadBackup, initSettings, savePublicCatalogSettings, sendFeedback, togglePublicCatalog } from './18-settings-backup.js';
+import { applyFontSize, applyNavPosition, applyScanCooldown, applyScanFps, applySimpleMode, applyTheme, copyPublicCatalogLink, downloadBackup, initSettings, saveLoyaltySettings, savePublicCatalogSettings, sendFeedback, toggleLoyalty, togglePublicCatalog } from './18-settings-backup.js';
 import { finishOnboarding, onboardingNext } from './19-onboarding.js';
 import { renderAll, switchTab } from './20-navigation.js';
 
@@ -195,6 +196,8 @@ document.getElementById("payNakitBtn").addEventListener("click", () => setPaymen
 document.getElementById("payKartBtn").addEventListener("click", () => setPaymentType("kart"));
 
 document.getElementById("payVeresiyeBtn").addEventListener("click", () => setPaymentType("veresiye"));
+document.getElementById("payGiftCardBtn").addEventListener("click", () => setPaymentType("hediye"));
+document.getElementById("giftCardCodeInput").addEventListener("input", checkGiftCardBalance);
 
 document.getElementById("veresiyeCustomerSearch").addEventListener("input", (e) => {
     state.selectedVeresiyeCustomerId = null;
@@ -328,9 +331,12 @@ document.getElementById("closeBranchEditModalBtn").addEventListener("click", clo
 
 document.getElementById("supplierAddBtn").addEventListener("click", addSupplier);
 document.getElementById("expenseAddBtn").addEventListener("click", addExpense);
+document.getElementById("createGiftCardBtn").addEventListener("click", createGiftCard);
 document.getElementById("publicCatalogToggle").addEventListener("change", (e) => togglePublicCatalog(e.target.checked));
 document.getElementById("savePublicCatalogBtn").addEventListener("click", savePublicCatalogSettings);
 document.getElementById("copyPublicCatalogLinkBtn").addEventListener("click", copyPublicCatalogLink);
+document.getElementById("loyaltyToggle").addEventListener("change", (e) => toggleLoyalty(e.target.checked));
+document.getElementById("saveLoyaltySettingsBtn").addEventListener("click", saveLoyaltySettings);
 
 document.getElementById("addSuggestedSuppliersBtn").addEventListener("click", addSuggestedSuppliers);
 

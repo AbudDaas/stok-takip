@@ -4,6 +4,7 @@ import { renderAuditLog, renderOwnerPinStatus, renderStaffList } from './03-staf
 import { renderFiscalSettings } from './04-fiscal.js';
 import { openModal, orderListRowHtml, populateNewProductSupplierSelect, productRowHtml, selfSourceRowHtml, toggleNeedsAlternativeSource, translateMissingProductNames } from './05-products.js';
 import { renderCustomers } from './06-veresiye.js';
+import { renderGiftCards } from './23-giftcards.js';
 import { renderCart, stopScan, stopScanKasa } from './07-kasa-checkout.js';
 import { renderSales } from './08-sales-returns.js';
 import { renderSuppliers } from './09-suppliers.js';
@@ -12,7 +13,7 @@ import { renderReminders } from './10-reminders.js';
 import { renderBreadStatus, renderPriceChanges } from './11-bread-orders.js';
 import { loadBranches, renderCatalogList } from './13-branches-chain.js';
 import { renderAiPanel } from './17-ai-panel.js';
-import { loadAutoBackups, renderDataSize, renderPublicCatalogSettings } from './18-settings-backup.js';
+import { loadAutoBackups, renderDataSize, renderLoyaltySettings, renderPublicCatalogSettings } from './18-settings-backup.js';
 
 export function renderAll() {
     const searchEl = document.getElementById("searchBox");
@@ -100,11 +101,13 @@ export function renderAll() {
     renderCart();
     renderSales();
     renderCustomers();
+    renderGiftCards();
     renderReminders();
     renderSuppliers();
     populateNewProductSupplierSelect();
     renderExpenses();
     renderPublicCatalogSettings();
+    renderLoyaltySettings();
     renderBreadStatus();
     renderPriceChanges();
     renderAuditLog();

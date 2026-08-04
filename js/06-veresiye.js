@@ -44,6 +44,37 @@ export function saveCustomerEdit() {
     openCustomerModal(c.id);
   }
 
+/**
+ * Bir satış tamamlandığında, sadakat programı açıksa müşteriye puan
+ * kazandırır. Ayarlarda belirlenen "X TL'ye 1 puan" oranına göre hesaplar.
+ */
+export function earnLoyaltyPoints(customerId, saleTotal) {
+    if (!state.loyaltyEnabled || !customerId) return;
+    const c = state.customers.find((x) => x.id === customerId);
+    if (!c) return;
+    const earnRate = state.loyaltyEarnRate || 10;
+    const earned = Math.floor(saleTotal / earnRate);
+    if (earned > 0) {
+      c.loyaltyPoints = (c.loyaltyPoints || 0) + earned;
+    }
+  }
+
+/**
+ * Müşterinin puanlarını indirime çevirir. Ayarlarda belirlenen "X puan =
+ * 1 TL" oranına göre, kullanılan puan kadarını düşer ve karşılık gelen
+ * TL indirimini döndürür.
+ */
+export function redeemLoyaltyPoints(customerId, pointsToRedeem) {
+    const c = state.customers.find((x) => x.id === customerId);
+    if (!c || !pointsToRedeem || pointsToRedeem <= 0) return 0;
+    const available = c.loyaltyPoints || 0;
+    const actualPoints = Math.min(pointsToRedeem, available);
+    if (actualPoints <= 0) return 0;
+    const redeemRate = state.loyaltyRedeemRate || 10;
+    c.loyaltyPoints = available - actualPoints;
+    return actualPoints / redeemRate;
+  }
+
 export function getCustomerDebt(customerId) {
     const debtFromSales = state.sales
       .filter((s) => s.paymentType === "veresiye" && s.customerId === customerId)
@@ -77,11 +108,15 @@ export function recordPayment() {
 export function customerRowHtml(c) {
     const debt = getCustomerDebt(c.id);
     const debtClass = debt > 0 ? "has-debt" : "no-debt";
+    const pointsHtml = state.loyaltyEnabled
+      ? `<p class="customer-points">⭐ ${c.loyaltyPoints || 0} ${state.t("loyaltyPointsShort")}</p>`
+      : "";
     return `
       <div class="customer-row" data-id="${c.id}">
         <div class="customer-info">
           <p class="customer-name">${escapeHtml(c.name)}</p>
           <p class="customer-phone">${escapeHtml(c.phone || "—")}</p>
+          ${pointsHtml}
         </div>
         <span class="customer-debt ${debtClass}">${formatTL(debt)}</span>
       </div>`;
@@ -144,14 +179,28 @@ export function selectVeresiyeCustomer(id) {
     document.getElementById("veresiyeCustomerSelectedId").value = id;
     document.getElementById("veresiyeCustomerSearch").value = c.name;
     document.getElementById("veresiyeCustomerResults").classList.remove("show");
+
+    const redeemRow = document.getElementById("loyaltyRedeemRow");
+    if (redeemRow) {
+      if (state.loyaltyEnabled && (c.loyaltyPoints || 0) > 0) {
+        redeemRow.style.display = "flex";
+        document.getElementById("loyaltyPointsAvailable").textContent = `⭐ ${c.loyaltyPoints} ${state.t("loyaltyPointsAvailableLabel")}`;
+      } else {
+        redeemRow.style.display = "none";
+      }
+    }
   }
 
 export function clearVeresiyeCustomerSelection() {
     state.selectedVeresiyeCustomerId = null;
     const idInput = document.getElementById("veresiyeCustomerSelectedId");
     const searchInput = document.getElementById("veresiyeCustomerSearch");
+    const redeemRow = document.getElementById("loyaltyRedeemRow");
+    const redeemInput = document.getElementById("loyaltyRedeemInput");
     if (idInput) idInput.value = "";
     if (searchInput) searchInput.value = "";
+    if (redeemRow) redeemRow.style.display = "none";
+    if (redeemInput) redeemInput.value = "";
   }
 
 export function openCustomerModal(id) {

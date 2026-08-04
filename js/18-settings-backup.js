@@ -342,6 +342,36 @@ export function copyPublicCatalogLink() {
       .catch(() => {});
   }
 
+export function toggleLoyalty(checked) {
+    state.loyaltyEnabled = checked;
+    document.getElementById("loyaltyConfig").style.display = checked ? "block" : "none";
+    const targetRef = state.originalDocRef || state.docRef;
+    if (targetRef) {
+      targetRef.set({ loyaltyEnabled: checked }, { merge: true }).catch((e) => console.error("Sadakat ayarı kaydedilemedi", e));
+    }
+  }
+
+export function saveLoyaltySettings() {
+    const earnRate = Number(document.getElementById("loyaltyEarnRate").value) || 10;
+    const redeemRate = Number(document.getElementById("loyaltyRedeemRate").value) || 10;
+    state.loyaltyEarnRate = earnRate;
+    state.loyaltyRedeemRate = redeemRate;
+    const targetRef = state.originalDocRef || state.docRef;
+    if (targetRef) {
+      targetRef.set({ loyaltyEarnRate: earnRate, loyaltyRedeemRate: redeemRate }, { merge: true }).catch((e) => console.error("Sadakat ayarları kaydedilemedi", e));
+    }
+    showToast(state.t("loyaltySettingsSaved"), "success");
+  }
+
+export function renderLoyaltySettings() {
+    const toggle = document.getElementById("loyaltyToggle");
+    if (!toggle) return;
+    toggle.checked = !!state.loyaltyEnabled;
+    document.getElementById("loyaltyConfig").style.display = state.loyaltyEnabled ? "block" : "none";
+    document.getElementById("loyaltyEarnRate").value = state.loyaltyEarnRate || 10;
+    document.getElementById("loyaltyRedeemRate").value = state.loyaltyRedeemRate || 10;
+  }
+
 export function initSettings() {
     let theme = "light";
     let navPosition = "bottom";

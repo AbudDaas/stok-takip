@@ -371,6 +371,9 @@
           <button id="payVeresiyeBtn" class="payment-type-btn" data-type="veresiye">
             <i class="fa-solid fa-book" aria-hidden="true"></i> <span data-i18n="payVeresiye">Veresiye</span>
           </button>
+          <button id="payGiftCardBtn" class="payment-type-btn" data-type="hediye">
+            <i class="fa-solid fa-gift" aria-hidden="true"></i> <span data-i18n="payGiftCard">Hediye Kartı</span>
+          </button>
         </div>
         <div id="veresiyeCustomerRow" class="form-row" style="display:none;">
           <div class="searchable-select">
@@ -378,6 +381,16 @@
             <input type="hidden" id="veresiyeCustomerSelectedId" />
             <div id="veresiyeCustomerResults" class="searchable-results"></div>
           </div>
+        </div>
+
+        <div id="giftCardPaymentRow" class="form-row" style="display:none;">
+          <input id="giftCardCodeInput" type="text" style="text-transform:uppercase;" data-i18n-placeholder="giftCardCodePh" placeholder="Hediye kartı kodu (örn. AB3D-EFGH)" />
+        </div>
+        <p id="giftCardBalanceInfo" class="card-subtitle" style="display:none;margin-top:0;"></p>
+
+        <div id="loyaltyRedeemRow" class="form-row two-col" style="display:none;">
+          <p class="card-subtitle" id="loyaltyPointsAvailable" style="margin:0;"></p>
+          <input id="loyaltyRedeemInput" type="number" min="0" step="1" data-i18n-placeholder="loyaltyRedeemPh" placeholder="Kullanılacak puan" />
         </div>
 
         <button id="completeSaleBtn" class="btn btn-primary btn-block">
@@ -480,6 +493,19 @@
       <p class="card-title" data-i18n="customersTitle">Müşteriler</p>
       <div id="customerList" class="list"></div>
       <p id="customerEmptyState" class="empty-state" data-i18n="emptyCustomers">Henüz müşteri yok.</p>
+
+      <div class="card" style="margin-top:16px;">
+        <p class="card-title" data-i18n="giftCardTitle">🎁 Hediye Kartları</p>
+        <p class="card-subtitle" data-i18n="giftCardSubtitle">Bir tutar belirle, sistem otomatik bir kod üretsin — bu kodu müşteriye ver, kasada ödeme türü olarak kullanabilir.</p>
+        <div class="form-row two-col">
+          <input id="giftCardAmount" type="number" min="0" step="0.01" data-i18n-placeholder="giftCardAmountPh" placeholder="Tutar (TL)" />
+          <button id="createGiftCardBtn" class="btn btn-primary btn-block">
+            <i class="fa-solid fa-plus" aria-hidden="true"></i> <span data-i18n="giftCardCreateBtn">Kart Oluştur</span>
+          </button>
+        </div>
+        <div id="giftCardList" class="list" style="margin-top:10px;"></div>
+        <p id="giftCardEmptyState" class="empty-state" data-i18n="giftCardEmpty">Henüz hediye kartı oluşturulmadı.</p>
+      </div>
     </section>
 
     <!-- SEKME: SİPARİŞ LİSTESİ -->
@@ -933,6 +959,24 @@
           </div>
           <button id="copyPublicCatalogLinkBtn" class="btn btn-block">
             <i class="fa-solid fa-copy" aria-hidden="true"></i> <span data-i18n="copyLinkBtn">Linki Kopyala</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="card">
+        <p class="card-title" data-i18n="loyaltyTitle">⭐ Müşteri Sadakat/Puan Sistemi</p>
+        <p class="card-subtitle" data-i18n="loyaltySubtitle">Veresiyeye kayıtlı müşteriler, her nakit/kart alışverişinde puan kazansın, biriken puanları indirim olarak kullanabilsin.</p>
+        <label class="checkbox-row">
+          <input id="loyaltyToggle" type="checkbox" />
+          <span data-i18n="loyaltyEnableLabel">Sadakat programını aktif et</span>
+        </label>
+        <div id="loyaltyConfig" style="display:none; margin-top:10px;">
+          <label class="field-label" data-i18n="loyaltyEarnRateLabel">Kaç TL harcamada 1 puan?</label>
+          <input id="loyaltyEarnRate" type="number" min="1" step="1" placeholder="Örn. 10" />
+          <label class="field-label" data-i18n="loyaltyRedeemRateLabel">Kaç puan 1 TL indirime denk gelsin?</label>
+          <input id="loyaltyRedeemRate" type="number" min="1" step="1" placeholder="Örn. 10" />
+          <button id="saveLoyaltySettingsBtn" class="btn btn-primary btn-block" style="margin-top:8px;">
+            <i class="fa-solid fa-floppy-disk" aria-hidden="true"></i> <span data-i18n="saveBtn">Kaydet</span>
           </button>
         </div>
       </div>
