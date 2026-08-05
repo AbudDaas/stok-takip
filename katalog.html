@@ -511,9 +511,8 @@
             pickedLng = e.latlng.lng;
             updateFeeSummary();
           });
-        } else {
-          deliveryMap.invalidateSize();
         }
+        deliveryMap.invalidateSize();
 
         if (navigator.geolocation && pickedLat == null) {
           navigator.geolocation.getCurrentPosition(
@@ -529,7 +528,7 @@
             () => {}
           );
         }
-      }, 100);
+      }, 250);
     }
 
     function sendOrder() {

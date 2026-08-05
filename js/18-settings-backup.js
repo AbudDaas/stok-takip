@@ -431,9 +431,13 @@ export function openBusinessLocationPicker() {
       } else {
         businessLocationMap.setView([startLat, startLng], startZoom);
         businessLocationMarker.setLatLng([startLat, startLng]);
-        businessLocationMap.invalidateSize();
       }
-    }, 100);
+      // Harita, pencere tam görünür olmadan oluşturulduğu için (ya da
+      // modal her açıldığında) Leaflet'in kutu boyutunu YENİDEN
+      // hesaplaması gerekiyor — yoksa bomboş/gri görünüyor. Bunu hem ilk
+      // oluşturmada hem sonraki açılışlarda çağırıyoruz.
+      businessLocationMap.invalidateSize();
+    }, 250);
   }
 
 export function closeBusinessLocationModal() {
