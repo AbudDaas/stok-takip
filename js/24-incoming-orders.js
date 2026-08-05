@@ -9,6 +9,18 @@ export function renderIncomingOrders() {
   if (!listEl) return;
 
   const orders = state.incomingOrders || [];
+
+  const badgeEl = document.getElementById("incomingOrdersBadge");
+  if (badgeEl) {
+    const pendingCount = orders.filter((o) => o.status !== "tamamlandi").length;
+    if (pendingCount > 0) {
+      badgeEl.textContent = pendingCount > 99 ? "99+" : String(pendingCount);
+      badgeEl.style.display = "block";
+    } else {
+      badgeEl.style.display = "none";
+    }
+  }
+
   if (!orders.length) {
     listEl.innerHTML = "";
     emptyEl.style.display = "block";
