@@ -584,7 +584,11 @@
             deliveryFee,
             distanceKm
           })
-        }).catch(() => {});
+        })
+          .then((res) => {
+            if (!res.ok) console.error("Sipariş sisteme kaydedilemedi, sunucu yanıtı:", res.status);
+          })
+          .catch((err) => console.error("Sipariş sisteme kaydedilemedi:", err));
       }
 
       const lines = items.map((it) => `• ${it.name} — ${it.qty} ${it.unit === "kg" ? "kg" : "adet"}`).join("%0A");
