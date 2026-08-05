@@ -6,7 +6,7 @@
   <title>Ürün Kataloğu</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,500&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,600;0,9..144,700;1,9..144,500&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -29,100 +29,116 @@
       font-family: var(--font-body);
       background: var(--paper);
       margin: 0;
-      padding: 0 0 96px;
       color: var(--ink);
       -webkit-font-smoothing: antialiased;
     }
-    .header-wrap {
-      background: var(--ink);
-      color: var(--paper);
-      padding: 28px 20px 34px;
-      text-align: center;
-      position: relative;
+
+    /* ---------- Üst çubuk: Trendyol tarzı sabit başlık ---------- */
+    .top-bar {
+      position: sticky; top: 0; z-index: 400;
+      background: var(--ink); color: var(--paper);
+      padding: 14px 16px 12px;
     }
-    .header-wrap h1 {
-      font-family: var(--font-display);
-      font-weight: 600;
-      font-size: 26px;
-      margin: 0 0 6px;
-      letter-spacing: 0.2px;
+    .top-bar-inner {
+      display: flex; align-items: center; justify-content: space-between;
+      max-width: 1000px; margin: 0 auto 12px;
     }
-    .header-wrap p {
-      font-size: 13px;
-      margin: 0;
-      color: #C8D2C0;
-      font-style: italic;
-      font-family: var(--font-display);
+    .brand-mini { display: flex; align-items: center; gap: 10px; min-width: 0; }
+    .brand-mini img {
+      width: 34px; height: 34px; border-radius: 8px; object-fit: cover; display: none; flex-shrink: 0;
     }
-    .torn-edge {
-      position: absolute;
-      left: 0; right: 0; bottom: -11px;
-      height: 12px;
-      background:
-        linear-gradient(135deg, var(--ink) 50%, transparent 50%) 0 0 / 14px 14px repeat-x,
-        linear-gradient(-135deg, var(--ink) 50%, transparent 50%) 0 0 / 14px 14px repeat-x;
-      background-position: 0 0, 7px 0;
+    .brand-mini h1 {
+      font-family: var(--font-display); font-weight: 600; font-size: 18px;
+      margin: 0; letter-spacing: 0.2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     }
-    .main-area { padding: 24px 16px 0; max-width: 560px; margin: 0 auto; }
+    .cart-icon-btn {
+      position: relative; background: var(--tomato); border: none; color: #fff;
+      width: 42px; height: 42px; border-radius: 10px; cursor: pointer; font-size: 17px;
+      display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    }
+    .cart-icon-badge {
+      position: absolute; top: -6px; right: -6px;
+      background: var(--mustard); color: var(--ink);
+      font-size: 10px; font-weight: 700; min-width: 18px; height: 18px;
+      border-radius: 9px; display: none; align-items: center; justify-content: center;
+      padding: 0 4px; border: 2px solid var(--ink);
+    }
+    .search-row { max-width: 1000px; margin: 0 auto; }
     .search-box {
-      width: 100%; padding: 13px 16px; border-radius: 10px;
-      border: 1.5px solid var(--line); font-size: 15px; margin-bottom: 22px;
+      width: 100%; padding: 12px 16px; border-radius: 10px;
+      border: none; font-size: 15px;
       background: var(--card); color: var(--ink); font-family: var(--font-body);
     }
     .search-box::placeholder { color: #A79D87; }
-    .search-box:focus { outline: none; border-color: var(--tomato); }
+    .search-box:focus { outline: 2px solid var(--mustard); }
+
+    .category-chips {
+      display: flex; gap: 8px; overflow-x: auto; padding: 12px 16px 0;
+      max-width: 1000px; margin: 0 auto; scrollbar-width: none;
+    }
+    .category-chips::-webkit-scrollbar { display: none; }
+    .category-chip {
+      flex-shrink: 0; padding: 7px 14px; border-radius: 20px; border: 1.5px solid #3B4D38;
+      background: transparent; color: var(--paper); font-size: 12.5px; font-weight: 600;
+      cursor: pointer; white-space: nowrap; font-family: var(--font-body);
+    }
+    .category-chip.active { background: var(--mustard); border-color: var(--mustard); color: var(--ink); }
+
+    /* ---------- Ana alan / ürün ızgarası ---------- */
+    .main-area { padding: 18px 16px 100px; max-width: 1000px; margin: 0 auto; }
+    .product-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+    }
+    @media (min-width: 620px) {
+      .product-grid { grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); }
+    }
+    .product-card {
+      background: var(--card); border-radius: 12px; overflow: hidden;
+      box-shadow: 0 1px 3px rgba(33, 48, 31, 0.08);
+      display: flex; flex-direction: column;
+    }
+    .product-visual {
+      height: 84px; display: flex; align-items: center; justify-content: center;
+      font-size: 30px; color: #fff;
+    }
+    .product-body { padding: 10px 12px 12px; display: flex; flex-direction: column; gap: 6px; flex: 1; }
+    .product-name {
+      font-size: 13.5px; font-weight: 600; margin: 0; line-height: 1.3;
+      display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+      min-height: 2.6em;
+    }
+    .product-price { font-size: 14.5px; color: var(--tomato-dark); font-weight: 700; margin: 0; font-variant-numeric: tabular-nums; }
+    .product-unit { font-size: 11px; color: var(--ink-soft); font-weight: 500; }
+
+    .qty-stepper { display: flex; align-items: center; gap: 6px; margin-top: auto; }
+    .qty-stepper button {
+      min-width: 30px; height: 30px; padding: 0 8px; border-radius: 7px; border: 1.5px solid var(--line);
+      background: var(--paper); font-size: 13px; cursor: pointer; color: var(--tomato-dark);
+      font-family: var(--font-body); font-weight: 700; white-space: nowrap;
+    }
+    .qty-stepper button.minus-btn { min-width: 30px; width: 30px; padding: 0; font-size: 16px; }
+    .qty-stepper button.add-btn { background: var(--tomato); border-color: var(--tomato); color: #fff; flex: 1; }
+    .qty-stepper span { min-width: 18px; text-align: center; font-weight: 700; font-variant-numeric: tabular-nums; font-size: 13px; }
+
     .category-label {
+      grid-column: 1 / -1;
       display: flex; align-items: center; gap: 10px;
       font-family: var(--font-display); font-weight: 600; font-style: italic;
       font-size: 15px; color: var(--tomato-dark);
-      margin: 26px 0 12px;
+      margin: 10px 0 2px;
     }
-    .category-label::after {
-      content: ""; flex: 1; height: 1px; background: var(--line);
-    }
+    .category-label::after { content: ""; flex: 1; height: 1px; background: var(--line); }
     .category-label:first-child { margin-top: 0; }
-    .product-card {
-      background: var(--card);
-      border-radius: 4px 10px 10px 4px;
-      border-left: 4px solid var(--mustard);
-      padding: 14px 16px;
-      margin-bottom: 9px;
-      display: flex; align-items: center; justify-content: space-between;
-      gap: 12px;
-      box-shadow: 0 1px 2px rgba(33, 48, 31, 0.06);
-    }
-    .product-name { font-size: 15px; font-weight: 600; margin: 0; color: var(--ink); }
-    .product-price { font-size: 13px; color: var(--ink-soft); margin: 3px 0 0; font-variant-numeric: tabular-nums; }
-    .qty-stepper { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
-    .qty-stepper button {
-      min-width: 34px; height: 34px; padding: 0 10px; border-radius: 8px; border: 1.5px solid var(--line);
-      background: var(--paper); font-size: 14px; cursor: pointer; color: var(--tomato-dark);
-      font-family: var(--font-body); font-weight: 700; white-space: nowrap;
-    }
-    .qty-stepper button.minus-btn { min-width: 34px; width: 34px; padding: 0; font-size: 17px; }
-    .qty-stepper button.add-btn { background: var(--tomato); border-color: var(--tomato); color: #fff; }
-    .qty-stepper span {
-      min-width: 22px; text-align: center; font-weight: 700; font-variant-numeric: tabular-nums;
-    }
+
     .empty-state, .error-state {
-      text-align: center; color: var(--ink-soft); padding: 48px 24px;
+      grid-column: 1 / -1; text-align: center; color: var(--ink-soft); padding: 48px 24px;
       font-family: var(--font-display); font-style: italic; font-size: 16px;
     }
-    .loading { text-align: center; padding: 48px 20px; color: var(--ink-soft); }
-    .cart-bar {
-      position: fixed; bottom: 0; left: 0; right: 0;
-      background: var(--ink); color: var(--paper); padding: 15px 20px;
-      display: none; align-items: center; justify-content: space-between;
-      box-shadow: 0 -3px 10px rgba(0,0,0,0.18); z-index: 500;
-    }
-    .cart-bar.show { display: flex; }
-    .cart-bar-info { font-family: var(--font-body); }
-    .cart-bar-count { font-size: 12px; color: #C8D2C0; }
-    .cart-bar-total { font-weight: 700; font-size: 17px; font-variant-numeric: tabular-nums; }
-    .cart-bar button {
-      background: var(--tomato); color: #fff; border: none; border-radius: 8px;
-      padding: 11px 18px; font-size: 14px; font-weight: 700; cursor: pointer; font-family: var(--font-body);
-    }
+    .loading { grid-column: 1 / -1; text-align: center; padding: 48px 20px; color: var(--ink-soft); }
+
+    /* ---------- Sepet penceresi: SİPARİŞ FİŞİ ---------- */
     .sheet-overlay {
       display: none; position: fixed; inset: 0; background: rgba(33, 48, 31, 0.45);
       z-index: 900; align-items: flex-end; justify-content: center;
@@ -161,6 +177,7 @@
     .cart-line-meta { font-size: 12px; color: var(--ink-soft); font-variant-numeric: tabular-nums; }
     .cart-line-total { font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
     .empty-cart-note { text-align: center; color: var(--ink-soft); font-size: 13px; font-style: italic; padding: 6px 0 4px; }
+
     .step-label {
       font-family: var(--font-display); font-weight: 600; font-style: italic;
       font-size: 14px; margin: 4px 0 10px; color: var(--tomato-dark);
@@ -173,6 +190,7 @@
     }
     .delivery-choice-btn.active { border-color: var(--tomato); background: #FBEEEC; color: var(--tomato-dark); }
     .delivery-choice-btn i { display: block; font-size: 20px; margin-bottom: 6px; }
+
     .address-input {
       width: 100%; padding: 12px; border-radius: 8px; border: 1.5px solid var(--line);
       font-size: 13.5px; margin-top: 10px; min-height: 58px; font-family: var(--font-body);
@@ -185,6 +203,7 @@
       margin-top: 4px; cursor: pointer; font-family: var(--font-body);
     }
     #deliveryMap { height: 240px; border-radius: 8px; margin-top: 10px; display: none; border: 1.5px solid var(--line); }
+
     .fee-summary { margin-top: 8px; font-size: 14px; }
     .fee-summary div { display: flex; justify-content: space-between; margin: 5px 0; font-variant-numeric: tabular-nums; }
     .fee-summary .grand-total {
@@ -207,27 +226,28 @@
   </style>
 </head>
 <body>
-  <div class="header-wrap">
-    <img id="businessLogoImg" src="" alt="" style="width:52px;height:52px;border-radius:12px;object-fit:cover;margin-bottom:8px;display:none;" />
-    <h1 id="businessNameHeader">Ürün Kataloğu</h1>
-    <p>ürünü seç, sepete ekle, tek seferde gönder</p>
-    <div class="torn-edge"></div>
-  </div>
+  <header class="top-bar">
+    <div class="top-bar-inner">
+      <div class="brand-mini">
+        <img id="businessLogoImg" src="" alt="" />
+        <h1 id="businessNameHeader">Ürün Kataloğu</h1>
+      </div>
+      <button id="openCartBtn" class="cart-icon-btn" aria-label="Sepetim">
+        <i class="fa-solid fa-basket-shopping" aria-hidden="true"></i>
+        <span id="cartBarCount" class="cart-icon-badge">0</span>
+      </button>
+    </div>
+    <div class="search-row">
+      <input id="searchBox" class="search-box" type="text" placeholder="Ürün ara..." style="display:none;" />
+    </div>
+    <div id="categoryChips" class="category-chips"></div>
+  </header>
 
-  <div class="main-area">
-    <input id="searchBox" class="search-box" type="text" placeholder="Ürün ara..." style="display:none;" />
-    <div id="content">
+  <main class="main-area">
+    <div id="content" class="product-grid">
       <div class="loading"><i class="fa-solid fa-spinner fa-spin" aria-hidden="true"></i> Ürünler yükleniyor…</div>
     </div>
-  </div>
-
-  <div id="cartBar" class="cart-bar">
-    <div class="cart-bar-info">
-      <div class="cart-bar-count" id="cartBarCount">0 ürün</div>
-      <div class="cart-bar-total" id="cartBarTotal">0,00 ₺</div>
-    </div>
-    <button id="openCartBtn">Sepeti Gör</button>
-  </div>
+  </main>
 
   <div id="cartSheetOverlay" class="sheet-overlay">
     <div class="receipt">
@@ -283,12 +303,13 @@
   <script src="js/chain-config.js"></script>
   <script>
     let allProducts = [];
-    let currentBusinessId = "";
     let businessPhone = "";
     let businessName = "";
     let businessLat = null;
     let businessLng = null;
     let perKmDeliveryFee = 0;
+    let currentBusinessId = "";
+    let activeCategory = "";
 
     const cart = {};
     let deliveryMode = "pickup";
@@ -316,16 +337,48 @@
       const b = Math.min(255, Math.max(0, (num & 0x0000ff) + amount));
       return `#${((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1)}`;
     }
-
     function applyBrandColor(color) {
       document.documentElement.style.setProperty("--tomato", color);
       document.documentElement.style.setProperty("--tomato-dark", shadeHex(color, -30));
     }
 
+    // Kategoriye göre basit bir ikon/renk eşlemesi — gerçek ürün fotoğrafı
+    // olmadığı için, en azından ızgarayı görsel olarak ayırt edilebilir yapar.
+    function getCategoryVisual(category) {
+      const cat = (category || "").toLowerCase();
+      if (cat.includes("içecek") || cat.includes("icecek")) return { icon: "fa-bottle-water", color: "#2E6E8E" };
+      if (cat.includes("süt") || cat.includes("sut") || cat.includes("peynir") || cat.includes("yoğurt") || cat.includes("yogurt")) return { icon: "fa-cheese", color: "#C99A2E" };
+      if (cat.includes("şarküteri") || cat.includes("sarkuteri") || cat.includes("tavuk") || cat.includes("balık") || cat.includes("balik") || cat.includes("dana") || cat.includes("kuzu")) return { icon: "fa-drumstick-bite", color: "#B23A2E" };
+      if (cat.includes("meyve") || cat.includes("sebze")) return { icon: "fa-carrot", color: "#4A7C3F" };
+      if (cat.includes("temizlik") || cat.includes("deterjan")) return { icon: "fa-spray-can-sparkles", color: "#3D8B87" };
+      if (cat.includes("atıştır") || cat.includes("atistir") || cat.includes("cips") || cat.includes("çikolata") || cat.includes("cikolata") || cat.includes("bisküvi") || cat.includes("biskuvi") || cat.includes("şeker") || cat.includes("seker")) return { icon: "fa-cookie", color: "#C77C2E" };
+      if (cat.includes("ekmek") || cat.includes("fırın") || cat.includes("firin") || cat.includes("pasta")) return { icon: "fa-bread-slice", color: "#8B5E34" };
+      if (cat.includes("bebek")) return { icon: "fa-baby", color: "#C97BA0" };
+      if (cat.includes("kişisel") || cat.includes("kisisel") || cat.includes("kozmetik") || cat.includes("şampuan") || cat.includes("sampuan")) return { icon: "fa-pump-soap", color: "#7A6BA8" };
+      return { icon: "fa-basket-shopping", color: "#5B6B54" };
+    }
+
+    function renderCategoryChips(products) {
+      const chipsEl = document.getElementById("categoryChips");
+      const categories = [...new Set(products.map((p) => p.category || "Diğer"))].sort();
+      let html = `<button class="category-chip ${activeCategory === "" ? "active" : ""}" data-cat="">Tümü</button>`;
+      html += categories
+        .map((cat) => `<button class="category-chip ${activeCategory === cat ? "active" : ""}" data-cat="${escapeHtml(cat)}">${escapeHtml(cat)}</button>`)
+        .join("");
+      chipsEl.innerHTML = html;
+      chipsEl.querySelectorAll(".category-chip").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          activeCategory = btn.dataset.cat;
+          renderProducts(allProducts, document.getElementById("searchBox").value);
+        });
+      });
+    }
+
     function renderProducts(products, filter) {
       const contentEl = document.getElementById("content");
       const normalized = (filter || "").toLowerCase().trim();
-      const filtered = normalized ? products.filter((p) => p.name.toLowerCase().includes(normalized)) : products;
+      let filtered = normalized ? products.filter((p) => p.name.toLowerCase().includes(normalized)) : products;
+      if (activeCategory) filtered = filtered.filter((p) => (p.category || "Diğer") === activeCategory);
 
       if (!filtered.length) {
         contentEl.innerHTML = '<div class="empty-state">Bu isimde bir ürün yok. Farklı bir kelime dene.</div>';
@@ -341,19 +394,23 @@
 
       let html = "";
       Object.keys(byCategory).sort().forEach((cat) => {
-        html += `<p class="category-label">${escapeHtml(cat)}</p>`;
+        if (!activeCategory) html += `<p class="category-label">${escapeHtml(cat)}</p>`;
         byCategory[cat].forEach((p) => {
           const unitLabel = p.unit === "kg" ? "kg" : "adet";
           const qty = cart[p.name] ? cart[p.name].qty : 0;
+          const visual = getCategoryVisual(p.category);
           html += `
             <div class="product-card">
-              <div>
-                <p class="product-name">${escapeHtml(p.name)}</p>
-                <p class="product-price">${formatTL(p.price)} / ${unitLabel}</p>
+              <div class="product-visual" style="background:${visual.color};">
+                <i class="fa-solid ${visual.icon}" aria-hidden="true"></i>
               </div>
-              <div class="qty-stepper" data-name="${escapeHtml(p.name)}" data-price="${p.price}" data-unit="${p.unit}">
-                ${qty > 0 ? `<button class="minus-btn">−</button><span>${qty}</span>` : ""}
-                <button class="add-btn">${qty > 0 ? "+" : "Ekle"}</button>
+              <div class="product-body">
+                <p class="product-name">${escapeHtml(p.name)}</p>
+                <p class="product-price">${formatTL(p.price)}<span class="product-unit"> / ${unitLabel}</span></p>
+                <div class="qty-stepper" data-name="${escapeHtml(p.name)}" data-price="${p.price}" data-unit="${p.unit}">
+                  ${qty > 0 ? `<button class="minus-btn">−</button><span>${qty}</span>` : ""}
+                  <button class="add-btn">${qty > 0 ? "+" : "Ekle"}</button>
+                </div>
               </div>
             </div>`;
         });
@@ -387,15 +444,14 @@
     }
 
     function updateCartBar() {
-      const bar = document.getElementById("cartBar");
+      const badge = document.getElementById("cartBarCount");
       const count = getCartCount();
       if (count <= 0) {
-        bar.classList.remove("show");
-        return;
+        badge.style.display = "none";
+      } else {
+        badge.style.display = "flex";
+        badge.textContent = count > 99 ? "99+" : String(count);
       }
-      bar.classList.add("show");
-      document.getElementById("cartBarCount").textContent = `${count} ürün`;
-      document.getElementById("cartBarTotal").textContent = formatTL(getCartTotal());
     }
 
     function openCartSheet() {
@@ -593,7 +649,6 @@
 
         if (!res.ok) throw new Error("Sunucu hatası: " + res.status);
 
-        // Başarılı — fiş görünümünü, teşekkür ekranına çeviriyoruz.
         document.querySelector(".receipt").innerHTML = `
           <p class="receipt-title">Siparişin Alındı</p>
           <p class="receipt-subtitle">teşekkürler, ${escapeHtml(customerName)}</p>
@@ -652,9 +707,7 @@
           logoImg.src = data.businessLogo;
           logoImg.style.display = "inline-block";
         }
-        if (data.brandColor) {
-          applyBrandColor(data.brandColor);
-        }
+        if (data.brandColor) applyBrandColor(data.brandColor);
 
         if (!allProducts.length) {
           contentEl.innerHTML = '<div class="empty-state">Şu an listelenecek ürün yok.</div>';
@@ -662,6 +715,7 @@
         }
 
         document.getElementById("searchBox").style.display = "block";
+        renderCategoryChips(allProducts);
         renderProducts(allProducts, "");
       } catch (e) {
         contentEl.innerHTML = '<div class="error-state">Katalog yüklenemedi, lütfen daha sonra tekrar dene.</div>';
