@@ -9,6 +9,7 @@ import { renderCart, stopScan, stopScanKasa } from './07-kasa-checkout.js';
 import { renderSales } from './08-sales-returns.js';
 import { renderSuppliers } from './09-suppliers.js';
 import { renderExpenses } from './21-expenses.js';
+import { renderIncomingOrders } from './24-incoming-orders.js';
 import { renderReminders } from './10-reminders.js';
 import { renderBreadStatus, renderPriceChanges } from './11-bread-orders.js';
 import { loadBranches, renderCatalogList } from './13-branches-chain.js';
@@ -106,6 +107,7 @@ export function renderAll() {
     renderSuppliers();
     populateNewProductSupplierSelect();
     renderExpenses();
+    renderIncomingOrders();
     renderPublicCatalogSettings();
     renderLoyaltySettings();
     renderScaleBarcodeSettings();

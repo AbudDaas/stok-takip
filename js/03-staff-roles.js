@@ -310,7 +310,7 @@ export function applyRoleRestrictionsUI() {
     }
 
     // Kasiyer: sadece Kasa, Satışlar, Veresiye görünür.
-    const cashierBlockedTabs = ["tab-products", "tab-scan", "tab-orders", "tab-pricechanges", "tab-settings", "tab-branches", "tab-suppliers", "tab-expenses"];
+    const cashierBlockedTabs = ["tab-products", "tab-scan", "tab-orders", "tab-pricechanges", "tab-settings", "tab-branches", "tab-suppliers", "tab-expenses", "tab-incoming-orders"];
     cashierBlockedTabs.forEach((tabId) => {
       const btn = document.querySelector(`.nav-btn[data-tab="${tabId}"]`);
       if (btn) btn.style.display = "none";

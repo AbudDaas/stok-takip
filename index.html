@@ -647,6 +647,13 @@
       <p id="expenseEmptyState" class="empty-state" data-i18n="expenseEmptyState">Henüz gider eklenmedi.</p>
     </section>
 
+    <!-- SEKME: GELEN SİPARİŞLER -->
+    <section id="tab-incoming-orders" class="tab-panel">
+      <p class="card-subtitle" data-i18n="incomingOrdersSubtitle" style="margin-bottom:14px;">Herkese açık kataloğundan gelen siparişler burada otomatik olarak listelenir.</p>
+      <div id="incomingOrdersList" class="list"></div>
+      <p id="incomingOrdersEmptyState" class="empty-state" data-i18n="incomingOrdersEmpty">Henüz gelen bir sipariş yok.</p>
+    </section>
+
     <!-- TEDARİKÇİ DETAY MODAL -->
     <!-- İADE ALMA MODAL -->
     <div id="returnModal" class="modal-overlay" style="display:none;">
@@ -1596,6 +1603,10 @@
     <button class="nav-btn" data-tab="tab-expenses">
       <i class="fa-solid fa-file-invoice-dollar" aria-hidden="true"></i>
       <span data-i18n="navExpenses">Giderler</span>
+    </button>
+    <button class="nav-btn" data-tab="tab-incoming-orders">
+      <i class="fa-solid fa-bell-concierge" aria-hidden="true"></i>
+      <span data-i18n="navIncomingOrders">Gelen Siparişler</span>
     </button>
     <button class="nav-btn" data-tab="tab-pricechanges">
       <i class="fa-solid fa-arrow-right-arrow-left" aria-hidden="true"></i>

@@ -41,6 +41,7 @@ state.businessLng = null;
 state.perKmDeliveryFee = 0;
 state.businessLogo = "";
 state.brandColor = "#1F3864";
+state.incomingOrders = [];
 state._rev = 0;
 state._hasLoadedOnce = false;
 state.activeReturnSaleId = null;
