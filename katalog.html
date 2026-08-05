@@ -273,7 +273,7 @@
         <p id="customerInfoWarn" class="warn-text" style="display:none;"></p>
 
         <button id="sendOrderBtn" class="send-order-btn">
-          <i class="fa-brands fa-whatsapp" aria-hidden="true"></i> Siparişi Gönder
+          <i class="fa-solid fa-paper-plane" aria-hidden="true"></i> Siparişi Gönder
         </button>
         <div class="receipt-footer-rule"></div>
       </div>
@@ -531,7 +531,7 @@
       }, 250);
     }
 
-    function sendOrder() {
+    async function sendOrder() {
       const customerName = document.getElementById("customerNameInput").value.trim();
       const customerPhone = document.getElementById("customerPhoneInput").value.trim();
       const warnEl = document.getElementById("customerInfoWarn");
@@ -563,13 +563,18 @@
 
       const sendBtn = document.getElementById("sendOrderBtn");
       sendBtn.disabled = true;
+      sendBtn.textContent = "Gönderiliyor…";
 
-      // Siparişi doğrudan işletmenin sistemine gönder — böylece işletme
-      // sahibi uygulamadaki "Gelen Siparişler" ekranında anında görür.
-      // Bu istek başarısız olsa bile (internet, sunucu vb.) müşteri
-      // WhatsApp'tan yine de sipariş verebilsin diye devam ediyoruz.
-      if (currentBusinessId && typeof chainConfig !== "undefined" && chainConfig.workerUrl) {
-        fetch(`${chainConfig.workerUrl}/submit-order`, {
+      if (!currentBusinessId || typeof chainConfig === "undefined" || !chainConfig.workerUrl) {
+        warnEl.textContent = "Sipariş sistemi şu an kullanılamıyor, lütfen daha sonra tekrar dene.";
+        warnEl.style.display = "block";
+        sendBtn.disabled = false;
+        sendBtn.textContent = "Siparişi Gönder";
+        return;
+      }
+
+      try {
+        const res = await fetch(`${chainConfig.workerUrl}/submit-order`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -584,36 +589,31 @@
             deliveryFee,
             distanceKm
           })
-        })
-          .then((res) => {
-            if (!res.ok) console.error("Sipariş sisteme kaydedilemedi, sunucu yanıtı:", res.status);
-          })
-          .catch((err) => console.error("Sipariş sisteme kaydedilemedi:", err));
+        });
+
+        if (!res.ok) throw new Error("Sunucu hatası: " + res.status);
+
+        // Başarılı — fiş görünümünü, teşekkür ekranına çeviriyoruz.
+        document.querySelector(".receipt").innerHTML = `
+          <p class="receipt-title">Siparişin Alındı</p>
+          <p class="receipt-subtitle">teşekkürler, ${escapeHtml(customerName)}</p>
+          <hr class="receipt-rule" />
+          <p style="text-align:center;font-size:14px;color:var(--ink-soft);line-height:1.6;">
+            ${escapeHtml(businessName)} siparişini gördü ve en kısa sürede seninle iletişime geçecek.
+          </p>
+          <div class="receipt-footer-rule"></div>`;
+
+        Object.keys(cart).forEach((k) => delete cart[k]);
+        updateCartBar();
+      } catch (err) {
+        console.error("Sipariş gönderilemedi:", err);
+        warnEl.textContent = businessPhone
+          ? `Sipariş gönderilemedi. Lütfen tekrar dene, ya da ara: ${businessPhone}`
+          : "Sipariş gönderilemedi, lütfen internetini kontrol edip tekrar dene.";
+        warnEl.style.display = "block";
+        sendBtn.disabled = false;
+        sendBtn.textContent = "Siparişi Gönder";
       }
-
-      const lines = items.map((it) => `• ${it.name} — ${it.qty} ${it.unit === "kg" ? "kg" : "adet"}`).join("%0A");
-      let message = `Merhaba, ben ${customerName} (${customerPhone}). Sipariş vermek istiyorum:%0A%0A${lines}%0A%0AÜrünler Toplamı: ${formatTL(productTotal)}`;
-
-      if (deliveryMode === "courier") {
-        message += `%0A%0ATeslimat: Kurye ile%0A`;
-        if (mapLink) {
-          message += `Konum: ${mapLink}%0A`;
-          message += `Teslimat Ücreti (~${distanceKm.toFixed(1)} km): ${formatTL(deliveryFee)}%0A`;
-          message += `Genel Toplam: ${formatTL(productTotal + deliveryFee)}%0A`;
-        }
-        if (addressText) message += `Adres notu: ${addressText}%0A`;
-      } else {
-        message += `%0A%0ATeslimat: Gelip alacağım`;
-      }
-
-      sendBtn.disabled = false;
-
-      if (!businessPhone) {
-        alert("Bu işletme için sipariş numarası tanımlanmamış.");
-        return;
-      }
-      const cleanPhone = businessPhone.replace(/[^\d]/g, "");
-      window.open(`https://wa.me/${cleanPhone}?text=${message}`, "_blank");
     }
 
     async function loadCatalog() {
