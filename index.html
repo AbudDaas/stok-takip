@@ -2,7 +2,7 @@
 <html lang="tr">
 <head>
 <meta charset="UTF-8" />
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdnjs.cloudflare.com https://www.gstatic.com https://unpkg.com; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://unpkg.com; img-src 'self' data: blob: https://*.tile.openstreetmap.org; font-src 'self' https://cdnjs.cloudflare.com; connect-src 'self' https://*.googleapis.com https://*.google.com https://*.workers.dev https://identitytoolkit.googleapis.com https://www.gstatic.com wss://*.firebaseio.com; frame-src 'none'; object-src 'none'; base-uri 'self';" />
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdnjs.cloudflare.com https://www.gstatic.com https://unpkg.com; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://unpkg.com; img-src 'self' data: blob: https://*.tile.openstreetmap.org https://firebasestorage.googleapis.com; font-src 'self' https://cdnjs.cloudflare.com; connect-src 'self' https://*.googleapis.com https://*.google.com https://*.workers.dev https://identitytoolkit.googleapis.com https://www.gstatic.com wss://*.firebaseio.com; frame-src 'none'; object-src 'none'; base-uri 'self';" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <title>Bakkal Stok Takip</title>
 <meta name="theme-color" content="#1F3864" />
@@ -179,7 +179,15 @@
             <option value="kg" data-i18n="unitKg">Kg (tartılı / açık ürün)</option>
           </select>
         </div>
-        <div class="form-row barcode-row">
+        <label class="field-label" data-i18n="productPhotoLabel">Ürün Fotoğrafı (opsiyonel)</label>
+        <div style="display:flex;align-items:center;gap:12px;">
+          <img id="newProductPhotoPreview" src="" alt="" style="width:52px;height:52px;border-radius:10px;object-fit:cover;display:none;" />
+          <div id="newProductPhotoPlaceholder" class="stat-card" style="width:52px;height:52px;display:flex;align-items:center;justify-content:center;padding:0;">
+            <i class="fa-solid fa-image" style="color:var(--text-muted);"></i>
+          </div>
+          <input id="newProductPhotoInput" type="file" accept="image/*" style="flex:1;" />
+        </div>
+        <div class="form-row barcode-row" style="margin-top:12px;">
           <input id="newBarcode" type="text" data-i18n-placeholder="barcodePh" placeholder="Barkod (opsiyonel)" />
           <button id="scanNewBarcodeBtn" type="button" class="btn btn-icon-only" data-i18n-aria="scanBarcodeAria" aria-label="Barkod tara">
             <i class="fa-solid fa-barcode" aria-hidden="true"></i>
@@ -1361,6 +1369,14 @@
           <select id="editSupplierId">
             <option value="" data-i18n="editSupplierNone">Tedarikçi seçilmedi</option>
           </select>
+          <label class="field-label" data-i18n="productPhotoLabel">Ürün Fotoğrafı (opsiyonel)</label>
+          <div style="display:flex;align-items:center;gap:12px;">
+            <img id="editProductPhotoPreview" src="" alt="" style="width:52px;height:52px;border-radius:10px;object-fit:cover;display:none;" />
+            <div id="editProductPhotoPlaceholder" class="stat-card" style="width:52px;height:52px;display:flex;align-items:center;justify-content:center;padding:0;">
+              <i class="fa-solid fa-image" style="color:var(--text-muted);"></i>
+            </div>
+            <input id="editProductPhotoInput" type="file" accept="image/*" style="flex:1;" />
+          </div>
           <label class="field-label" data-i18n="barcodeLabel">Barkod</label>
           <div class="form-row barcode-row">
             <input id="editBarcode" type="text" data-i18n-placeholder="barcodePh" placeholder="Barkod (opsiyonel)" />
@@ -1643,6 +1659,7 @@
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-messaging-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
   <script src="js/firebase-config.js"></script>
   <script src="js/bulk-scan-config.js"></script>
   <script src="js/admin-config.js"></script>

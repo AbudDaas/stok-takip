@@ -21,6 +21,7 @@ export function initFirebaseIfConfigured() {
       firebase.initializeApp(firebaseConfig);
       state.db = firebase.firestore();
       state.auth = firebase.auth();
+      state.storage = firebase.storage();
       state.cloudEnabled = true;
 
       // Çevrimdışı (offline) destek: Firestore'un kendi yerleşik önbelleğini

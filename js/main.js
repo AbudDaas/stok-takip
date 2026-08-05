@@ -3,7 +3,7 @@ import { forgotPassword, importLocalBackup, load, logout, registerPeriodicSync, 
 import { showToast } from './02-utils.js';
 import { addStaffMember, enterAsOwner, saveOwnerPin, staffPickerGoBack, submitStaffPickerPin, switchUser } from './03-staff-roles.js';
 import { saveFiscalSettings, toggleFiscalEnabled } from './04-fiscal.js';
-import { addCaseBarcodeEntry, addExtraBarcode, addPendingCaseBarcode, addPendingExtraBarcode, addProduct, addWarehouseStock, adjustQty, closeModal, deleteProduct, handleCsvImportFile, printAllQrCodes, printQr, printSelfSourceList, resetAll, saveEdit, setQtyManually, transferToShelf, translateMissingProductNames } from './05-products.js';
+import { addCaseBarcodeEntry, addExtraBarcode, addPendingCaseBarcode, addPendingExtraBarcode, addProduct, addWarehouseStock, adjustQty, closeModal, deleteProduct, handleCsvImportFile, handleEditProductPhotoUpload, handleNewProductPhotoUpload, printAllQrCodes, printQr, printSelfSourceList, resetAll, saveEdit, setQtyManually, transferToShelf, translateMissingProductNames } from './05-products.js';
 import { addCustomer, closeCustomerModal, deleteCustomer, recordPayment, renderVeresiyeCustomerResults, saveCustomerEdit } from './06-veresiye.js';
 import { checkGiftCardBalance, clearCart, closeQuickBarcodeScan, completeSale, openQuickBarcodeScan, renderCart, renderManualAddResults, setPaymentType, setScanMode, startScan, startScanKasa, stopScan, stopScanKasa } from './07-kasa-checkout.js';
 import { closeReturnModal, confirmReturn, renderSales } from './08-sales-returns.js';
@@ -103,6 +103,8 @@ document.getElementById("transferToShelfBtn").addEventListener("click", transfer
 document.getElementById("printAllQrBtn").addEventListener("click", printAllQrCodes);
 
 document.getElementById("scanNewBarcodeBtn").addEventListener("click", () => openQuickBarcodeScan("newBarcode"));
+document.getElementById("newProductPhotoInput").addEventListener("change", (e) => handleNewProductPhotoUpload(e.target.files[0]));
+document.getElementById("editProductPhotoInput").addEventListener("change", (e) => handleEditProductPhotoUpload(e.target.files[0]));
 document.getElementById("scanNewExtraBarcodeBtn").addEventListener("click", () => openQuickBarcodeScan("newExtraBarcodeSingle"));
 document.getElementById("scanNewCaseBarcodeBtn").addEventListener("click", () => openQuickBarcodeScan("newCaseBarcode"));
 document.getElementById("addPendingExtraBarcodeBtn").addEventListener("click", addPendingExtraBarcode);

@@ -1,6 +1,6 @@
 import { state } from './00-state.js';
 import { save } from './01-firebase-core.js';
-import { escapeHtml, formatQty, formatTL, getStatus, getStatusLabel, mkProduct, printOrderListAsPdf, showPrompt, showToast } from './02-utils.js';
+import { escapeHtml, formatQty, formatTL, genId, getStatus, getStatusLabel, mkProduct, printOrderListAsPdf, showPrompt, showToast } from './02-utils.js';
 import { logAudit } from './03-staff-roles.js';
 import { callGeminiWithRetry } from './16-bulk-scan-ai.js';
 import { renderAll } from './20-navigation.js';
@@ -99,6 +99,86 @@ export function addPendingCaseBarcode() {
     renderPendingCaseBarcodesList();
   }
 
+/**
+ * Bir görsel dosyasını, yüklemeden önce küçültüp sıkıştırır (hem hızlı
+ * yüklensin hem depolama alanını az kullansın).
+ */
+function resizeImageForUpload(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          const maxSize = 500;
+          const scale = Math.min(1, maxSize / Math.max(img.width, img.height));
+          const canvas = document.createElement("canvas");
+          canvas.width = img.width * scale;
+          canvas.height = img.height * scale;
+          const ctx = canvas.getContext("2d");
+          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+          canvas.toBlob((blob) => resolve(blob), "image/jpeg", 0.8);
+        };
+        img.onerror = reject;
+        img.src = e.target.result;
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  }
+
+/**
+ * Görseli Firebase Storage'a yükler (Firestore belgesinin İÇİNE DEĞİL —
+ * çünkü yüzlerce ürün fotoğrafı, Firestore'un 1MB belge sınırını
+ * kolayca aşardı). Firestore'a sadece küçük bir bağlantı (URL) kaydedilir.
+ */
+async function uploadImageToStorage(file, productId) {
+    if (!state.storage) throw new Error("Storage etkin değil");
+    const businessId = (state.originalDocRef || state.docRef).id;
+    const blob = await resizeImageForUpload(file);
+    const ref = state.storage.ref(`product-images/${businessId}/${productId}.jpg`);
+    await ref.put(blob);
+    return await ref.getDownloadURL();
+  }
+
+export function handleNewProductPhotoUpload(file) {
+    if (!file) return;
+    const tempId = genId();
+    uploadImageToStorage(file, tempId)
+      .then((url) => {
+        state.pendingProductImage = url;
+        const preview = document.getElementById("newProductPhotoPreview");
+        const placeholder = document.getElementById("newProductPhotoPlaceholder");
+        preview.src = url;
+        preview.style.display = "block";
+        placeholder.style.display = "none";
+      })
+      .catch((e) => {
+        console.error("Fotoğraf yüklenemedi", e);
+        showToast(state.t("photoUploadFailed"), "error");
+      });
+  }
+
+export function handleEditProductPhotoUpload(file) {
+    if (!file) return;
+    const p = state.products.find((x) => x.id === state.activeProductId);
+    if (!p) return;
+    uploadImageToStorage(file, p.id)
+      .then((url) => {
+        p.image = url;
+        const preview = document.getElementById("editProductPhotoPreview");
+        const placeholder = document.getElementById("editProductPhotoPlaceholder");
+        preview.src = url;
+        preview.style.display = "block";
+        placeholder.style.display = "none";
+        save();
+        showToast(state.t("photoUploaded"), "success");
+      })
+      .catch((e) => {
+        console.error("Fotoğraf yüklenemedi", e);
+        showToast(state.t("photoUploadFailed"), "error");
+      });
+  }
+
 export function addProduct() {
     const nameInput = document.getElementById("newName");
     const catInput = document.getElementById("newCategory");
@@ -125,6 +205,7 @@ export function addProduct() {
 
     const newProduct = mkProduct(name, category, qty, min, price, barcode, unit, costPrice);
     newProduct.supplierId = supplierInput.value || null;
+    if (state.pendingProductImage) newProduct.image = state.pendingProductImage;
     const scaleCodeInput = document.getElementById("newScaleCode");
     if (scaleCodeInput && scaleCodeInput.value.trim()) newProduct.teraziKodu = scaleCodeInput.value.trim();
     if (state.pendingExtraBarcodes.length) newProduct.extraBarcodes = [...state.pendingExtraBarcodes];
@@ -142,6 +223,10 @@ export function addProduct() {
     unitInput.value = "adet";
     supplierInput.value = "";
     if (scaleCodeInput) scaleCodeInput.value = "";
+    state.pendingProductImage = "";
+    document.getElementById("newProductPhotoInput").value = "";
+    document.getElementById("newProductPhotoPreview").style.display = "none";
+    document.getElementById("newProductPhotoPlaceholder").style.display = "flex";
     state.pendingExtraBarcodes = [];
     state.pendingCaseBarcodes = [];
     renderPendingExtraBarcodesList();
@@ -369,8 +454,12 @@ export function toggleNeedsAlternativeSource(productId) {
 export function productRowHtml(p) {
     const status = getStatus(p);
     const priceLabel = p.unit === "kg" ? formatTL(p.price) + state.t("perKgSuffix") : formatTL(p.price);
+    const thumbHtml = p.image
+      ? `<img src="${escapeHtml(p.image)}" alt="" class="product-thumb" />`
+      : `<div class="product-thumb product-thumb-placeholder"><i class="fa-solid fa-image" aria-hidden="true"></i></div>`;
     return `
       <div class="product-row" data-id="${p.id}">
+        ${thumbHtml}
         <div class="product-info">
           <p class="product-name">${escapeHtml(getDisplayName(p))}</p>
           <p class="product-meta">${escapeHtml(p.category)} · ${state.t("stockShortLabel")}: ${formatQty(p)} · ${priceLabel}</p>
@@ -396,6 +485,17 @@ export function openModal(id) {
     document.getElementById("editBulkValue").value = p.bulkDiscountValue || "";
     populateEditSupplierSelect(p.supplierId);
     document.getElementById("editScaleCode").value = p.teraziKodu || "";
+    const editPhotoPreview = document.getElementById("editProductPhotoPreview");
+    const editPhotoPlaceholder = document.getElementById("editProductPhotoPlaceholder");
+    document.getElementById("editProductPhotoInput").value = "";
+    if (p.image) {
+      editPhotoPreview.src = p.image;
+      editPhotoPreview.style.display = "block";
+      editPhotoPlaceholder.style.display = "none";
+    } else {
+      editPhotoPreview.style.display = "none";
+      editPhotoPlaceholder.style.display = "flex";
+    }
     document.getElementById("editCaseBarcode").value = "";
     document.getElementById("editCaseQty").value = "";
     renderExtraBarcodesList();

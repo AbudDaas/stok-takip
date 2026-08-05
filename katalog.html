@@ -399,17 +399,19 @@
           const unitLabel = p.unit === "kg" ? "kg" : "adet";
           const qty = cart[p.name] ? cart[p.name].qty : 0;
           const visual = getCategoryVisual(p.category);
+          const visualHtml = p.image
+            ? `<div class="product-visual" style="background:${visual.color};padding:0;"><img src="${escapeHtml(p.image)}" alt="" style="width:100%;height:100%;object-fit:cover;" /></div>`
+            : `<div class="product-visual" style="background:${visual.color};"><i class="fa-solid ${visual.icon}" aria-hidden="true"></i></div>`;
           html += `
             <div class="product-card">
-              <div class="product-visual" style="background:${visual.color};">
-                <i class="fa-solid ${visual.icon}" aria-hidden="true"></i>
-              </div>
+              ${visualHtml}
               <div class="product-body">
                 <p class="product-name">${escapeHtml(p.name)}</p>
                 <p class="product-price">${formatTL(p.price)}<span class="product-unit"> / ${unitLabel}</span></p>
                 <div class="qty-stepper" data-name="${escapeHtml(p.name)}" data-price="${p.price}" data-unit="${p.unit}">
                   ${qty > 0 ? `<button class="minus-btn">−</button><span>${qty}</span>` : ""}
                   <button class="add-btn">${qty > 0 ? "+" : "Ekle"}</button>
+
                 </div>
               </div>
             </div>`;
