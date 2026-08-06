@@ -109,14 +109,21 @@ function resizeImageForUpload(file) {
       reader.onload = (e) => {
         const img = new Image();
         img.onload = () => {
-          const maxSize = 500;
-          const scale = Math.min(1, maxSize / Math.max(img.width, img.height));
+          // Ürün fotoğrafları hem listede hem katalogda KARE bir alanda
+          // gösteriliyor. Yüklenen fotoğraf kare değilse (dikdörtgense),
+          // ortadan kırpıp kareye çeviriyoruz — böylece hangi boy/oranda
+          // fotoğraf yüklersen yükle, hiçbir yerde beklenmedik şekilde
+          // kırpılmış/bozuk görünmüyor.
+          const size = 500;
           const canvas = document.createElement("canvas");
-          canvas.width = img.width * scale;
-          canvas.height = img.height * scale;
+          canvas.width = size;
+          canvas.height = size;
           const ctx = canvas.getContext("2d");
-          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-          canvas.toBlob((blob) => resolve(blob), "image/jpeg", 0.8);
+          const scale = Math.max(size / img.width, size / img.height);
+          const w = img.width * scale;
+          const h = img.height * scale;
+          ctx.drawImage(img, (size - w) / 2, (size - h) / 2, w, h);
+          canvas.toBlob((blob) => resolve(blob), "image/jpeg", 0.85);
         };
         img.onerror = reject;
         img.src = e.target.result;
