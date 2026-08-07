@@ -215,6 +215,12 @@ export function addProduct() {
     if (state.pendingProductImage) newProduct.image = state.pendingProductImage;
     const scaleCodeInput = document.getElementById("newScaleCode");
     if (scaleCodeInput && scaleCodeInput.value.trim()) newProduct.teraziKodu = scaleCodeInput.value.trim();
+    newProduct.catalogNew = document.getElementById("newCatalogNew").checked;
+    newProduct.catalogDiscount = document.getElementById("newCatalogDiscount").checked;
+    if (newProduct.catalogDiscount) {
+      const discountedPrice = Number(document.getElementById("newDiscountedPrice").value) || 0;
+      if (discountedPrice > 0) newProduct.discountedPrice = discountedPrice;
+    }
     if (state.pendingExtraBarcodes.length) newProduct.extraBarcodes = [...state.pendingExtraBarcodes];
     if (state.pendingCaseBarcodes.length) newProduct.caseBarcodes = [...state.pendingCaseBarcodes];
 
@@ -230,6 +236,10 @@ export function addProduct() {
     unitInput.value = "adet";
     supplierInput.value = "";
     if (scaleCodeInput) scaleCodeInput.value = "";
+    document.getElementById("newCatalogNew").checked = false;
+    document.getElementById("newCatalogDiscount").checked = false;
+    document.getElementById("newDiscountedPrice").value = "";
+    document.getElementById("newDiscountedPrice").style.display = "none";
     state.pendingProductImage = "";
     document.getElementById("newProductPhotoInput").value = "";
     document.getElementById("newProductPhotoPreview").style.display = "none";
@@ -324,6 +334,14 @@ export function saveEdit() {
     p.bulkDiscountValue = Number(document.getElementById("editBulkValue").value) || 0;
     p.supplierId = document.getElementById("editSupplierId").value || null;
     p.teraziKodu = document.getElementById("editScaleCode").value.trim() || null;
+    p.catalogNew = document.getElementById("editCatalogNew").checked;
+    p.catalogDiscount = document.getElementById("editCatalogDiscount").checked;
+    if (p.catalogDiscount) {
+      const discountedPrice = Number(document.getElementById("editDiscountedPrice").value) || 0;
+      p.discountedPrice = discountedPrice > 0 ? discountedPrice : null;
+    } else {
+      p.discountedPrice = null;
+    }
     // Not: koli barkodları artık "Koli Barkodu Ekle" butonuyla doğrudan
     // p.caseBarcodes listesine ekleniyor/çıkarılıyor, burada ayrıca
     // kaydetmeye gerek yok.
@@ -492,6 +510,11 @@ export function openModal(id) {
     document.getElementById("editBulkValue").value = p.bulkDiscountValue || "";
     populateEditSupplierSelect(p.supplierId);
     document.getElementById("editScaleCode").value = p.teraziKodu || "";
+    document.getElementById("editCatalogNew").checked = !!p.catalogNew;
+    document.getElementById("editCatalogDiscount").checked = !!p.catalogDiscount;
+    const editDiscountInput = document.getElementById("editDiscountedPrice");
+    editDiscountInput.value = p.discountedPrice || "";
+    editDiscountInput.style.display = p.catalogDiscount ? "block" : "none";
     const editPhotoPreview = document.getElementById("editProductPhotoPreview");
     const editPhotoPlaceholder = document.getElementById("editProductPhotoPlaceholder");
     document.getElementById("editProductPhotoInput").value = "";

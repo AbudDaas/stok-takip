@@ -195,6 +195,18 @@
         </div>
         <label class="field-label" data-i18n="scaleCodeLabel">Terazi Kodu (opsiyonel, sadece kg ile satılan ürünler için)</label>
         <input id="newScaleCode" type="text" maxlength="8" data-i18n-placeholder="scaleCodePh" placeholder="Terazide bu ürüne verdiğin kod" />
+
+        <label class="field-label" data-i18n="catalogHighlightLabel">Katalogda Öne Çıkar (opsiyonel)</label>
+        <label class="checkbox-row">
+          <input id="newCatalogNew" type="checkbox" />
+          <span data-i18n="catalogNewLabel">🆕 "Yeni Ürünler" bölümünde göster</span>
+        </label>
+        <label class="checkbox-row">
+          <input id="newCatalogDiscount" type="checkbox" />
+          <span data-i18n="catalogDiscountLabel">🔥 "İndirimde" bölümünde göster</span>
+        </label>
+        <input id="newDiscountedPrice" type="number" min="0" step="0.01" data-i18n-placeholder="discountedPricePh" placeholder="İndirimli fiyat (TL)" style="display:none;margin-top:6px;" />
+
         <label class="field-label" data-i18n="editSupplierLabel">Tedarikçi (opsiyonel)</label>
         <select id="newSupplierId">
           <option value="" data-i18n="editSupplierNone">Tedarikçi seçilmedi</option>
@@ -1386,6 +1398,18 @@
           </div>
           <label class="field-label" data-i18n="scaleCodeLabel">Terazi Kodu (opsiyonel, sadece kg ile satılan ürünler için)</label>
           <input id="editScaleCode" type="text" maxlength="8" data-i18n-placeholder="scaleCodePh" placeholder="Terazide bu ürüne verdiğin kod" />
+
+          <label class="field-label" data-i18n="catalogHighlightLabel">Katalogda Öne Çıkar (opsiyonel)</label>
+          <label class="checkbox-row">
+            <input id="editCatalogNew" type="checkbox" />
+            <span data-i18n="catalogNewLabel">🆕 "Yeni Ürünler" bölümünde göster</span>
+          </label>
+          <label class="checkbox-row">
+            <input id="editCatalogDiscount" type="checkbox" />
+            <span data-i18n="catalogDiscountLabel">🔥 "İndirimde" bölümünde göster</span>
+          </label>
+          <input id="editDiscountedPrice" type="number" min="0" step="0.01" data-i18n-placeholder="discountedPricePh" placeholder="İndirimli fiyat (TL)" style="display:none;margin-top:6px;" />
+
           <label class="field-label" data-i18n="extraBarcodesLabel">Ek Barkodlar (opsiyonel)</label>
           <p class="card-subtitle" data-i18n="extraBarcodesSubtitle" style="margin-top:0;">Aynı ürünün farklı çeşitleri/ambalajları varsa, hepsinin barkodunu buraya ekle — hangisini okutursan okut bu ürün eşleşir.</p>
           <div id="extraBarcodesList" class="list" style="margin-bottom:8px;"></div>

@@ -122,6 +122,35 @@
     .qty-stepper button.add-btn { background: var(--tomato); border-color: var(--tomato); color: #fff; flex: 1; }
     .qty-stepper span { min-width: 18px; text-align: center; font-weight: 700; font-variant-numeric: tabular-nums; font-size: 13px; }
 
+    .highlight-section { margin-bottom: 8px; }
+    .highlight-title {
+      font-family: var(--font-display); font-weight: 600; font-style: italic;
+      font-size: 15px; color: var(--tomato-dark); margin: 0 0 8px;
+    }
+    .highlight-title.discount { color: var(--tomato); }
+    .highlight-scroll {
+      display: flex; gap: 10px; overflow-x: auto; padding-bottom: 4px; scrollbar-width: none;
+    }
+    .highlight-scroll::-webkit-scrollbar { display: none; }
+    .highlight-card {
+      flex-shrink: 0; width: 128px; background: var(--card); border-radius: 12px; overflow: hidden;
+      box-shadow: 0 1px 3px rgba(33, 48, 31, 0.08);
+    }
+    .highlight-visual {
+      aspect-ratio: 1 / 1; width: 100%; display: flex; align-items: center; justify-content: center;
+      font-size: 24px; color: #fff; overflow: hidden;
+    }
+    .highlight-body { padding: 8px 10px 10px; }
+    .highlight-name {
+      font-size: 12px; font-weight: 600; margin: 0 0 4px; line-height: 1.3;
+      display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; min-height: 2.4em;
+    }
+    .highlight-price-old { font-size: 10.5px; color: var(--ink-soft); text-decoration: line-through; }
+    .highlight-price-new { font-size: 13px; font-weight: 700; color: var(--tomato-dark); }
+    .highlight-add-btn {
+      width: 100%; margin-top: 6px; padding: 6px; border-radius: 6px; border: none;
+      background: var(--tomato); color: #fff; font-size: 11.5px; font-weight: 700; cursor: pointer;
+    }
     .category-label {
       grid-column: 1 / -1;
       display: flex; align-items: center; gap: 10px;
@@ -244,6 +273,14 @@
   </header>
 
   <main class="main-area">
+    <div id="newProductsSection" class="highlight-section" style="display:none;">
+      <p class="highlight-title">🆕 Yeni Ürünler</p>
+      <div id="newProductsScroll" class="highlight-scroll"></div>
+    </div>
+    <div id="discountSection" class="highlight-section" style="display:none;">
+      <p class="highlight-title discount">🔥 İndirimde</p>
+      <div id="discountScroll" class="highlight-scroll"></div>
+    </div>
     <div id="content" class="product-grid">
       <div class="loading"><i class="fa-solid fa-spinner fa-spin" aria-hidden="true"></i> Ürünler yükleniyor…</div>
     </div>
@@ -358,6 +395,43 @@
       return { icon: "fa-basket-shopping", color: "#5B6B54" };
     }
 
+    function renderHighlightSection(sectionId, scrollId, products, isDiscount) {
+      const sectionEl = document.getElementById(sectionId);
+      const scrollEl = document.getElementById(scrollId);
+      if (!products.length) {
+        sectionEl.style.display = "none";
+        return;
+      }
+      sectionEl.style.display = "block";
+      scrollEl.innerHTML = products
+        .map((p) => {
+          const visual = getCategoryVisual(p.category);
+          const visualHtml = p.image
+            ? `<div class="highlight-visual" style="background:${visual.color};"><img src="${escapeHtml(p.image)}" alt="" style="width:100%;height:100%;object-fit:cover;" /></div>`
+            : `<div class="highlight-visual" style="background:${visual.color};"><i class="fa-solid ${visual.icon}" aria-hidden="true"></i></div>`;
+          const effectivePrice = isDiscount && p.discountedPrice ? p.discountedPrice : p.price;
+          const priceHtml =
+            isDiscount && p.discountedPrice
+              ? `<p class="highlight-price-old">${formatTL(p.price)}</p><p class="highlight-price-new">${formatTL(p.discountedPrice)}</p>`
+              : `<p class="highlight-price-new">${formatTL(p.price)}</p>`;
+          return `
+            <div class="highlight-card">
+              ${visualHtml}
+              <div class="highlight-body">
+                <p class="highlight-name">${escapeHtml(p.name)}</p>
+                ${priceHtml}
+                <button class="highlight-add-btn" data-name="${escapeHtml(p.name)}" data-price="${effectivePrice}" data-unit="${p.unit}">Sepete Ekle</button>
+              </div>
+            </div>`;
+        })
+        .join("");
+      scrollEl.querySelectorAll(".highlight-add-btn").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          changeCartQty(btn.dataset.name, Number(btn.dataset.price), btn.dataset.unit, 1);
+        });
+      });
+    }
+
     function renderCategoryChips(products) {
       const chipsEl = document.getElementById("categoryChips");
       const categories = [...new Set(products.map((p) => p.category || "Diğer"))].sort();
@@ -402,13 +476,18 @@
           const visualHtml = p.image
             ? `<div class="product-visual" style="background:${visual.color};padding:0;"><img src="${escapeHtml(p.image)}" alt="" style="width:100%;height:100%;object-fit:cover;" /></div>`
             : `<div class="product-visual" style="background:${visual.color};"><i class="fa-solid ${visual.icon}" aria-hidden="true"></i></div>`;
+          const isDiscounted = p.catalogDiscount && p.discountedPrice;
+          const effectivePrice = isDiscounted ? p.discountedPrice : p.price;
+          const priceHtml = isDiscounted
+            ? `<p class="product-price"><span class="highlight-price-old">${formatTL(p.price)}</span> ${formatTL(p.discountedPrice)}<span class="product-unit"> / ${unitLabel}</span></p>`
+            : `<p class="product-price">${formatTL(p.price)}<span class="product-unit"> / ${unitLabel}</span></p>`;
           html += `
             <div class="product-card">
               ${visualHtml}
               <div class="product-body">
                 <p class="product-name">${escapeHtml(p.name)}</p>
-                <p class="product-price">${formatTL(p.price)}<span class="product-unit"> / ${unitLabel}</span></p>
-                <div class="qty-stepper" data-name="${escapeHtml(p.name)}" data-price="${p.price}" data-unit="${p.unit}">
+                ${priceHtml}
+                <div class="qty-stepper" data-name="${escapeHtml(p.name)}" data-price="${effectivePrice}" data-unit="${p.unit}">
                   ${qty > 0 ? `<button class="minus-btn">−</button><span>${qty}</span>` : ""}
                   <button class="add-btn">${qty > 0 ? "+" : "Ekle"}</button>
 
@@ -717,6 +796,8 @@
         }
 
         document.getElementById("searchBox").style.display = "block";
+        renderHighlightSection("newProductsSection", "newProductsScroll", allProducts.filter((p) => p.catalogNew), false);
+        renderHighlightSection("discountSection", "discountScroll", allProducts.filter((p) => p.catalogDiscount), true);
         renderCategoryChips(allProducts);
         renderProducts(allProducts, "");
       } catch (e) {

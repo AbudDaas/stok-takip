@@ -103,6 +103,12 @@ document.getElementById("transferToShelfBtn").addEventListener("click", transfer
 document.getElementById("printAllQrBtn").addEventListener("click", printAllQrCodes);
 
 document.getElementById("scanNewBarcodeBtn").addEventListener("click", () => openQuickBarcodeScan("newBarcode"));
+document.getElementById("newCatalogDiscount").addEventListener("change", (e) => {
+  document.getElementById("newDiscountedPrice").style.display = e.target.checked ? "block" : "none";
+});
+document.getElementById("editCatalogDiscount").addEventListener("change", (e) => {
+  document.getElementById("editDiscountedPrice").style.display = e.target.checked ? "block" : "none";
+});
 document.getElementById("newProductPhotoInput").addEventListener("change", (e) => handleNewProductPhotoUpload(e.target.files[0]));
 document.getElementById("editProductPhotoInput").addEventListener("change", (e) => handleEditProductPhotoUpload(e.target.files[0]));
 document.getElementById("scanNewExtraBarcodeBtn").addEventListener("click", () => openQuickBarcodeScan("newExtraBarcodeSingle"));
